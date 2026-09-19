@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { addRoutineSet, getRoutineDetail } from '../../data/routineRepo';
 import { db } from '../../db/client';
@@ -9,8 +9,19 @@ import { theme } from '../../ui/theme';
 type Props = { routineId: string };
 
 export function RoutineBuilder({ routineId }: Props) {
-  const [version, setVersion] = useState(0);
+  // A local counter is the refresh signal: bumping it forces a re-read of
+  // getRoutineDetail. "Add set" bumps it directly; useFocusEffect bumps it
+  // whenever this screen regains focus, since other screens (e.g.
+  // add-exercise) mutate this routine and navigate back via router.back(),
+  // leaving this screen mounted underneath rather than remounting it.
+  const [, setVersion] = useState(0);
   const detail = getRoutineDetail(db, routineId);
+
+  useFocusEffect(
+    useCallback(() => {
+      setVersion((v) => v + 1);
+    }, []),
+  );
 
   if (!detail) {
     return (
@@ -21,7 +32,7 @@ export function RoutineBuilder({ routineId }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} key={version}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {detail.exercises.map((entry) => (
         <View key={entry.routineExercise.id} style={styles.card}>
           <Text style={styles.cardTitle}>{entry.exercise.name}</Text>

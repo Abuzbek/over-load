@@ -1,6 +1,15 @@
 import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { FlatList, Modal, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { createRoutine, listRoutines } from '../../data/routineRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
@@ -14,6 +23,7 @@ export function RoutineList() {
 
   const [isModalVisible, setModalVisible] = useState(false);
   const [name, setName] = useState('');
+  const inputRef = useRef<TextInput>(null);
 
   const onCreate = useCallback(() => {
     setName('');
@@ -49,16 +59,27 @@ export function RoutineList() {
         <Button title="New routine" onPress={onCreate} />
       </View>
 
-      <Modal visible={isModalVisible} transparent animationType="fade" onRequestClose={onCancel}>
-        <View style={styles.backdrop}>
+      <Modal
+        visible={isModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={onCancel}
+        // autoFocus on the TextInput is unreliable inside a Modal on Android,
+        // so focus it explicitly once the modal has finished animating in.
+        onShow={() => inputRef.current?.focus()}
+      >
+        <KeyboardAvoidingView
+          style={styles.backdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>New routine</Text>
             <TextInput
+              ref={inputRef}
               value={name}
               onChangeText={setName}
               placeholder="Name"
               placeholderTextColor={theme.colors.textMuted}
-              autoFocus
               style={styles.input}
               onSubmitEditing={onConfirm}
             />
@@ -71,7 +92,7 @@ export function RoutineList() {
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
