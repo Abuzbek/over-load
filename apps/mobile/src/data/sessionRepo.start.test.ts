@@ -1,4 +1,4 @@
-import { exercises, newId, routineSets, type Exercise } from '@workouts/schema';
+import { exercises, newId, now, routineSets, type Exercise } from '@workouts/schema';
 import { createTestDb } from '@workouts/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -73,6 +73,16 @@ describe('startWorkoutFromRoutine', () => {
 
   it('throws for an unknown routine', () => {
     expect(() => startWorkoutFromRoutine(db, newId(), AT)).toThrow(/routine not found/i);
+  });
+
+  it('excludes an exercise from the detail once its definition is soft-deleted', () => {
+    const routine = pushDay();
+    const workoutId = startWorkoutFromRoutine(db, routine.id, AT);
+
+    db.update(exercises).set({ deletedAt: now() }).where(eq(exercises.id, bench.id)).run();
+
+    const detail = getWorkoutDetail(db, workoutId);
+    expect(detail?.exercises).toEqual([]);
   });
 });
 
