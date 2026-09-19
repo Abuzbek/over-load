@@ -2,6 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { addRoutineSet, getRoutineDetail } from '../../data/routineRepo';
+import { startWorkoutFromRoutine } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { theme } from '../../ui/theme';
@@ -59,6 +60,14 @@ export function RoutineBuilder({ routineId }: Props) {
       {detail.exercises.length === 0 ? (
         <Text style={styles.empty}>No exercises yet. Add one to get started.</Text>
       ) : null}
+
+      <Button
+        title="Start workout"
+        onPress={() => {
+          const workoutId = startWorkoutFromRoutine(db, routineId, Date.now());
+          router.push(`/session/${workoutId}`);
+        }}
+      />
 
       <Button
         title="Add exercise"
