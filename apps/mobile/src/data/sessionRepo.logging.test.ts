@@ -1,4 +1,11 @@
-import { exercises, newId, sets, workouts, type Exercise } from '@workouts/schema';
+import {
+  exercises,
+  newId,
+  sets,
+  workoutExercises,
+  workouts,
+  type Exercise,
+} from '@workouts/schema';
 import { createTestDb } from '@workouts/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -131,6 +138,26 @@ describe('lastPerformance', () => {
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT - 100_000);
     addSet(db, we.id, AT - 100_000);
     finishWorkout(db, workoutId, AT - 90_000);
+
+    const current = startEmptyWorkout(db, 'Today', AT);
+    expect(lastPerformance(db, bench.id, current)).toEqual([]);
+  });
+
+  it('ignores sets whose workout_exercises row is tombstoned', () => {
+    const workoutId = startEmptyWorkout(db, 'Older', AT - 100_000);
+    const we = addExerciseToWorkout(db, workoutId, bench.id, AT - 100_000);
+    const set = addSet(db, we.id, AT - 100_000);
+    completeSet(db, set.id, { weightKg: 100, reps: 5 }, AT - 100_000);
+    finishWorkout(db, workoutId, AT - 90_000);
+
+    // No repository function soft-deletes a workout_exercises row yet, so we
+    // reach in directly — same pattern the routine tests and Task 8's R13
+    // test use to exercise tombstone filtering that has no writer function.
+    db
+      .update(workoutExercises)
+      .set({ deletedAt: AT - 80_000 })
+      .where(eq(workoutExercises.id, we.id))
+      .run();
 
     const current = startEmptyWorkout(db, 'Today', AT);
     expect(lastPerformance(db, bench.id, current)).toEqual([]);
