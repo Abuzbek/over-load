@@ -38,18 +38,20 @@ export function SetRow({ set, index, previous, onComplete, onUncomplete }: Props
       <TextInput
         value={weight}
         onChangeText={setWeight}
+        editable={!completed}
         keyboardType="decimal-pad"
         placeholder="kg"
         placeholderTextColor={theme.colors.textMuted}
-        style={styles.input}
+        style={[styles.input, completed && styles.inputLocked]}
       />
       <TextInput
         value={reps}
         onChangeText={setReps}
+        editable={!completed}
         keyboardType="number-pad"
         placeholder="reps"
         placeholderTextColor={theme.colors.textMuted}
-        style={styles.input}
+        style={[styles.input, completed && styles.inputLocked]}
       />
 
       <Pressable
@@ -82,6 +84,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     textAlign: 'center',
   },
+  inputLocked: { color: theme.colors.textMuted },
   check: {
     width: 34,
     height: 34,
