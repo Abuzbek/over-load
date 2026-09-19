@@ -1,6 +1,6 @@
 import { eq, isNull } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { exercises } from './exercises';
+import { exercises, type NewExercise } from './exercises';
 import { newId, now } from './sync';
 import { createTestDb, type TestDb } from './testing/memoryDb';
 
@@ -57,7 +57,7 @@ describe('exercises table', () => {
 
   it('rejects an unknown tracking type at the type level', () => {
     // @ts-expect-error 'cardio' is not a TrackingType
-    const invalid = { ...benchPress(), trackingType: 'cardio' };
+    const invalid: NewExercise = { ...benchPress(), trackingType: 'cardio' };
     expect(invalid.trackingType).toBe('cardio');
   });
 });
