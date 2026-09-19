@@ -15,6 +15,18 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@26.6.2)
 
+  apps/mobile:
+    dependencies:
+      '@workouts/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@workouts/schema':
+        specifier: workspace:*
+        version: link:../../packages/schema
+      drizzle-orm:
+        specifier: ^0.36.0
+        version: 0.36.4(@types/better-sqlite3@7.6.13)(better-sqlite3@11.10.0)
+
   packages/domain: {}
 
   packages/schema:

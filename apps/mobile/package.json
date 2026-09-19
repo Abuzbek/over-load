@@ -1,0 +1,11 @@
+{
+  "name": "@workouts/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "dependencies": {
+    "@workouts/domain": "workspace:*",
+    "@workouts/schema": "workspace:*",
+    "drizzle-orm": "^0.36.0"
+  }
+}
