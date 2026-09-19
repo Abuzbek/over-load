@@ -12,5 +12,10 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 config.resolver.sourceExts.push('sql');
+// @workouts/schema exposes ./migrations and ./testing only via its package.json
+// "exports" map. Metro's resolver ignores "exports" maps by default, so without
+// this flag it cannot resolve those subpaths (e.g. `@workouts/schema/migrations`
+// in src/db/bootstrap.ts).
+config.resolver.unstable_enablePackageExports = true;
 
 module.exports = config;
