@@ -1,7 +1,8 @@
 import { createTestDb } from '@workouts/schema/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import curated from '../../../../tools/seed-exercises/curated.json';
 import { listExercises } from './exerciseRepo';
-import { seedExercisesIfEmpty } from './seedRepo';
+import { seedExercisesIfEmpty, type SeedExercise } from './seedRepo';
 
 const SEED = [
   { name: 'Bench Press', trackingType: 'weight_reps' as const, primaryMuscle: 'chest', secondaryMuscles: ['triceps'], equipment: 'barbell', instructions: 'Press.', isCustom: false },
@@ -33,5 +34,22 @@ describe('seedExercisesIfEmpty', () => {
     seedExercisesIfEmpty(db, SEED);
     const plank = listExercises(db).find((e) => e.name === 'Plank');
     expect(plank?.trackingType).toBe('duration');
+  });
+});
+
+describe('seedExercisesIfEmpty with the real curated exercise library', () => {
+  // Only a 2-row fixture is covered above; first launch runs all 743 real
+  // rows through this function, which the fixture can't exercise.
+  const realSeed = curated as SeedExercise[];
+
+  it('inserts every row of curated.json into an empty library', () => {
+    expect(seedExercisesIfEmpty(db, realSeed)).toBe(743);
+    expect(listExercises(db)).toHaveLength(743);
+  });
+
+  it('is a no-op on a second call', () => {
+    seedExercisesIfEmpty(db, realSeed);
+    expect(seedExercisesIfEmpty(db, realSeed)).toBe(0);
+    expect(listExercises(db)).toHaveLength(743);
   });
 });

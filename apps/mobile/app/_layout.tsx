@@ -3,13 +3,15 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { initializeDatabase } from '../src/db/bootstrap';
 
+type BootstrapError = Error & { restored?: boolean };
+
 export default function RootLayout() {
-  const [state, setState] = useState<{ ready: boolean; error?: Error }>({ ready: false });
+  const [state, setState] = useState<{ ready: boolean; error?: BootstrapError }>({ ready: false });
 
   useEffect(() => {
     initializeDatabase()
       .then(() => setState({ ready: true }))
-      .catch((error: Error) => setState({ ready: false, error }));
+      .catch((error: BootstrapError) => setState({ ready: false, error }));
   }, []);
 
   if (state.error) {
@@ -17,7 +19,11 @@ export default function RootLayout() {
       <View style={styles.center}>
         <Text style={styles.errorTitle}>Database error</Text>
         <Text style={styles.errorBody}>{state.error.message}</Text>
-        <Text style={styles.errorBody}>Your previous data was restored. Please restart the app.</Text>
+        <Text style={styles.errorBody}>
+          {state.error.restored
+            ? 'Your previous data was restored. Please restart the app.'
+            : 'Please restart the app.'}
+        </Text>
       </View>
     );
   }
