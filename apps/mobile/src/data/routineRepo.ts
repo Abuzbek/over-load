@@ -11,7 +11,7 @@ import {
   type RoutineExercise,
   type RoutineSet,
 } from '@workouts/schema';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull, max } from 'drizzle-orm';
 
 export type RoutineDetailExercise = {
   routineExercise: RoutineExercise;
@@ -35,6 +35,7 @@ export function listRoutines(db: Db): Routine[] {
 
 export function createRoutine(db: Db, name: string): Routine {
   const timestamp = now();
+  const highest = db.select({ maxIndex: max(routines.orderIndex) }).from(routines).get();
   const row = {
     id: newId(),
     createdAt: timestamp,
@@ -42,7 +43,7 @@ export function createRoutine(db: Db, name: string): Routine {
     deletedAt: null,
     name,
     notes: null,
-    orderIndex: listRoutines(db).length,
+    orderIndex: (highest?.maxIndex ?? -1) + 1,
   };
   db.insert(routines).values(row).run();
   return row;
@@ -57,11 +58,11 @@ export function addExerciseToRoutine(
   routineId: string,
   exerciseId: string,
 ): RoutineExercise {
-  const siblings = db
-    .select()
+  const highest = db
+    .select({ maxIndex: max(routineExercises.orderIndex) })
     .from(routineExercises)
-    .where(and(eq(routineExercises.routineId, routineId), isNull(routineExercises.deletedAt)))
-    .all();
+    .where(eq(routineExercises.routineId, routineId))
+    .get();
 
   const timestamp = now();
   const row = {
@@ -71,7 +72,7 @@ export function addExerciseToRoutine(
     deletedAt: null,
     routineId,
     exerciseId,
-    orderIndex: siblings.length,
+    orderIndex: (highest?.maxIndex ?? -1) + 1,
     notes: null,
     restSeconds: null,
     supersetGroup: null,
@@ -86,11 +87,11 @@ export function addRoutineSet(
   routineExerciseId: string,
   values: { targetReps?: number; targetWeightKg?: number } = {},
 ): RoutineSet {
-  const siblings = db
-    .select()
+  const highest = db
+    .select({ maxIndex: max(routineSets.orderIndex) })
     .from(routineSets)
-    .where(and(eq(routineSets.routineExerciseId, routineExerciseId), isNull(routineSets.deletedAt)))
-    .all();
+    .where(eq(routineSets.routineExerciseId, routineExerciseId))
+    .get();
 
   const timestamp = now();
   const row = {
@@ -99,7 +100,7 @@ export function addRoutineSet(
     updatedAt: timestamp,
     deletedAt: null,
     routineExerciseId,
-    orderIndex: siblings.length,
+    orderIndex: (highest?.maxIndex ?? -1) + 1,
     setType: 'normal' as const,
     targetReps: values.targetReps ?? null,
     targetWeightKg: values.targetWeightKg ?? null,
@@ -123,7 +124,13 @@ export function getRoutineDetail(db: Db, routineId: string): RoutineDetail | und
     .select({ routineExercise: routineExercises, exercise: exercises })
     .from(routineExercises)
     .innerJoin(exercises, eq(exercises.id, routineExercises.exerciseId))
-    .where(and(eq(routineExercises.routineId, routineId), isNull(routineExercises.deletedAt)))
+    .where(
+      and(
+        eq(routineExercises.routineId, routineId),
+        isNull(routineExercises.deletedAt),
+        isNull(exercises.deletedAt),
+      ),
+    )
     .orderBy(asc(routineExercises.orderIndex))
     .all();
 

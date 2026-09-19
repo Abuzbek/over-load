@@ -1,5 +1,6 @@
-import { exercises, newId, type Exercise } from '@workouts/schema';
+import { exercises, newId, now, routineExercises, routineSets, type Exercise } from '@workouts/schema';
 import { createTestDb } from '@workouts/schema/testing';
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   addExerciseToRoutine,
@@ -69,5 +70,49 @@ describe('getRoutineDetail', () => {
   it('returns a routine with no exercises as an empty list, not undefined', () => {
     const routine = createRoutine(db, 'Empty');
     expect(getRoutineDetail(db, routine.id)?.exercises).toEqual([]);
+  });
+});
+
+describe('getRoutineDetail tombstone filtering', () => {
+  it('returns undefined for a soft-deleted routine', () => {
+    const routine = createRoutine(db, 'Push Day');
+    softDeleteRoutine(db, routine.id);
+    expect(getRoutineDetail(db, routine.id)).toBeUndefined();
+  });
+
+  it('excludes a soft-deleted routine exercise', () => {
+    const routine = createRoutine(db, 'Push Day');
+    const re = addExerciseToRoutine(db, routine.id, bench.id);
+    db.update(routineExercises).set({ deletedAt: now() }).where(eq(routineExercises.id, re.id)).run();
+
+    expect(getRoutineDetail(db, routine.id)?.exercises).toEqual([]);
+  });
+
+  it('excludes a soft-deleted routine set from its exercise', () => {
+    const routine = createRoutine(db, 'Push Day');
+    const re = addExerciseToRoutine(db, routine.id, bench.id);
+    const set = addRoutineSet(db, re.id, { targetReps: 8, targetWeightKg: 80 });
+    db.update(routineSets).set({ deletedAt: now() }).where(eq(routineSets.id, set.id)).run();
+
+    expect(getRoutineDetail(db, routine.id)?.exercises[0]?.sets).toEqual([]);
+  });
+
+  it('excludes a routine exercise whose underlying exercise row is soft-deleted', () => {
+    const routine = createRoutine(db, 'Push Day');
+    addExerciseToRoutine(db, routine.id, bench.id);
+    db.update(exercises).set({ deletedAt: now() }).where(eq(exercises.id, bench.id)).run();
+
+    expect(getRoutineDetail(db, routine.id)?.exercises).toEqual([]);
+  });
+});
+
+describe('orderIndex after a soft delete', () => {
+  it('does not collide across live and tombstoned routines', () => {
+    const a = createRoutine(db, 'A');
+    const b = createRoutine(db, 'B');
+    softDeleteRoutine(db, a.id);
+    const c = createRoutine(db, 'C');
+
+    expect(new Set([a.orderIndex, b.orderIndex, c.orderIndex]).size).toBe(3);
   });
 });
