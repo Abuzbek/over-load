@@ -37,6 +37,14 @@ describe('inferTrackingType', () => {
   it('overrides isometric holds to duration despite being bodyweight strength', () => {
     expect(inferTrackingType(source({ name: 'Plank', equipment: 'body only' }))).toBe('duration');
   });
+
+  it('classifies hang-position loaded lifts as weight and reps, not duration', () => {
+    expect(inferTrackingType(source({ name: 'Hang Clean', equipment: 'barbell' }))).toBe('weight_reps');
+  });
+
+  it('classifies hanging bodyweight exercises as reps, not duration', () => {
+    expect(inferTrackingType(source({ name: 'Hanging Leg Raise', equipment: 'body only' }))).toBe('reps');
+  });
 });
 
 describe('mapSourceExercise', () => {

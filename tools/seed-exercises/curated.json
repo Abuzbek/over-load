@@ -151,7 +151,7 @@
   },
   {
     "name": "Alternating Hang Clean",
-    "trackingType": "duration",
+    "trackingType": "weight_reps",
     "primaryMuscle": "hamstrings",
     "secondaryMuscles": [
       "biceps",
@@ -983,7 +983,7 @@
   },
   {
     "name": "Bottoms-Up Clean From The Hang Position",
-    "trackingType": "duration",
+    "trackingType": "weight_reps",
     "primaryMuscle": "forearms",
     "secondaryMuscles": [
       "biceps",
@@ -2085,7 +2085,7 @@
   },
   {
     "name": "Double Kettlebell Alternating Hang Clean",
-    "trackingType": "duration",
+    "trackingType": "weight_reps",
     "primaryMuscle": "hamstrings",
     "secondaryMuscles": [
       "biceps",
@@ -3131,7 +3131,7 @@
   },
   {
     "name": "Hang Clean",
-    "trackingType": "duration",
+    "trackingType": "weight_reps",
     "primaryMuscle": "quadriceps",
     "secondaryMuscles": [
       "calves",
@@ -3148,7 +3148,7 @@
   },
   {
     "name": "Hang Clean - Below the Knees",
-    "trackingType": "duration",
+    "trackingType": "weight_reps",
     "primaryMuscle": "quadriceps",
     "secondaryMuscles": [
       "calves",
@@ -3165,7 +3165,7 @@
   },
   {
     "name": "Hang Snatch",
-    "trackingType": "duration",
+    "trackingType": "weight_reps",
     "primaryMuscle": "hamstrings",
     "secondaryMuscles": [
       "abdominals",
@@ -3183,7 +3183,7 @@
   },
   {
     "name": "Hang Snatch - Below Knees",
-    "trackingType": "duration",
+    "trackingType": "weight_reps",
     "primaryMuscle": "hamstrings",
     "secondaryMuscles": [
       "abdominals",
@@ -3201,7 +3201,7 @@
   },
   {
     "name": "Hanging Bar Good Morning",
-    "trackingType": "duration",
+    "trackingType": "weight_reps",
     "primaryMuscle": "hamstrings",
     "secondaryMuscles": [
       "abdominals",
@@ -3214,7 +3214,7 @@
   },
   {
     "name": "Hanging Leg Raise",
-    "trackingType": "duration",
+    "trackingType": "reps",
     "primaryMuscle": "abdominals",
     "secondaryMuscles": [],
     "equipment": "body only",
@@ -3223,7 +3223,7 @@
   },
   {
     "name": "Hanging Pike",
-    "trackingType": "duration",
+    "trackingType": "reps",
     "primaryMuscle": "abdominals",
     "secondaryMuscles": [],
     "equipment": "body only",
@@ -3762,7 +3762,7 @@
   },
   {
     "name": "Kettlebell Hang Clean",
-    "trackingType": "duration",
+    "trackingType": "weight_reps",
     "primaryMuscle": "hamstrings",
     "secondaryMuscles": [
       "calves",
@@ -6792,7 +6792,7 @@
   },
   {
     "name": "Smith Machine Hang Power Clean",
-    "trackingType": "duration",
+    "trackingType": "weight_reps",
     "primaryMuscle": "hamstrings",
     "secondaryMuscles": [
       "glutes",

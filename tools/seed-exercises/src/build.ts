@@ -8,8 +8,11 @@ const SOURCE_URL =
 
 /**
  * The upstream set is ~870 entries including many near-duplicate machine
- * variations. We keep the equipment categories people actually log and cap the
- * result, which lands near 300 without hand-listing every exercise.
+ * variations. We keep all equipment categories people actually log in commercial
+ * gyms (barbell, dumbbell, cable, machine, kettlebells, etc.), which produces
+ * ~740 exercises. Equipment category coverage matters more than an arbitrary
+ * count cap — this ensures leg press, kettlebell work, machines, and other gym
+ * mainstays are represented for the logger's exercise library.
  */
 const KEEP_EQUIPMENT = new Set([
   'barbell', 'dumbbell', 'cable', 'machine', 'body only', 'kettlebells',

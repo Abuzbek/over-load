@@ -17,8 +17,11 @@ const BODYWEIGHT = new Set(['body only', 'none', null]);
 /**
  * Isometric holds are bodyweight strength work by the dataset's categories but
  * are logged as time, not reps. Matched on a name fragment, lowercased.
+ * Note: 'hang' is not included despite semantic similarity to holds because
+ * hang-position strength exercises (Hang Clean, Hanging Leg Raise) are logged
+ * by load (weight_reps or reps), not duration.
  */
-const DURATION_NAME_HINTS = ['plank', 'hold', 'hang', 'wall sit', 'l-sit', 'isometric'];
+const DURATION_NAME_HINTS = ['plank', 'hold', 'wall sit', 'l-sit', 'isometric'];
 
 export function inferTrackingType(source: SourceExercise): TrackingType {
   const name = source.name.toLowerCase();
