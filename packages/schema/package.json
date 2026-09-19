@@ -1,0 +1,25 @@
+{
+  "name": "@workouts/schema",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./migrations": "./drizzle/migrations.js",
+    "./testing": "./src/testing/memoryDb.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.36.0",
+    "uuidv7": "^1.0.2"
+  },
+  "devDependencies": {
+    "better-sqlite3": "^11.5.0",
+    "@types/better-sqlite3": "^7.6.11",
+    "drizzle-kit": "^0.28.0"
+  }
+}
