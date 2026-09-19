@@ -1,21 +1,24 @@
-import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
-import { Stack } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
-import { exercises } from '@workouts/schema';
-import { db } from '../src/db/client';
+import { Link, Stack } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
+import { Button } from '../src/ui/Button';
+import { theme } from '../src/ui/theme';
 
 export default function HomeScreen() {
-  const { data } = useLiveQuery(db.select().from(exercises));
-
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: 'Workouts' }} />
-      <Text style={styles.text}>Exercise library: {data?.length ?? 0} exercises</Text>
+      <Link href="/exercises" asChild>
+        <Button title="Browse exercises" onPress={() => {}} />
+      </Link>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  text: { fontSize: 16 },
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
+  },
 });

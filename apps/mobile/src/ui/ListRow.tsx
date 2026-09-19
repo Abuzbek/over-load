@@ -1,0 +1,38 @@
+import type { ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { theme } from './theme';
+
+type Props = {
+  title: string;
+  subtitle?: string;
+  right?: ReactNode;
+  onPress?: () => void;
+};
+
+export function ListRow({ title, subtitle, right, onPress }: Props) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+      <View style={styles.main}>
+        <Text style={styles.title}>{title}</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      </View>
+      {right}
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border,
+  },
+  pressed: { backgroundColor: theme.colors.surface },
+  main: { flex: 1, gap: 2 },
+  title: { ...theme.text.body, color: theme.colors.text },
+  subtitle: { ...theme.text.caption, color: theme.colors.textMuted },
+});
