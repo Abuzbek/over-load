@@ -12,7 +12,8 @@ const SOURCE_URL =
  * result, which lands near 300 without hand-listing every exercise.
  */
 const KEEP_EQUIPMENT = new Set([
-  'barbell', 'dumbbell', 'cable', 'body only',
+  'barbell', 'dumbbell', 'cable', 'machine', 'body only', 'kettlebells',
+  'e-z curl bar', 'bands', 'medicine ball', 'exercise ball', 'none',
 ]);
 
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), '../curated.json');
