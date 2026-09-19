@@ -7,6 +7,9 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: 'Workouts' }} />
+      <Link href="/routines" asChild>
+        <Button title="Routines" onPress={() => {}} />
+      </Link>
       <Link href="/exercises" asChild>
         <Button title="Browse exercises" onPress={() => {}} />
       </Link>
