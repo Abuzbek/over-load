@@ -1,4 +1,5 @@
-import type { CompletedSet } from '@workouts/domain';
+import { DEFAULT_REST_SECONDS, type CompletedSet } from '@workouts/domain';
+import { useKeepAwake } from 'expo-keep-awake';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -7,10 +8,17 @@ import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { theme } from '../../ui/theme';
 import { ExerciseCard } from './ExerciseCard';
+import { cancelRestNotification, scheduleRestNotification } from './notifications';
+import { RestTimer } from './RestTimer';
 
 type Props = { workoutId: string };
 
 export function ActiveSession({ workoutId }: Props) {
+  // The phone must not lock between sets.
+  useKeepAwake();
+
+  const [rest, setRest] = useState<{ startedAt: number; seconds: number } | null>(null);
+
   // Bumping this re-renders, which re-reads the workout from SQLite.
   const [, setVersion] = useState(0);
   const detail = getWorkoutDetail(db, workoutId);
@@ -40,7 +48,11 @@ export function ActiveSession({ workoutId }: Props) {
           entry={entry}
           previous={previousByExercise.get(entry.exercise.id) ?? []}
           onChanged={() => setVersion((v) => v + 1)}
-          onSetCompleted={() => {}}
+          onSetCompleted={(restSeconds) => {
+            const seconds = restSeconds ?? DEFAULT_REST_SECONDS;
+            setRest({ startedAt: Date.now(), seconds });
+            void scheduleRestNotification(seconds);
+          }}
         />
       ))}
 
@@ -55,6 +67,17 @@ export function ActiveSession({ workoutId }: Props) {
           router.replace('/');
         }}
       />
+
+      {rest ? (
+        <RestTimer
+          startedAt={rest.startedAt}
+          restSeconds={rest.seconds}
+          onDismiss={() => {
+            setRest(null);
+            void cancelRestNotification();
+          }}
+        />
+      ) : null}
     </ScrollView>
   );
 }
