@@ -1,4 +1,4 @@
-import { formatDuration, formatWeight, toStorageKg, type CompletedSet, type TrackingType, type Unit } from '@overload/domain';
+import { formatTrackedSet, formatWeight, toStorageKg, type CompletedSet, type TrackingType, type Unit } from '@overload/domain';
 import type { WorkoutSet } from '@overload/schema';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -17,26 +17,16 @@ type Props = {
 };
 
 /**
- * The matching set from last time, formatted for its tracking type:
- * "80 kg × 8" for weight_reps, "12 reps" for reps, "2:05" for duration,
- * "5000 m · 30:00" for distance_duration, or an em dash when there was none.
+ * The matching set from last time, formatted for its tracking type via the
+ * shared `formatTrackedSet` (also used by the workout history detail view,
+ * so the two never drift): "80 kg × 8" for weight_reps, "12 reps" for reps,
+ * "2:05" for duration, "5000 m · 30:00" for distance_duration, or an em dash
+ * when there was no matching set at this index.
  */
 export function formatPrevious(sets: CompletedSet[], index: number, unit: Unit): string {
   const match = sets[index];
   if (!match) return '—';
-
-  switch (match.trackingType) {
-    case 'weight_reps':
-      return `${formatWeight(match.weightKg, unit)} × ${match.reps ?? '—'}`;
-    case 'reps':
-      return `${match.reps ?? '—'} reps`;
-    case 'duration':
-      return match.durationSeconds === null ? '—' : formatDuration(match.durationSeconds);
-    case 'distance_duration': {
-      const duration = match.durationSeconds === null ? '—' : formatDuration(match.durationSeconds);
-      return `${match.distanceM ?? '—'} m · ${duration}`;
-    }
-  }
+  return formatTrackedSet(match.trackingType, match, unit);
 }
 
 function toNumber(value: string): number | null {

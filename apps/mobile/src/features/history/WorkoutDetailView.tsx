@@ -1,4 +1,4 @@
-import { formatWeight } from '@overload/domain';
+import { formatTrackedSet } from '@overload/domain';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -39,7 +39,7 @@ export function WorkoutDetailView({ workoutId }: Props) {
             .filter((set) => set.completedAt !== null)
             .map((set, index) => (
               <Text key={set.id} style={styles.setLine}>
-                {index + 1}. {formatWeight(set.weightKg, unit)} × {set.reps ?? '—'}
+                {index + 1}. {formatTrackedSet(entry.exercise.trackingType, set, unit)}
               </Text>
             ))}
         </View>

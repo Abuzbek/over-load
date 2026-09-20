@@ -1,5 +1,6 @@
 export * from './units';
 export * from './formatWeight';
+export * from './formatTrackedSet';
 export * from './oneRepMax';
 export * from './sets';
 export * from './personalRecords';
