@@ -10,6 +10,7 @@ const AT = 1_700_000_000_000;
 let db: ReturnType<typeof createTestDb>['db'];
 let close: () => void;
 let bench: Exercise;
+let plank: Exercise;
 
 beforeEach(() => {
   ({ db, close } = createTestDb());
@@ -23,6 +24,20 @@ beforeEach(() => {
   };
   db.insert(exercises).values(row).run();
   bench = row as unknown as Exercise;
+
+  // A non-weight exercise, seeded alongside bench so a stub that hardcoded
+  // trackingType: 'weight_reps' in place of the joined column would still
+  // pass every other test in this file.
+  const plankRow = {
+    id: newId(),
+    name: 'Plank',
+    trackingType: 'duration' as const,
+    primaryMuscle: 'core',
+    secondaryMuscles: [],
+    equipment: 'bodyweight',
+  };
+  db.insert(exercises).values(plankRow).run();
+  plank = plankRow as unknown as Exercise;
 });
 
 afterEach(() => close());
@@ -59,6 +74,22 @@ describe('listFinishedWorkouts', () => {
     const [summary] = listFinishedWorkouts(db);
     expect(summary?.setCount).toBe(2);
     expect(summary?.volumeKg).toBe(800);
+  });
+
+  it('counts a set on a non-weight exercise toward setCount but not volumeKg, even with a stray weightKg/reps', () => {
+    const workoutId = startEmptyWorkout(db, 'Core', AT);
+    const we = addExerciseToWorkout(db, workoutId, plank.id, AT);
+    const set = addSet(db, we.id, AT);
+    // The stray weightKg/reps are the kind of junk a duration set can carry
+    // (e.g. left over from switching an exercise's tracking type); they must
+    // not be counted as volume just because the columns are populated.
+    completeSet(db, set.id, { weightKg: 17, reps: 8, durationSeconds: 60 }, AT);
+    finishWorkout(db, workoutId, AT + 1000);
+
+    const [summary] = listFinishedWorkouts(db);
+    expect(summary?.workout.id).toBe(workoutId);
+    expect(summary?.setCount).toBe(1);
+    expect(summary?.volumeKg).toBe(0);
   });
 
   it('respects the limit, keeping the newest workouts rather than an arbitrary two', () => {
