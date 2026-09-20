@@ -23,6 +23,7 @@ export function ExerciseCard({ entry, previous, onChanged, onSetCompleted }: Pro
           key={set.id}
           set={set}
           index={index}
+          trackingType={entry.exercise.trackingType}
           previous={previous}
           onComplete={(values) => {
             completeSet(db, set.id, values, Date.now());

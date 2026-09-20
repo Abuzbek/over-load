@@ -1,14 +1,17 @@
-import type { CompletedSet } from '@overload/domain';
+import type { CompletedSet, TrackingType } from '@overload/domain';
 import type { WorkoutSet } from '@overload/schema';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { SetValues } from '../../data/sessionRepo';
 import { theme } from '../../ui/theme';
+import { formatDurationInput, inputsFor, parseDuration, type SetField } from './setInputs';
 
 type Props = {
   set: WorkoutSet;
   index: number;
+  trackingType: TrackingType;
   previous: CompletedSet[];
-  onComplete: (values: { weightKg: number | null; reps: number | null }) => void;
+  onComplete: (values: SetValues) => void;
   onUncomplete: () => void;
 };
 
@@ -25,34 +28,48 @@ function toNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function SetRow({ set, index, previous, onComplete, onUncomplete }: Props) {
-  const [weight, setWeight] = useState(set.weightKg?.toString() ?? '');
-  const [reps, setReps] = useState(set.reps?.toString() ?? '');
+export function SetRow({ set, index, trackingType, previous, onComplete, onUncomplete }: Props) {
+  const inputs = inputsFor(trackingType);
   const completed = set.completedAt !== null;
+
+  const [values, setValues] = useState<Record<SetField, string>>(() => ({
+    weightKg: set.weightKg?.toString() ?? '',
+    reps: set.reps?.toString() ?? '',
+    durationSeconds: formatDurationInput(set.durationSeconds),
+    distanceM: set.distanceM?.toString() ?? '',
+  }));
+
+  // Only the fields this tracking type renders are sent. An omitted key leaves
+  // the stored value alone, so a plank never writes a null over a weight and a
+  // lift never writes a null over a duration.
+  function collect(): SetValues {
+    const patch: SetValues = {};
+    for (const input of inputs) {
+      patch[input.field] =
+        input.field === 'durationSeconds'
+          ? parseDuration(values.durationSeconds)
+          : toNumber(values[input.field]);
+    }
+    return patch;
+  }
 
   return (
     <View style={[styles.row, completed && styles.rowCompleted]}>
       <Text style={styles.index}>{index + 1}</Text>
       <Text style={styles.previous}>{formatPrevious(previous, index)}</Text>
 
-      <TextInput
-        value={weight}
-        onChangeText={setWeight}
-        editable={!completed}
-        keyboardType="decimal-pad"
-        placeholder="kg"
-        placeholderTextColor={theme.colors.textMuted}
-        style={[styles.input, completed && styles.inputLocked]}
-      />
-      <TextInput
-        value={reps}
-        onChangeText={setReps}
-        editable={!completed}
-        keyboardType="number-pad"
-        placeholder="reps"
-        placeholderTextColor={theme.colors.textMuted}
-        style={[styles.input, completed && styles.inputLocked]}
-      />
+      {inputs.map((input) => (
+        <TextInput
+          key={input.field}
+          value={values[input.field]}
+          onChangeText={(text) => setValues((v) => ({ ...v, [input.field]: text }))}
+          editable={!completed}
+          keyboardType={input.keyboard}
+          placeholder={input.placeholder}
+          placeholderTextColor={theme.colors.textMuted}
+          style={[styles.input, completed && styles.inputLocked]}
+        />
+      ))}
 
       <Pressable
         accessibilityRole="button"
@@ -62,11 +79,7 @@ export function SetRow({ set, index, previous, onComplete, onUncomplete }: Props
         // it is the control tapped most often in the app. hitSlop grows the
         // touch target to 48x48 without changing the layout.
         hitSlop={7}
-        onPress={() =>
-          completed
-            ? onUncomplete()
-            : onComplete({ weightKg: toNumber(weight), reps: toNumber(reps) })
-        }
+        onPress={() => (completed ? onUncomplete() : onComplete(collect()))}
         style={[styles.check, completed && styles.checkOn]}
       >
         <Text style={styles.checkMark}>{completed ? '✓' : ''}</Text>
