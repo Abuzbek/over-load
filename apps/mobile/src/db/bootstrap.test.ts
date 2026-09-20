@@ -30,6 +30,8 @@ const { initializeDatabase } = await import('./bootstrap');
 const {
   rebuildAllPersonalRecords: rebuildAllPersonalRecordsForReal,
   addExerciseToWorkout,
+  addSet,
+  completeSet,
   startEmptyWorkout,
 } = await vi.importActual<typeof import('../data/sessionRepo')>('../data/sessionRepo');
 
@@ -88,6 +90,22 @@ describe('initializeDatabase', () => {
     expect(callOrder(discardBackup)).toBeLessThan(callOrder(seedExercisesIfEmpty));
     expect(callOrder(seedExercisesIfEmpty)).toBeLessThan(callOrder(rebuildAllPersonalRecords));
   });
+
+  it('does not let a failed personal-record rebuild reject initializeDatabase', async () => {
+    // The backup is already discarded by this point, so a rethrow here would
+    // brick every subsequent launch (the same failure recurs on restart, with
+    // no backup left to recover from). See bootstrap.ts's comment.
+    vi.mocked(migrate).mockResolvedValueOnce(undefined);
+    vi.mocked(rebuildAllPersonalRecords).mockImplementationOnce(() => {
+      throw new Error('bad tracking type');
+    });
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(initializeDatabase()).resolves.toBeUndefined();
+
+    expect(discardBackup).toHaveBeenCalledTimes(1);
+    consoleError.mockRestore();
+  });
 });
 
 describe('rebuildAllPersonalRecords', () => {
@@ -110,9 +128,15 @@ describe('rebuildAllPersonalRecords', () => {
     plankId = plank.id;
 
     // rebuildAllPersonalRecords only rebuilds exercises a workout has touched;
-    // give it one, with no completed sets, so plankId is in scope for the rebuild.
+    // give it one with a completed set, so the plank actually produces records
+    // under the current (gated) metric rules and the DELETE-then-reinsert has
+    // something to prove. weightKg/reps are the junk a duration exercise's row
+    // carried before gating existed — deliberately included, and deliberately
+    // ignored by max_duration.
     const workoutId = startEmptyWorkout(db, 'Session', 1);
-    addExerciseToWorkout(db, workoutId, plankId, 1);
+    const we = addExerciseToWorkout(db, workoutId, plankId, 1);
+    const set = addSet(db, we.id, 1);
+    completeSet(db, set.id, { weightKg: 17, reps: 8, durationSeconds: 60 }, 1);
   });
 
   afterEach(() => close());
@@ -128,6 +152,6 @@ describe('rebuildAllPersonalRecords', () => {
 
     const remaining = db.select().from(personalRecords)
       .where(eq(personalRecords.exerciseId, plankId)).all();
-    expect(remaining.find((r) => r.type === 'est_1rm')).toBeUndefined();
+    expect(remaining.map((r) => r.type)).toEqual(['max_duration']);
   });
 });

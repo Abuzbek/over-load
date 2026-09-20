@@ -61,7 +61,11 @@ export function computePersonalRecords(sets: CompletedSet[]): PersonalRecord[] {
   const records: PersonalRecord[] = [];
 
   for (const [exerciseId, group] of byExercise) {
-    const metrics = METRICS_BY_TRACKING_TYPE[group[0]!.trackingType];
+    // tracking_type is a plain text column with no SQLite CHECK constraint — the
+    // union is TypeScript-only. An unrecognised value (corrupt data, a future
+    // migration not yet handled here) must not throw when destructured below;
+    // fall back to no metrics for that exercise instead.
+    const metrics = METRICS_BY_TRACKING_TYPE[group[0]!.trackingType] ?? [];
 
     for (const metric of metrics) {
       let best: CompletedSet | undefined;

@@ -29,6 +29,18 @@ export async function initializeDatabase(): Promise<void> {
   // Rebuilds the derived personal-record cache once migrations and seeding have
   // landed, so installs written before metrics were gated by tracking type drop
   // the records the new rules would never produce (e.g. an est_1rm on a duration
-  // exercise). Safe every launch: personal_records is fully recomputable from `sets`.
-  rebuildAllPersonalRecords(db);
+  // exercise).
+  //
+  // Must never throw past this point: the backup was already discarded above,
+  // so a throw here would reject initializeDatabase with no backup left to
+  // restore from, and _layout.tsx's terminal error screen would repeat forever
+  // on every relaunch (this same rebuild runs again on the next launch and
+  // fails again). personal_records is a fully recomputable cache — losing this
+  // launch's rebuild costs stale records until the next successful one, not
+  // data loss — so swallow rather than rethrow.
+  try {
+    rebuildAllPersonalRecords(db);
+  } catch (error) {
+    console.error('rebuildAllPersonalRecords failed during bootstrap; continuing launch', error);
+  }
 }
