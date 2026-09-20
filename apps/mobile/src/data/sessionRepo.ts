@@ -10,6 +10,7 @@ import {
   type Db,
   type Exercise,
   type PersonalRecordRow,
+  type TrackingType,
   type Workout,
   type WorkoutExercise,
   type WorkoutSet,
@@ -169,6 +170,7 @@ export type SetValues = {
   weightKg?: number | null;
   reps?: number | null;
   durationSeconds?: number | null;
+  distanceM?: number | null;
   rpe?: number | null;
   rir?: number | null;
 };
@@ -249,6 +251,7 @@ export function completeSet(db: Db, setId: string, values: SetValues, at: number
   if (values.weightKg !== undefined) patch.weightKg = values.weightKg;
   if (values.reps !== undefined) patch.reps = values.reps;
   if (values.durationSeconds !== undefined) patch.durationSeconds = values.durationSeconds;
+  if (values.distanceM !== undefined) patch.distanceM = values.distanceM;
   if (values.rpe !== undefined) patch.rpe = values.rpe;
   if (values.rir !== undefined) patch.rir = values.rir;
   db.update(sets).set(patch).where(eq(sets.id, setId)).run();
@@ -258,14 +261,20 @@ export function uncompleteSet(db: Db, setId: string): void {
   db.update(sets).set({ completedAt: null, updatedAt: now() }).where(eq(sets.id, setId)).run();
 }
 
-export function toCompletedSet(row: WorkoutSet, exerciseId: string): CompletedSet {
+export function toCompletedSet(
+  row: WorkoutSet,
+  exerciseId: string,
+  trackingType: TrackingType,
+): CompletedSet {
   return {
     id: row.id,
     exerciseId,
+    trackingType,
     setType: row.setType,
     weightKg: row.weightKg,
     reps: row.reps,
     durationSeconds: row.durationSeconds,
+    distanceM: row.distanceM,
     completedAt: row.completedAt!,
   };
 }
@@ -297,9 +306,10 @@ export function lastPerformance(
   if (!previousWorkout) return [];
 
   return db
-    .select({ set: sets })
+    .select({ set: sets, trackingType: exercises.trackingType })
     .from(sets)
     .innerJoin(workoutExercises, eq(workoutExercises.id, sets.workoutExerciseId))
+    .innerJoin(exercises, eq(exercises.id, workoutExercises.exerciseId))
     .where(
       and(
         eq(workoutExercises.workoutId, previousWorkout.workoutId),
@@ -307,21 +317,28 @@ export function lastPerformance(
         isNotNull(sets.completedAt),
         isNull(sets.deletedAt),
         isNull(workoutExercises.deletedAt),
+        isNull(exercises.deletedAt),
       ),
     )
     .orderBy(asc(sets.orderIndex))
     .all()
-    .map(({ set }) => toCompletedSet(set, exerciseId));
+    .map(({ set, trackingType }) => toCompletedSet(set, exerciseId, trackingType));
+}
+
+/** Completed sets for a single exercise across all history, most-recent tombstones excluded. */
+export function completedSetsForExercise(db: Db, exerciseId: string): CompletedSet[] {
+  return allCompletedSets(db, [exerciseId]);
 }
 
 function allCompletedSets(db: Db, exerciseIds: string[]): CompletedSet[] {
   if (exerciseIds.length === 0) return [];
 
   return db
-    .select({ set: sets, exerciseId: workoutExercises.exerciseId })
+    .select({ set: sets, exerciseId: workoutExercises.exerciseId, trackingType: exercises.trackingType })
     .from(sets)
     .innerJoin(workoutExercises, eq(workoutExercises.id, sets.workoutExerciseId))
     .innerJoin(workouts, eq(workouts.id, workoutExercises.workoutId))
+    .innerJoin(exercises, eq(exercises.id, workoutExercises.exerciseId))
     .where(
       and(
         inArray(workoutExercises.exerciseId, exerciseIds),
@@ -329,10 +346,11 @@ function allCompletedSets(db: Db, exerciseIds: string[]): CompletedSet[] {
         isNull(sets.deletedAt),
         isNull(workoutExercises.deletedAt),
         isNull(workouts.deletedAt),
+        isNull(exercises.deletedAt),
       ),
     )
     .all()
-    .map(({ set, exerciseId }) => toCompletedSet(set, exerciseId));
+    .map(({ set, exerciseId, trackingType }) => toCompletedSet(set, exerciseId, trackingType));
 }
 
 /**

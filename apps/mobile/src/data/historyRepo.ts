@@ -27,12 +27,13 @@ export function listFinishedWorkouts(db: Db, limit = 50): WorkoutSummary[] {
 
   return finished.map((workout) => {
     const completed: CompletedSet[] = db
-      .select({ set: sets, exerciseId: workoutExercises.exerciseId })
+      .select({ set: sets, exerciseId: workoutExercises.exerciseId, trackingType: exercises.trackingType })
       .from(sets)
       .innerJoin(workoutExercises, eq(workoutExercises.id, sets.workoutExerciseId))
-      // Joining exercises purely for its tombstone: getWorkoutDetail already
-      // drops sets whose exercise definition is deleted, so without this the
-      // list summary and the detail screen disagree about the same workout.
+      // Joining exercises for its tracking type, and for its tombstone:
+      // getWorkoutDetail already drops sets whose exercise definition is
+      // deleted, so without this the list summary and the detail screen
+      // disagree about the same workout.
       .innerJoin(exercises, eq(exercises.id, workoutExercises.exerciseId))
       .where(
         and(
@@ -44,7 +45,7 @@ export function listFinishedWorkouts(db: Db, limit = 50): WorkoutSummary[] {
         ),
       )
       .all()
-      .map(({ set, exerciseId }) => toCompletedSet(set, exerciseId));
+      .map(({ set, exerciseId, trackingType }) => toCompletedSet(set, exerciseId, trackingType));
 
     return {
       workout,

@@ -1,6 +1,7 @@
 import {
   exercises,
   newId,
+  now,
   sets,
   workoutExercises,
   workouts,
@@ -13,6 +14,7 @@ import {
   addExerciseToWorkout,
   addSet,
   completeSet,
+  completedSetsForExercise,
   finishWorkout,
   getWorkoutDetail,
   lastPerformance,
@@ -26,6 +28,8 @@ const AT = 1_700_000_000_000;
 let db: ReturnType<typeof createTestDb>['db'];
 let close: () => void;
 let bench: Exercise;
+let plankId: string;
+let runId: string;
 
 beforeEach(() => {
   ({ db, close } = createTestDb());
@@ -39,6 +43,28 @@ beforeEach(() => {
   };
   db.insert(exercises).values(row).run();
   bench = row as unknown as Exercise;
+
+  const plank = {
+    id: newId(),
+    name: 'Plank',
+    trackingType: 'duration' as const,
+    primaryMuscle: 'core',
+    secondaryMuscles: [],
+    equipment: 'bodyweight',
+  };
+  db.insert(exercises).values(plank).run();
+  plankId = plank.id;
+
+  const run = {
+    id: newId(),
+    name: 'Run',
+    trackingType: 'distance_duration' as const,
+    primaryMuscle: 'legs',
+    secondaryMuscles: [],
+    equipment: 'none',
+  };
+  db.insert(exercises).values(run).run();
+  runId = run.id;
 });
 
 afterEach(() => close());
@@ -209,5 +235,40 @@ describe('getWorkoutDetail tombstone filtering (write-path coverage)', () => {
 
     const stored = getWorkoutDetail(db, workoutId)!.exercises[0]!.sets;
     expect(stored.map((s) => s.id)).toEqual([keep.id]);
+  });
+});
+
+describe('tracking type on completed sets', () => {
+  it('carries the exercise tracking type onto completed sets', () => {
+    // plankId is a 'duration' exercise seeded in beforeEach
+    const workoutId = startEmptyWorkout(db, 'Test', now());
+    const we = addExerciseToWorkout(db, workoutId, plankId, now());
+    const row = addSet(db, we.id, now());
+    completeSet(db, row.id, { durationSeconds: 60 }, now());
+
+    const sets = completedSetsForExercise(db, plankId);
+    expect(sets[0]!.trackingType).toBe('duration');
+    expect(sets[0]!.durationSeconds).toBe(60);
+  });
+
+  it('writes distanceM through completeSet', () => {
+    const workoutId = startEmptyWorkout(db, 'Test', now());
+    const we = addExerciseToWorkout(db, workoutId, runId, now());
+    const row = addSet(db, we.id, now());
+    completeSet(db, row.id, { distanceM: 5000, durationSeconds: 1500 }, now());
+
+    const stored = db.select().from(sets).where(eq(sets.id, row.id)).get();
+    expect(stored!.distanceM).toBe(5000);
+  });
+
+  it('excludes sets whose exercise is tombstoned', () => {
+    const workoutId = startEmptyWorkout(db, 'Test', now());
+    const we = addExerciseToWorkout(db, workoutId, plankId, now());
+    const row = addSet(db, we.id, now());
+    completeSet(db, row.id, { durationSeconds: 60 }, now());
+
+    db.update(exercises).set({ deletedAt: now() }).where(eq(exercises.id, plankId)).run();
+
+    expect(completedSetsForExercise(db, plankId)).toEqual([]);
   });
 });
