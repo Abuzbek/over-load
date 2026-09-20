@@ -1,6 +1,6 @@
 import { exercises, newId, now, routineExercises, routineSets, type Exercise } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
-import { eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   addExerciseToRoutine,
@@ -8,6 +8,7 @@ import {
   createRoutine,
   getRoutineDetail,
   listRoutines,
+  reorderRoutineExercises,
   softDeleteRoutine,
 } from './routineRepo';
 
@@ -15,15 +16,17 @@ let db: ReturnType<typeof createTestDb>['db'];
 let close: () => void;
 let bench: Exercise;
 let squat: Exercise;
+let row: Exercise;
 
 beforeEach(() => {
   ({ db, close } = createTestDb());
   const rows = [
     { id: newId(), name: 'Bench Press', trackingType: 'weight_reps' as const, primaryMuscle: 'chest', secondaryMuscles: [], equipment: 'barbell' },
     { id: newId(), name: 'Back Squat', trackingType: 'weight_reps' as const, primaryMuscle: 'quads', secondaryMuscles: [], equipment: 'barbell' },
+    { id: newId(), name: 'Barbell Row', trackingType: 'weight_reps' as const, primaryMuscle: 'back', secondaryMuscles: [], equipment: 'barbell' },
   ];
   db.insert(exercises).values(rows).run();
-  [bench, squat] = rows as unknown as [Exercise, Exercise];
+  [bench, squat, row] = rows as unknown as [Exercise, Exercise, Exercise];
 });
 
 afterEach(() => close());
@@ -135,5 +138,42 @@ describe('addRoutineSet with targetWeightKg', () => {
 
     const stored = db.select().from(routineSets).where(eq(routineSets.id, set.id)).get();
     expect(stored!.targetWeightKg).toBeNull();
+  });
+});
+
+describe('reorderRoutineExercises', () => {
+  it('reorders live exercises without colliding with a tombstoned sibling', () => {
+    const routine = createRoutine(db, 'Push');
+    const a = addExerciseToRoutine(db, routine.id, bench.id);
+    const b = addExerciseToRoutine(db, routine.id, squat.id);
+    const c = addExerciseToRoutine(db, routine.id, row.id);
+
+    // Tombstone the middle one; its orderIndex 1 stays on disk.
+    db.update(routineExercises).set({ deletedAt: now() }).where(eq(routineExercises.id, b.id)).run();
+
+    // The global max BEFORE reordering, tombstones included (a=0, b=1, c=2).
+    // A correct renumber must place every live row strictly above this — a
+    // renumber-from-0 would not, even though it happens to preserve display
+    // order, because `addExerciseToRoutine` computes its own next index over
+    // all rows independently and would mask the bug for that assertion alone.
+    const beforeMax = Math.max(
+      ...db.select().from(routineExercises).where(eq(routineExercises.routineId, routine.id)).all().map((r) => r.orderIndex),
+    );
+
+    reorderRoutineExercises(db, routine.id, [c.id, a.id], now());
+
+    const live = db
+      .select()
+      .from(routineExercises)
+      .where(and(eq(routineExercises.routineId, routine.id), isNull(routineExercises.deletedAt)))
+      .orderBy(asc(routineExercises.orderIndex))
+      .all();
+    expect(live.map((r) => r.id)).toEqual([c.id, a.id]);
+    expect(live.every((r) => r.orderIndex > beforeMax)).toBe(true);
+
+    // The next insert must still land after everything, tombstones included.
+    const d = addExerciseToRoutine(db, routine.id, bench.id);
+    const all = db.select().from(routineExercises).all();
+    expect(d.orderIndex).toBe(Math.max(...all.filter((r) => r.id !== d.id).map((r) => r.orderIndex)) + 1);
   });
 });

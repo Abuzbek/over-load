@@ -111,6 +111,35 @@ export function addRoutineSet(
   return row;
 }
 
+/**
+ * Renumbers live rows above every existing index, tombstones included, so a
+ * reorder can never produce an index a tombstoned sibling already holds and
+ * `max(orderIndex) + 1` stays correct for the next insert.
+ */
+export function reorderRoutineExercises(
+  db: Db,
+  routineId: string,
+  orderedIds: string[],
+  at: number,
+): void {
+  db.transaction((tx) => {
+    const highest = tx
+      .select({ maxIndex: max(routineExercises.orderIndex) })
+      .from(routineExercises)
+      .where(eq(routineExercises.routineId, routineId))
+      .get();
+
+    const base = (highest?.maxIndex ?? -1) + 1;
+
+    orderedIds.forEach((id, position) => {
+      tx.update(routineExercises)
+        .set({ orderIndex: base + position, updatedAt: at })
+        .where(and(eq(routineExercises.id, id), eq(routineExercises.routineId, routineId)))
+        .run();
+    });
+  });
+}
+
 export function getRoutineDetail(db: Db, routineId: string): RoutineDetail | undefined {
   const routine = db
     .select()

@@ -2,7 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { RoutineDetailExercise } from '../../data/routineRepo';
-import { addRoutineSet, getRoutineDetail } from '../../data/routineRepo';
+import { addRoutineSet, getRoutineDetail, reorderRoutineExercises } from '../../data/routineRepo';
 import { discardWorkout, getActiveWorkoutId, startWorkoutFromRoutine } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
@@ -18,15 +18,23 @@ function toNumber(value: string): number | null {
 type ExerciseCardProps = {
   entry: RoutineDetailExercise;
   onSetAdded: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 };
 
-function ExerciseCard({ entry, onSetAdded }: ExerciseCardProps) {
+function ExerciseCard({ entry, onSetAdded, onMoveUp, onMoveDown }: ExerciseCardProps) {
   const [newSetWeight, setNewSetWeight] = useState('');
   const [newSetReps, setNewSetReps] = useState('');
 
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>{entry.exercise.name}</Text>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{entry.exercise.name}</Text>
+        <View style={styles.reorderControls}>
+          {onMoveUp ? <Button title="Move up" variant="secondary" onPress={onMoveUp} /> : null}
+          {onMoveDown ? <Button title="Move down" variant="secondary" onPress={onMoveDown} /> : null}
+        </View>
+      </View>
       {entry.sets.map((set, index) => (
         <Text key={set.id} style={styles.setLine}>
           Set {index + 1}: {set.targetWeightKg ?? '—'} kg × {set.targetReps ?? '—'}
@@ -118,6 +126,28 @@ export function RoutineBuilder({ routineId }: Props) {
     startWorkout();
   }, [blockingWorkoutId, startWorkout]);
 
+  // Swaps the exercise at `index` with its neighbour in `direction` and
+  // persists the full live order in one transaction. Reads the live list
+  // fresh off `detail` each time rather than tracking local state, since
+  // `detail` is already the source of truth this screen renders from.
+  const moveExercise = useCallback(
+    (index: number, direction: -1 | 1) => {
+      if (!detail) return;
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= detail.exercises.length) return;
+
+      const ids = detail.exercises.map((entry) => entry.routineExercise.id);
+      const moved = ids[index];
+      if (moved === undefined) return;
+      ids.splice(index, 1);
+      ids.splice(targetIndex, 0, moved);
+
+      reorderRoutineExercises(db, routineId, ids, Date.now());
+      setVersion((v) => v + 1);
+    },
+    [detail, routineId],
+  );
+
   if (!detail) {
     return (
       <View style={styles.container}>
@@ -129,11 +159,13 @@ export function RoutineBuilder({ routineId }: Props) {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        {detail.exercises.map((entry) => (
+        {detail.exercises.map((entry, index) => (
           <ExerciseCard
             key={entry.routineExercise.id}
             entry={entry}
             onSetAdded={() => setVersion((v) => v + 1)}
+            onMoveUp={index > 0 ? () => moveExercise(index, -1) : undefined}
+            onMoveDown={index < detail.exercises.length - 1 ? () => moveExercise(index, 1) : undefined}
           />
         ))}
 
@@ -181,7 +213,14 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.sm,
   },
-  cardTitle: { ...theme.text.title, color: theme.colors.text },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  cardTitle: { ...theme.text.title, color: theme.colors.text, flexShrink: 1 },
+  reorderControls: { flexDirection: 'row', gap: theme.spacing.sm },
   setLine: { ...theme.text.body, color: theme.colors.textMuted },
   addSetContainer: { gap: theme.spacing.sm, marginTop: theme.spacing.sm },
   setInput: {
