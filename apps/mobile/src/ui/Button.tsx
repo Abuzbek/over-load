@@ -10,6 +10,8 @@ type Props = {
 export function Button({ title, onPress, variant = 'primary' }: Props) {
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,

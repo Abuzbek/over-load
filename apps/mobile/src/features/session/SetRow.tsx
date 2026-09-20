@@ -55,7 +55,13 @@ export function SetRow({ set, index, previous, onComplete, onUncomplete }: Props
       />
 
       <Pressable
+        accessibilityRole="button"
         accessibilityLabel={completed ? 'Mark set incomplete' : 'Complete set'}
+        accessibilityState={{ checked: completed }}
+        // The box is 34x34, under the 44pt iOS and 48dp Android minimums, and
+        // it is the control tapped most often in the app. hitSlop grows the
+        // touch target to 48x48 without changing the layout.
+        hitSlop={7}
         onPress={() =>
           completed
             ? onUncomplete()
