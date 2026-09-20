@@ -4,3 +4,8 @@ dist/
 *.log
 .DS_Store
 .claude/worktrees/
+
+# expo prebuild output — regenerate with `npx expo prebuild --clean`.
+# Remove these lines if you switch to the bare workflow and hand-edit native code.
+apps/mobile/ios/
+apps/mobile/android/
