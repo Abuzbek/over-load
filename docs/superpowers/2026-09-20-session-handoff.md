@@ -5,12 +5,23 @@ packages are `@overload/*`, bundle id `com.overload.app`, SQLite file `overload.
 The word `workouts` still appears throughout as domain vocabulary and is unrelated.
 **Remote:** https://github.com/Abuzbek/over-load.git
 **Date:** 2026-09-20
-**Branch:** merged to `main` (33 commits; feature branch deleted, worktree removed)
-**State:** 133 tests / 18 files passing · `pnpm typecheck` exit 0 · `npx expo export --platform ios` succeeds
+**Branch:** `main`, 40 commits. Feature branch merged and deleted, worktree removed.
+**Remote configured but NOT yet pushed** — CI has never run.
+**State:** 133 tests / 18 files passing · `pnpm typecheck` exit 0 · `pnpm bundle` succeeds ·
+**the app launches on an iOS simulator**
 
 This document exists so the session that produced this work can be discarded. It
 records what was built, what was decided and why, what is deliberately missing,
 and what to do next.
+
+## Read this first if you are picking the project up
+
+The app **runs**. Home screen, exercise library (743 seeded exercises, searchable),
+routine creation, start/finish a workout, and history all render on an iOS simulator.
+
+Getting there took four more defects after the branch merged, none of which a
+green test suite could see — see section 4. The single most useful thing you can
+do next is in section 6.
 
 ## Companion documents
 
@@ -152,35 +163,115 @@ Worth knowing, because they show where the reasoning was weak:
 
 ---
 
-## 4. Known defect patterns
+## 4. Getting it to launch — four defects found after the merge
+
+The branch merged with 133 tests green, typecheck clean and `expo export`
+succeeding. The app then booted to a red **"App entry not found"** screen with
+no error in any log. All four causes were in my own configuration, and none was
+reachable by any automated check in the repo.
+
+**1. Metro's `unstable_enablePackageExports` (my ruling R16) was the worst of them.**
+I had enabled it globally so Metro could resolve `@overload/schema/migrations`.
+It silently changed resolution across the entire dependency tree — Metro bundled
+**1205 modules instead of 1388**, picking different builds of several packages —
+and expo-router's entry chain stopped registering the `main` component.
+*Replaced with `packages/schema/migrations.js`*, a two-line bridge so the subpath
+resolves under both classic and exports-based resolution. **Do not re-enable that
+flag**; there is a comment in `apps/mobile/metro.config.js` saying so.
+
+**2. `expo-linking` and `expo-constants` were undeclared.** expo-router lists both
+as `peerDependencies`, and peers must be declared by the consumer. Under pnpm's
+strict linking they were simply absent, so the `ExpoLinking` native module was
+never compiled into the app. This was the literal cause: `Cannot find native
+module 'ExpoLinking'`. Fixed with `npx expo install expo-linking expo-constants`
+plus a `pod install`.
+
+**3. `query-string` was pinned to `^9`.** Also mine, from ruling R15. v9 is
+ESM-only; expo-router does `__importStar(require("query-string")).stringify`,
+which yields `undefined` under CJS. Pinned to `^7`, which has the shape it
+expects. Note expo-router 4.0.22 imports `query-string` **without declaring it** —
+that is an upstream packaging bug, which is why it has to be declared here at all.
+
+**4. `Button` was not a `forwardRef`.** `<Link asChild>` clones its child and
+passes a ref; a plain function component drops it. Worth knowing: a code review
+examined this exact pattern earlier and concluded it was correct. It was not.
+
+### What this should change about how you work on this repo
+
+Three of the four were packaging-level. **No amount of unit testing or type
+checking reaches that layer.** `pnpm bundle` catches some of it (it is in CI for
+that reason) but did not catch any of these — the bundle built fine every time.
+
+The debugging that worked was instrumenting the entry point to force the error
+into a log. Indirect probing — greping Podfile.lock, fetching bundle URLs — sent
+me down two wrong paths first, including one where I misread the pod name
+`EXNotifications` as missing because I searched for `ExpoNotifications`.
+
+---
+
+## 5. Known defect patterns
 
 Five separate queries in the plan omitted a tombstone filter on a joined level. Four
 cross-platform defects shipped a feature working on one OS and dead on the other.
 Both are listed in `CLAUDE.md` because they are the two mistakes most likely to recur.
 
-A third, subtler pattern: **three defects were invisible to a green test suite and a
-clean typecheck** — the app not bundling, a migration test that could not fail, and a
-backup that copied only the main SQLite file. Tests passing is not evidence that
-packaging, migrations, or filesystem behaviour are correct.
+A third, subtler pattern, and the one that has cost the most: **seven defects so far
+were invisible to a green test suite and a clean typecheck** — the app not bundling,
+a migration test that could not fail, a backup copying only the main SQLite file, and
+the four launch defects in section 4. Tests passing is not evidence that packaging,
+native linking, migrations, or filesystem behaviour are correct. Run the app.
 
 ---
 
-## 5. What to do next, in order
+## 6. What to do next, in order
 
-1. **Run the device verification checklist.** No screen has ever rendered. Three fixes
-   in the final wave (keyboard handling, rest-timer placement, post-finish navigation)
-   address defects expected to be visible within a minute of real use but never seen.
-   The riskiest single item: `PRAGMA foreign_keys = ON` is new, so first launch seeds
-   743 exercises under enforcement for the first time.
+### Verified on a device so far
 
-2. **Resolve the scope question** in section 2.
+Migrations run · 743 exercises seed and survive a relaunch · library renders and
+searches · routine creation via the cross-platform modal · start a workout ·
+finish a workout · history list with date and volume summary. Dark theme renders.
+`PRAGMA foreign_keys = ON` did **not** break first launch.
 
-3. **Add CI.** Ten lines running `pnpm test && pnpm typecheck`. Typecheck is currently
-   the only enforcement for the entire type-safety story, and it runs only when
-   someone remembers.
+### Not yet exercised at all
 
-4. **Then Plan 2**: charts, CSV import, superset/set-type UI, the failed-write banner —
-   plus whatever section 2 resolves into.
+**Logging an actual set** — the app's entire point, and nothing has touched it.
+Also: previous-performance column, rest timer, notifications, crash recovery and
+resume, the discard-second-workout guard, and **Android in its entirety**.
+
+### 1. Log one real set (highest value, ~5 minutes)
+
+Routines → add an exercise (does the card appear *immediately*? that is the
+`useFocusEffect` fix) → start → type weight and reps → tap the checkmark. Then
+watch for the three defects fixed blind and never seen running:
+keyboard covering the lower rows with no dismiss path; the rest timer rendering
+below the fold instead of pinned; a back button on Home into the routine builder
+after finishing.
+
+Then **force-quit from the app switcher and reopen** — the resume banner should
+appear with the set intact. That is the architectural promise the whole data
+layer exists for and it has never been tested.
+
+### 2. Push
+
+`git push -u origin main`. This triggers the first CI run ever. Two steps are
+unproven on Linux: `better-sqlite3` compiling, and Hermes bundling.
+
+### 3. Resolve the scope question in section 2
+
+Still the largest open item.
+
+### 4. Then Plan 2
+
+Charts, CSV import, superset/set-type UI, the failed-write banner — plus whatever
+section 2 resolves into.
+
+### Driving the simulator without hands
+
+Useful for a future session: routes are reachable by deep link
+(`xcrun simctl openurl booted "overload://routines"`), screenshots via
+`xcrun simctl io booted screenshot /tmp/x.png`, and JS errors only appear in
+Metro's own output — not the device syslog. Start Metro with its stdout
+redirected to a file if you need to read them programmatically.
 
 ### Deferred minors worth revisiting
 

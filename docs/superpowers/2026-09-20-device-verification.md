@@ -3,12 +3,21 @@
 **Branch:** `worktree-logger-foundation` (27+ commits, 253e916..HEAD)
 **Status:** 133 tests passing, `pnpm typecheck` clean, `npx expo export --platform ios` succeeds.
 
+## Status — updated 2026-09-20
+
+**Done (verified on an iOS simulator):** cold launch, migrations, 743-exercise
+seed, no re-seed on relaunch, library render + search, routine creation modal,
+start a workout, finish a workout, history list with date and volume.
+`PRAGMA foreign_keys = ON` did not break first launch.
+
+**Not started:** everything below involving logging a set, the rest timer,
+notifications, crash recovery, and all of Android.
+
 ## Why this file exists
 
-**No screen in this app has ever been rendered.** The build environment had no
-simulator, emulator, or device. Every UI-level claim in this branch is backed by
-exactly three things: TypeScript compilation, a successful Metro/Hermes bundle,
-and code review.
+Most of this app's UI was written without access to a simulator. Every UI-level
+claim not listed as done above is backed by exactly three things: TypeScript
+compilation, a successful Metro/Hermes bundle, and code review.
 
 The domain logic and the repository layer are well covered — 133 tests against
 real SQLite, running the real migrations, with recorded failing-before evidence
@@ -19,7 +28,7 @@ Work through this before trusting the app.
 
 ## Run first, in this order
 
-### 1. Cold launch, both platforms
+### 1. Cold launch, both platforms — ✅ iOS done, Android pending
 
 Migrations run, 743 exercises seed, the library screen lists and filters them.
 
@@ -29,7 +38,7 @@ foreign-key enforcement. First launch now seeds 743 exercises and builds
 routine/workout trees under it. A review scanned every insert path and found
 nothing that should throw, but this is the first time it runs for real.
 
-### 2. Second launch
+### 2. Second launch — ✅ iOS done
 
 No re-seed, no duplicate rows, startup not sluggish. (The seed JSON is ~1 MB and
 is parsed at module scope on every launch, not just the first — a known deferred
