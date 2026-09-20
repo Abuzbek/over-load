@@ -137,7 +137,19 @@ it would cut against the tombstone discipline everywhere else in the schema. Gat
 `setVolumeKg` makes the stored values inert, which achieves the same result without
 destroying anything.
 
-A one-time PR rebuild runs on next launch so existing installs self-heal.
+A PR rebuild runs at the end of every successful launch, so existing installs
+self-heal without a migration and any future drift corrects itself. It is idempotent
+by construction — `personal_records` is a derived cache with no source of truth of its
+own — so repeating it is safe rather than merely tolerable.
+
+It is deliberately ungated. A "has already run" marker needs durable state, and the
+natural home for it (`app_settings`) does not exist until later in this same plan;
+introducing a bespoke marker now and migrating it afterwards costs more than the scan.
+The work is bounded by completed sets for exercises that appear in `workout_exercises`
+— the same computation `finishWorkout` already performs per workout. If launch time
+becomes a problem for large histories, gating it behind an `app_settings` flag is the
+cheap fix, and it belongs with the other known launch-time costs (the ~1 MB seed JSON
+is parsed at module scope on every launch).
 
 ### Repository changes
 
