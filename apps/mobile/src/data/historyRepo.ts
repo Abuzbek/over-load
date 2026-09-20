@@ -1,5 +1,6 @@
 import { totalVolumeKg, type CompletedSet } from '@workouts/domain';
 import {
+  exercises,
   sets,
   workoutExercises,
   workouts,
@@ -29,12 +30,17 @@ export function listFinishedWorkouts(db: Db, limit = 50): WorkoutSummary[] {
       .select({ set: sets, exerciseId: workoutExercises.exerciseId })
       .from(sets)
       .innerJoin(workoutExercises, eq(workoutExercises.id, sets.workoutExerciseId))
+      // Joining exercises purely for its tombstone: getWorkoutDetail already
+      // drops sets whose exercise definition is deleted, so without this the
+      // list summary and the detail screen disagree about the same workout.
+      .innerJoin(exercises, eq(exercises.id, workoutExercises.exerciseId))
       .where(
         and(
           eq(workoutExercises.workoutId, workout.id),
           isNotNull(sets.completedAt),
           isNull(sets.deletedAt),
           isNull(workoutExercises.deletedAt),
+          isNull(exercises.deletedAt),
         ),
       )
       .all()

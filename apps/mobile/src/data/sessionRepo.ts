@@ -113,6 +113,21 @@ export function getActiveWorkoutId(db: Db): string | undefined {
     .get()?.id;
 }
 
+/**
+ * Tombstones an unfinished workout the lifter chose to throw away. Without
+ * this, starting a second workout strands the first: it has no endedAt so
+ * history never lists it, and getActiveWorkoutId only ever returns the newest.
+ * The workout row alone is tombstoned — every read of its exercises and sets
+ * joins through it, so they go with it.
+ */
+export function discardWorkout(db: Db, workoutId: string, at: number): void {
+  db
+    .update(workouts)
+    .set({ deletedAt: at, updatedAt: at })
+    .where(eq(workouts.id, workoutId))
+    .run();
+}
+
 export function getWorkoutDetail(db: Db, workoutId: string): WorkoutDetail | undefined {
   const workout = db
     .select()
@@ -227,10 +242,15 @@ export function addSet(db: Db, workoutExerciseId: string, at: number): WorkoutSe
  * fields are left as they are so a partial edit never blanks a logged value.
  */
 export function completeSet(db: Db, setId: string, values: SetValues, at: number): void {
-  const patch: Record<string, unknown> = { completedAt: at, updatedAt: at };
-  for (const key of ['weightKg', 'reps', 'durationSeconds', 'rpe', 'rir'] as const) {
-    if (values[key] !== undefined) patch[key] = values[key];
-  }
+  // Typed against the schema, so renaming a column fails to compile here rather
+  // than silently writing nothing. Each field is assigned only when present, so
+  // an omitted key leaves the stored value alone while an explicit null clears it.
+  const patch: Partial<typeof sets.$inferInsert> = { completedAt: at, updatedAt: at };
+  if (values.weightKg !== undefined) patch.weightKg = values.weightKg;
+  if (values.reps !== undefined) patch.reps = values.reps;
+  if (values.durationSeconds !== undefined) patch.durationSeconds = values.durationSeconds;
+  if (values.rpe !== undefined) patch.rpe = values.rpe;
+  if (values.rir !== undefined) patch.rir = values.rir;
   db.update(sets).set(patch).where(eq(sets.id, setId)).run();
 }
 

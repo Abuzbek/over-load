@@ -1,5 +1,6 @@
-import { exercises, newId, type Exercise } from '@workouts/schema';
+import { exercises, newId, now, type Exercise } from '@workouts/schema';
 import { createTestDb } from '@workouts/schema/testing';
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { listFinishedWorkouts } from './historyRepo';
 import { addExerciseToWorkout, addSet, completeSet, finishWorkout, startEmptyWorkout } from './sessionRepo';
@@ -60,10 +61,25 @@ describe('listFinishedWorkouts', () => {
     expect(summary?.volumeKg).toBe(800);
   });
 
-  it('respects the limit', () => {
+  it('respects the limit, keeping the newest workouts rather than an arbitrary two', () => {
     logWorkout('A', AT - 200_000, [[100, 5]]);
     logWorkout('B', AT - 100_000, [[100, 5]]);
     logWorkout('C', AT, [[100, 5]]);
-    expect(listFinishedWorkouts(db, 2)).toHaveLength(2);
+
+    // Asserting the names, not just the length: a limit applied before the
+    // ordering would still return two rows, just the wrong two.
+    expect(listFinishedWorkouts(db, 2).map((s) => s.workout.name)).toEqual(['C', 'B']);
+  });
+
+  it('ignores sets whose exercise definition has been tombstoned, as the detail read does', () => {
+    const workoutId = logWorkout('Push', AT, [[100, 5], [100, 3]]);
+    expect(listFinishedWorkouts(db)[0]).toMatchObject({ setCount: 2, volumeKg: 800 });
+
+    db.update(exercises).set({ deletedAt: now() }).where(eq(exercises.id, bench.id)).run();
+
+    const [summary] = listFinishedWorkouts(db);
+    expect(summary?.workout.id).toBe(workoutId);
+    expect(summary?.setCount).toBe(0);
+    expect(summary?.volumeKg).toBe(0);
   });
 });

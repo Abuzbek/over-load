@@ -72,4 +72,20 @@ describe('computePersonalRecords', () => {
     ]);
     expect(records).toEqual([]);
   });
+
+  it('records a max_reps PR for a bodyweight exercise, which carries no weight', () => {
+    const records = computePersonalRecords([
+      set({ id: 'pullup-a', exerciseId: 'pullup', weightKg: null, reps: 8 }),
+      set({ id: 'pullup-b', exerciseId: 'pullup', weightKg: null, reps: 12 }),
+    ]);
+
+    // max_reps is the only record that means anything without a load, so it
+    // must exist; the weight-derived metrics stay absent.
+    expect(records.find((r) => r.type === 'max_reps')).toMatchObject({
+      value: 12,
+      setId: 'pullup-b',
+      exerciseId: 'pullup',
+    });
+    expect(records.map((r) => r.type)).toEqual(['max_reps']);
+  });
 });

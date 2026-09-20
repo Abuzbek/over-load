@@ -16,7 +16,9 @@ type Metric = { type: PersonalRecordType; of: (set: CompletedSet) => number };
 
 const METRICS: Metric[] = [
   { type: 'max_weight', of: (s) => s.weightKg ?? 0 },
-  { type: 'max_reps', of: (s) => (s.weightKg === null ? 0 : (s.reps ?? 0)) },
+  // Reps stand on their own: a bodyweight set carries no weight, and max reps
+  // is the only record that means anything for it.
+  { type: 'max_reps', of: (s) => s.reps ?? 0 },
   { type: 'max_volume', of: setVolumeKg },
   { type: 'est_1rm', of: (s) => estimateOneRepMax(s.weightKg ?? 0, s.reps ?? 0) },
 ];

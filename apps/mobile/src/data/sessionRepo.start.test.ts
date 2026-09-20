@@ -1,9 +1,10 @@
-import { exercises, newId, now, routineSets, type Exercise } from '@workouts/schema';
+import { exercises, newId, now, routineSets, workouts, type Exercise } from '@workouts/schema';
 import { createTestDb } from '@workouts/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { addExerciseToRoutine, addRoutineSet, createRoutine } from './routineRepo';
 import {
+  discardWorkout,
   getActiveWorkoutId,
   getWorkoutDetail,
   startEmptyWorkout,
@@ -108,5 +109,35 @@ describe('getActiveWorkoutId', () => {
     startEmptyWorkout(db, 'Older', AT);
     const newer = startEmptyWorkout(db, 'Newer', AT + 1000);
     expect(getActiveWorkoutId(db)).toBe(newer);
+  });
+});
+
+describe('discardWorkout', () => {
+  it('tombstones the workout so it is no longer the active one', () => {
+    const workoutId = startEmptyWorkout(db, 'Abandoned', AT);
+    expect(getActiveWorkoutId(db)).toBe(workoutId);
+
+    discardWorkout(db, workoutId, AT + 5000);
+
+    expect(getActiveWorkoutId(db)).toBeUndefined();
+    expect(getWorkoutDetail(db, workoutId)).toBeUndefined();
+  });
+
+  it('records the tombstone and the update time rather than deleting the row', () => {
+    const workoutId = startEmptyWorkout(db, 'Abandoned', AT);
+
+    discardWorkout(db, workoutId, AT + 5000);
+
+    const row = db.select().from(workouts).where(eq(workouts.id, workoutId)).get();
+    expect(row).toMatchObject({ deletedAt: AT + 5000, updatedAt: AT + 5000, endedAt: null });
+  });
+
+  it('leaves an older unfinished workout resumable once the newer one is discarded', () => {
+    const older = startEmptyWorkout(db, 'Older', AT);
+    const newer = startEmptyWorkout(db, 'Newer', AT + 1000);
+
+    discardWorkout(db, newer, AT + 2000);
+
+    expect(getActiveWorkoutId(db)).toBe(older);
   });
 });
