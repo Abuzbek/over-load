@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { initializeDatabase } from '../src/db/bootstrap';
+import { theme } from '../src/ui/theme';
 
 type BootstrapError = Error & { restored?: boolean };
 
@@ -31,16 +32,32 @@ export default function RootLayout() {
   if (!state.ready) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={theme.colors.text} />
       </View>
     );
   }
 
-  return <Stack />;
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: theme.colors.surface },
+        headerTintColor: theme.colors.text,
+        headerTitleStyle: { color: theme.colors.text },
+        contentStyle: { backgroundColor: theme.colors.background },
+      }}
+    />
+  );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
-  errorTitle: { fontSize: 18, fontWeight: '600' },
-  errorBody: { textAlign: 'center', opacity: 0.7 },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    gap: 8,
+    backgroundColor: theme.colors.background,
+  },
+  errorTitle: { fontSize: 18, fontWeight: '600', color: theme.colors.text },
+  errorBody: { textAlign: 'center', opacity: 0.7, color: theme.colors.textMuted },
 });
