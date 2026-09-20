@@ -15,7 +15,8 @@
     "typecheck": "pnpm -r exec tsc --noEmit",
     "bundle": "pnpm --filter @overload/mobile exec expo export --platform ios",
     "seed:build": "pnpm --filter @overload/seed-exercises build",
-    "db:generate": "pnpm --filter @overload/schema generate"
+    "db:generate": "pnpm --filter @overload/schema generate",
+    "ci": "pnpm install --frozen-lockfile && pnpm typecheck && pnpm test && pnpm bundle"
   },
   "devDependencies": {
     "react-native-web": "^0.21.2",

@@ -17,6 +17,7 @@ pnpm android        # straight to an Android emulator/device
 
 pnpm test           # full suite (133 tests, 18 files)
 pnpm typecheck      # type gate; CI runs this too (.github/workflows/ci.yml)
+pnpm run ci         # everything CI runs, locally: install + typecheck + test + bundle
 pnpm bundle         # expo export — catches packaging breaks tests cannot see
 
 pnpm db:generate    # regenerate migrations after a schema change
