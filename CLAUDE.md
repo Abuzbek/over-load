@@ -76,9 +76,16 @@ tools/seed-exercises/    curated.json (743 exercises), committed
 
 ## Verification reality
 
-**No screen in this app has ever been rendered.** There was no simulator during the
-build. The domain and repository layers are well covered; everything UI-level is
-verified only by typecheck, a successful bundle, and code review.
+The app **launches on an iOS simulator**: migrations run, 743 exercises seed, the
+home screen and exercise library render and filter. Everything past that — the
+full logging loop, crash recovery, rest timer, notifications, Android — is still
+unverified on a device.
 
-Before trusting any screen, work through
-`docs/superpowers/2026-09-20-device-verification.md`.
+Work through `docs/superpowers/2026-09-20-device-verification.md` before trusting
+the rest.
+
+**A green suite proves less here than it looks.** Four separate defects shipped
+with 133 tests passing, typecheck clean and `expo export` succeeding, and the app
+still would not launch: a Metro resolver flag silently mis-resolving 183 modules,
+two undeclared expo-router peer dependencies, a major-version-wrong `query-string`,
+and a `Button` that dropped the ref `<Link asChild>` passes it. Run the app.
