@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { exercises } from './exercises';
 import { newId } from './sync';
@@ -40,4 +41,19 @@ describe('migrations', () => {
   // Add one test per future migration: createDbAtMigration(<index of the
   // migration immediately before the new one>), insert a row exercising the
   // schema at that point, applyFullMigrations, then assert it survived.
+
+  it('preserves exercise data across the app_settings migration', () => {
+    // 1 == through 0001_sturdy_demogoblin, i.e. everything before app_settings.
+    const { db, close } = createDbAtMigration(1);
+    const id = newId();
+    db.insert(exercises).values({
+      id, name: 'Bench', trackingType: 'weight_reps',
+      primaryMuscle: 'chest', secondaryMuscles: [], equipment: 'barbell',
+    }).run();
+
+    applyFullMigrations(db);
+
+    expect(db.select().from(exercises).where(eq(exercises.id, id)).get()).toBeDefined();
+    close();
+  });
 });

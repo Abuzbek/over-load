@@ -1,4 +1,5 @@
 export * from './sync';
+export * from './appSettings';
 export * from './exercises';
 export * from './routines';
 export * from './workouts';
