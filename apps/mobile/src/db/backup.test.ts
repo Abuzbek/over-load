@@ -12,7 +12,7 @@ vi.mock('expo-file-system', () => ({
 }));
 vi.mock('./client', () => ({
   DB_NAME: 'workouts.db',
-  expoDb: { execSync: vi.fn() },
+  expoDb: { execSync: vi.fn(), closeSync: vi.fn() },
 }));
 
 const FileSystem = await import('expo-file-system');
@@ -73,6 +73,18 @@ describe('backupDatabase', () => {
     expect(FileSystem.copyAsync).toHaveBeenCalledTimes(1); // main file only
   });
 
+  it('keeps the connection open — bootstrap migrates on it immediately afterwards', async () => {
+    setExisting(DB_PATH);
+
+    await backupDatabase();
+
+    // The backup's destination is the .backup path, which nothing has open, so
+    // there is no handle to protect here. initializeDatabase runs migrate() on
+    // this very connection the moment backupDatabase resolves; closing it would
+    // fail every launch.
+    expect(expoDb.closeSync).not.toHaveBeenCalled();
+  });
+
   it('backs up safely even if the checkpoint pragma throws', async () => {
     setExisting(DB_PATH);
     vi.mocked(expoDb.execSync).mockImplementation(() => {
@@ -105,6 +117,22 @@ describe('restoreDatabase', () => {
       from: `${BACKUP_PATH}-shm`,
       to: `${DB_PATH}-shm`,
     });
+  });
+
+  it('closes the database connection before overwriting the file underneath it', async () => {
+    setExisting(BACKUP_PATH, `${BACKUP_PATH}-wal`);
+
+    await restoreDatabase();
+
+    expect(expoDb.closeSync).toHaveBeenCalledTimes(1);
+    expect(callOrder(expoDb.closeSync)).toBeLessThan(callOrder(FileSystem.copyAsync));
+  });
+
+  it('does not close the connection when there is no backup to restore', async () => {
+    setExisting();
+
+    await expect(restoreDatabase()).resolves.toBe(false);
+    expect(expoDb.closeSync).not.toHaveBeenCalled();
   });
 
   it('deletes a stale db-side sidecar when the backup has none', async () => {

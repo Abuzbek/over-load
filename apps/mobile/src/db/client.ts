@@ -8,4 +8,9 @@ export const DB_NAME = 'workouts.db';
 /** enableChangeListener powers useLiveQuery, so screens re-render on write. */
 export const expoDb = openDatabaseSync(DB_NAME, { enableChangeListener: true });
 
+// SQLite defaults foreign key enforcement to OFF, per connection. The test
+// harness (memoryDb.ts, partialMigrate.ts) turns it on, so without this the
+// suite is systematically stricter than the device.
+expoDb.execSync('PRAGMA foreign_keys = ON;');
+
 export const db: Db = drizzle(expoDb, { schema });

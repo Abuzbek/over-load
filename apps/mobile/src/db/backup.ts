@@ -39,11 +39,15 @@ function checkpointWal(): void {
 
 /**
  * Copies the database file, and its -wal/-shm sidecars when present, before
- * migrations run. `client.ts` opens the database at import time, so this
- * always runs against a live, already-open connection — never "before the
- * app's first write." A WAL checkpoint is forced first so the copied main
- * file reflects everything committed so far, not just what has already been
+ * migrations run. A WAL checkpoint is forced first so the copied main file
+ * reflects everything committed so far, not just what has already been
  * checkpointed.
+ *
+ * The connection stays open here, deliberately. Only the `.backup` paths are
+ * written, and nothing holds those open; the live `workouts.db` is read, not
+ * replaced. `initializeDatabase` runs `migrate()` on this same connection the
+ * instant this resolves, so closing it would break every launch. Restoring is
+ * the opposite case — see `restoreDatabase`.
  */
 export async function backupDatabase(): Promise<void> {
   if (!(await exists(DB_PATH))) return; // first launch — nothing to protect yet
@@ -56,11 +60,24 @@ export async function backupDatabase(): Promise<void> {
   }
 }
 
-/** Restores the main file and its sidecars from backup. Returns whether a
+/**
+ * Restores the main file and its sidecars from backup. Returns whether a
  * backup actually existed (and was restored), so a caller can distinguish
- * "we recovered your data" from "there was nothing to recover." */
+ * "we recovered your data" from "there was nothing to recover."
+ *
+ * The open connection is closed first. This copy overwrites the very file the
+ * connection is reading, and the native behaviour differs by platform: iOS
+ * unlinks the destination before copying, leaving the handle attached to a
+ * dead inode, while Android truncates and overwrites in place, leaving the
+ * connection's page cache stale against different content. Either way the
+ * handle is worthless afterwards, so it is closed rather than left to lie.
+ * The caller surfaces a "please restart the app" message, so a closed
+ * connection is the expected end state.
+ */
 export async function restoreDatabase(): Promise<boolean> {
   if (!(await exists(BACKUP_PATH))) return false;
+
+  expoDb.closeSync();
 
   await FileSystem.copyAsync({ from: BACKUP_PATH, to: DB_PATH });
   for (const suffix of SIDECAR_SUFFIXES) {
