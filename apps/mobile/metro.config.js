@@ -12,10 +12,12 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 config.resolver.sourceExts.push('sql');
-// @overload/schema exposes ./migrations and ./testing only via its package.json
-// "exports" map. Metro's resolver ignores "exports" maps by default, so without
-// this flag it cannot resolve those subpaths (e.g. `@overload/schema/migrations`
-// in src/db/bootstrap.ts).
-config.resolver.unstable_enablePackageExports = true;
 
+// NOTE: do NOT set `config.resolver.unstable_enablePackageExports = true` here.
+// It was added once to resolve `@overload/schema/migrations` and it silently
+// changed resolution across the entire dependency tree — Metro bundled 1205
+// modules instead of 1388, picking different builds of several packages, and
+// expo-router's entry chain stopped registering the "main" component. The app
+// booted to a red "App entry not found" screen with no error in any log.
+// The migrations subpath is handled by packages/schema/migrations.js instead.
 module.exports = config;

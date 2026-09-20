@@ -23,7 +23,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Workouts' }} />
+      <Stack.Screen options={{ title: 'Overload' }} />
 
       {activeWorkoutId ? (
         <View style={styles.resume}>
