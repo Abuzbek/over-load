@@ -1,4 +1,4 @@
-import type { CompletedSet, TrackingType } from '@overload/domain';
+import { formatDuration, formatWeight, toStorageKg, type CompletedSet, type TrackingType, type Unit } from '@overload/domain';
 import type { WorkoutSet } from '@overload/schema';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -11,16 +11,32 @@ type Props = {
   index: number;
   trackingType: TrackingType;
   previous: CompletedSet[];
+  unit: Unit;
   onComplete: (values: SetValues) => void;
   onUncomplete: () => void;
 };
 
-/** "80 kg × 8" for the matching set last time, or an em dash when there was none. */
-export function formatPrevious(sets: CompletedSet[], index: number): string {
+/**
+ * The matching set from last time, formatted for its tracking type:
+ * "80 kg × 8" for weight_reps, "12 reps" for reps, "2:05" for duration,
+ * "5000 m · 30:00" for distance_duration, or an em dash when there was none.
+ */
+export function formatPrevious(sets: CompletedSet[], index: number, unit: Unit): string {
   const match = sets[index];
   if (!match) return '—';
-  if (match.weightKg === null) return `${match.reps ?? '—'} reps`;
-  return `${match.weightKg} kg × ${match.reps ?? '—'}`;
+
+  switch (match.trackingType) {
+    case 'weight_reps':
+      return `${formatWeight(match.weightKg, unit)} × ${match.reps ?? '—'}`;
+    case 'reps':
+      return `${match.reps ?? '—'} reps`;
+    case 'duration':
+      return match.durationSeconds === null ? '—' : formatDuration(match.durationSeconds);
+    case 'distance_duration': {
+      const duration = match.durationSeconds === null ? '—' : formatDuration(match.durationSeconds);
+      return `${match.distanceM ?? '—'} m · ${duration}`;
+    }
+  }
 }
 
 function toNumber(value: string): number | null {
@@ -28,12 +44,20 @@ function toNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function SetRow({ set, index, trackingType, previous, onComplete, onUncomplete }: Props) {
+/** The weight text input holds a plain number in the display unit, never "kg"/"lb" suffixed. */
+function weightInputValue(weightKg: number | null, unit: Unit): string {
+  if (weightKg === null) return '';
+  const displayKg = formatWeight(weightKg, unit);
+  // formatWeight renders "123.4 kg"/"lb"; strip the unit suffix back off for the input.
+  return displayKg.slice(0, displayKg.lastIndexOf(' '));
+}
+
+export function SetRow({ set, index, trackingType, previous, unit, onComplete, onUncomplete }: Props) {
   const inputs = inputsFor(trackingType);
   const completed = set.completedAt !== null;
 
   const [values, setValues] = useState<Record<SetField, string>>(() => ({
-    weightKg: set.weightKg?.toString() ?? '',
+    weightKg: weightInputValue(set.weightKg, unit),
     reps: set.reps?.toString() ?? '',
     durationSeconds: formatDurationInput(set.durationSeconds),
     distanceM: set.distanceM?.toString() ?? '',
@@ -41,14 +65,20 @@ export function SetRow({ set, index, trackingType, previous, onComplete, onUncom
 
   // Only the fields this tracking type renders are sent. An omitted key leaves
   // the stored value alone, so a plank never writes a null over a weight and a
-  // lift never writes a null over a duration.
+  // lift never writes a null over a duration. The weight field is entered in
+  // the display unit and converted to kilograms here — the one place a typed
+  // weight becomes storage.
   function collect(): SetValues {
     const patch: SetValues = {};
     for (const input of inputs) {
-      patch[input.field] =
-        input.field === 'durationSeconds'
-          ? parseDuration(values.durationSeconds)
-          : toNumber(values[input.field]);
+      if (input.field === 'durationSeconds') {
+        patch.durationSeconds = parseDuration(values.durationSeconds);
+      } else if (input.field === 'weightKg') {
+        const entered = toNumber(values.weightKg);
+        patch.weightKg = entered === null ? null : toStorageKg(entered, unit);
+      } else {
+        patch[input.field] = toNumber(values[input.field]);
+      }
     }
     return patch;
   }
@@ -56,7 +86,7 @@ export function SetRow({ set, index, trackingType, previous, onComplete, onUncom
   return (
     <View style={[styles.row, completed && styles.rowCompleted]}>
       <Text style={styles.index}>{index + 1}</Text>
-      <Text style={styles.previous}>{formatPrevious(previous, index)}</Text>
+      <Text style={styles.previous}>{formatPrevious(previous, index, unit)}</Text>
 
       {inputs.map((input) => (
         <TextInput
@@ -65,7 +95,7 @@ export function SetRow({ set, index, trackingType, previous, onComplete, onUncom
           onChangeText={(text) => setValues((v) => ({ ...v, [input.field]: text }))}
           editable={!completed}
           keyboardType={input.keyboard}
-          placeholder={input.placeholder}
+          placeholder={input.field === 'weightKg' ? unit : input.placeholder}
           placeholderTextColor={theme.colors.textMuted}
           style={[styles.input, completed && styles.inputLocked]}
         />

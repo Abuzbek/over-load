@@ -1,8 +1,9 @@
 import { DEFAULT_REST_SECONDS, type CompletedSet } from '@overload/domain';
 import { useKeepAwake } from 'expo-keep-awake';
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useFocusEffect, router } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { getWeightUnit } from '../../data/settingsRepo';
 import { finishWorkout, getWorkoutDetail, lastPerformance } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
@@ -19,9 +20,18 @@ export function ActiveSession({ workoutId }: Props) {
 
   const [rest, setRest] = useState<{ startedAt: number; seconds: number } | null>(null);
 
-  // Bumping this re-renders, which re-reads the workout from SQLite.
+  // Bumping this re-renders, which re-reads the workout from SQLite and the
+  // weight-unit preference — the latter matters when Settings is reachable
+  // from this stack and the user navigates back here.
   const [, setVersion] = useState(0);
   const detail = getWorkoutDetail(db, workoutId);
+  const unit = getWeightUnit(db);
+
+  useFocusEffect(
+    useCallback(() => {
+      setVersion((v) => v + 1);
+    }, []),
+  );
 
   // Previous performance is fixed for the session — query once per exercise.
   const previousByExercise = useMemo(() => {
@@ -63,6 +73,7 @@ export function ActiveSession({ workoutId }: Props) {
             key={entry.workoutExercise.id}
             entry={entry}
             previous={previousByExercise.get(entry.exercise.id) ?? []}
+            unit={unit}
             onChanged={() => setVersion((v) => v + 1)}
             onSetCompleted={(restSeconds) => {
               const seconds = restSeconds ?? DEFAULT_REST_SECONDS;

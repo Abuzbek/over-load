@@ -41,6 +41,9 @@ export default function HomeScreen() {
       <Link href="/exercises" asChild>
         <Button title="Browse exercises" onPress={() => {}} />
       </Link>
+      <Link href="/settings" asChild>
+        <Button title="Settings" variant="secondary" onPress={() => {}} />
+      </Link>
     </View>
   );
 }

@@ -1,8 +1,10 @@
+import { formatWeight, toStorageKg, type Unit } from '@overload/domain';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { RoutineDetailExercise } from '../../data/routineRepo';
 import { addRoutineSet, getRoutineDetail, reorderRoutineExercises } from '../../data/routineRepo';
+import { getWeightUnit } from '../../data/settingsRepo';
 import { discardWorkout, getActiveWorkoutId, startWorkoutFromRoutine } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
@@ -17,12 +19,13 @@ function toNumber(value: string): number | null {
 
 type ExerciseCardProps = {
   entry: RoutineDetailExercise;
+  unit: Unit;
   onSetAdded: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
 };
 
-function ExerciseCard({ entry, onSetAdded, onMoveUp, onMoveDown }: ExerciseCardProps) {
+function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: ExerciseCardProps) {
   const [newSetWeight, setNewSetWeight] = useState('');
   const [newSetReps, setNewSetReps] = useState('');
 
@@ -37,14 +40,14 @@ function ExerciseCard({ entry, onSetAdded, onMoveUp, onMoveDown }: ExerciseCardP
       </View>
       {entry.sets.map((set, index) => (
         <Text key={set.id} style={styles.setLine}>
-          Set {index + 1}: {set.targetWeightKg ?? '—'} kg × {set.targetReps ?? '—'}
+          Set {index + 1}: {formatWeight(set.targetWeightKg, unit)} × {set.targetReps ?? '—'}
         </Text>
       ))}
       <View style={styles.addSetContainer}>
         <TextInput
           value={newSetWeight}
           onChangeText={setNewSetWeight}
-          placeholder="Weight (kg)"
+          placeholder={`Weight (${unit})`}
           keyboardType="decimal-pad"
           placeholderTextColor={theme.colors.textMuted}
           style={styles.setInput}
@@ -65,7 +68,7 @@ function ExerciseCard({ entry, onSetAdded, onMoveUp, onMoveDown }: ExerciseCardP
             const repsValue = newSetReps ? toNumber(newSetReps) : 8;
             addRoutineSet(db, entry.routineExercise.id, {
               targetReps: repsValue ?? 8,
-              targetWeightKg: weightValue ?? undefined,
+              targetWeightKg: weightValue != null ? toStorageKg(weightValue, unit) : undefined,
             });
             setNewSetWeight('');
             setNewSetReps('');
@@ -85,6 +88,7 @@ export function RoutineBuilder({ routineId }: Props) {
   // leaving this screen mounted underneath rather than remounting it.
   const [, setVersion] = useState(0);
   const detail = getRoutineDetail(db, routineId);
+  const unit = getWeightUnit(db);
 
   // The unfinished workout that blocks starting a new one. getActiveWorkoutId
   // only ever returns the newest unfinished workout, so silently starting a
@@ -163,6 +167,7 @@ export function RoutineBuilder({ routineId }: Props) {
           <ExerciseCard
             key={entry.routineExercise.id}
             entry={entry}
+            unit={unit}
             onSetAdded={() => setVersion((v) => v + 1)}
             onMoveUp={index > 0 ? () => moveExercise(index, -1) : undefined}
             onMoveDown={index < detail.exercises.length - 1 ? () => moveExercise(index, 1) : undefined}
