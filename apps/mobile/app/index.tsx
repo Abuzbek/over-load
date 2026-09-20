@@ -1,7 +1,7 @@
 import { Link, router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { getActiveWorkoutId } from '../src/data/sessionRepo';
+import { Modal, StyleSheet, Text, View } from 'react-native';
+import { discardWorkout, getActiveWorkoutId, startEmptyWorkout } from '../src/data/sessionRepo';
 import { db } from '../src/db/client';
 import { Button } from '../src/ui/Button';
 import { theme } from '../src/ui/theme';
@@ -15,11 +15,44 @@ export default function HomeScreen() {
   const [, setVersion] = useState(0);
   const activeWorkoutId = getActiveWorkoutId(db);
 
+  // The unfinished workout that blocks starting a new empty one — same
+  // stranding hazard RoutineBuilder guards against: getActiveWorkoutId only
+  // ever returns the newest unfinished workout, so starting a second one
+  // silently strands the first. Mirrors RoutineBuilder's resume/discard/cancel
+  // modal rather than Alert.alert, since Alert's button semantics are iOS-shaped.
+  const [blockingWorkoutId, setBlockingWorkoutId] = useState<string | null>(null);
+
   useFocusEffect(
     useCallback(() => {
       setVersion((v) => v + 1);
     }, []),
   );
+
+  const startEmpty = useCallback(() => {
+    setBlockingWorkoutId(null);
+    const workoutId = startEmptyWorkout(db, 'Empty workout', Date.now());
+    router.push(`/session/${workoutId}`);
+  }, []);
+
+  const onStartEmptyPressed = useCallback(() => {
+    const active = getActiveWorkoutId(db);
+    if (active) {
+      setBlockingWorkoutId(active);
+      return;
+    }
+    startEmpty();
+  }, [startEmpty]);
+
+  const onResume = useCallback(() => {
+    const active = blockingWorkoutId;
+    setBlockingWorkoutId(null);
+    if (active) router.push(`/session/${active}`);
+  }, [blockingWorkoutId]);
+
+  const onDiscardAndStart = useCallback(() => {
+    if (blockingWorkoutId) discardWorkout(db, blockingWorkoutId, Date.now());
+    startEmpty();
+  }, [blockingWorkoutId, startEmpty]);
 
   return (
     <View style={styles.container}>
@@ -35,6 +68,7 @@ export default function HomeScreen() {
       <Link href="/routines" asChild>
         <Button title="Routines" onPress={() => {}} />
       </Link>
+      <Button title="Start empty workout" variant="secondary" onPress={onStartEmptyPressed} />
       <Link href="/history" asChild>
         <Button title="History" onPress={() => {}} />
       </Link>
@@ -47,6 +81,26 @@ export default function HomeScreen() {
       <Link href="/settings" asChild>
         <Button title="Settings" variant="secondary" onPress={() => {}} />
       </Link>
+
+      <Modal
+        visible={blockingWorkoutId !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBlockingWorkoutId(null)}
+      >
+        <View style={styles.backdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>A workout is already in progress</Text>
+            <Text style={styles.modalBody}>
+              Resume it, or discard it and start an empty workout instead. Discarding keeps
+              nothing from the unfinished workout.
+            </Text>
+            <Button title="Resume it" onPress={onResume} />
+            <Button title="Discard it and start" variant="secondary" onPress={onDiscardAndStart} />
+            <Button title="Cancel" variant="secondary" onPress={() => setBlockingWorkoutId(null)} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -60,4 +114,18 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
   },
   resumeText: { ...theme.text.body, color: theme.colors.text },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    padding: theme.spacing.xl,
+  },
+  modalCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
+  },
+  modalTitle: { ...theme.text.title, color: theme.colors.text },
+  modalBody: { ...theme.text.body, color: theme.colors.textMuted },
 });

@@ -1,8 +1,19 @@
-import type { Exercise } from '@overload/schema';
+import { TRACKING_TYPES, type Exercise, type TrackingType } from '@overload/schema';
 import { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { listExercises } from '../../data/exerciseRepo';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { createCustomExercise, listExercises as listExercisesRepo } from '../../data/exerciseRepo';
 import { db } from '../../db/client';
+import { Button } from '../../ui/Button';
 import { ListRow } from '../../ui/ListRow';
 import { SearchField } from '../../ui/SearchField';
 import { theme } from '../../ui/theme';
@@ -12,15 +23,35 @@ type Props = {
   onSelect?: (exercise: Exercise) => void;
 };
 
+const TRACKING_TYPE_LABELS: Record<TrackingType, string> = {
+  weight_reps: 'Weight + reps',
+  reps: 'Reps only',
+  duration: 'Duration',
+  distance_duration: 'Distance + duration',
+};
+
 export function ExerciseList({ onSelect }: Props) {
   const [search, setSearch] = useState('');
+  // Bumping this forces the list below to re-query after a custom exercise
+  // is created, since listExercises is read fresh on every render.
+  const [version, setVersion] = useState(0);
+  const [formVisible, setFormVisible] = useState(false);
 
-  // The library is static during a session, so re-query only as the search changes.
-  const exercises = useMemo(() => listExercises(db, { search: search.trim() || undefined }), [search]);
+  // The library is static during a session, so re-query only as the search
+  // changes. `version` is bumped after a custom exercise is created and is
+  // otherwise unused — it forces this memo to re-run against the same search.
+  const exercises = useMemo(
+    () => listExercisesRepo(db, { search: search.trim() || undefined }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [search, version],
+  );
 
   return (
     <View style={styles.container}>
       <SearchField value={search} onChangeText={setSearch} placeholder="Search exercises" />
+      <View style={styles.newExerciseContainer}>
+        <Button title="New exercise" variant="secondary" onPress={() => setFormVisible(true)} />
+      </View>
       <FlatList
         data={exercises}
         keyExtractor={(item) => item.id}
@@ -34,11 +65,161 @@ export function ExerciseList({ onSelect }: Props) {
           />
         )}
       />
+
+      <NewExerciseModal
+        visible={formVisible}
+        onClose={() => setFormVisible(false)}
+        onCreated={() => {
+          setFormVisible(false);
+          setVersion((v) => v + 1);
+        }}
+      />
     </View>
+  );
+}
+
+type NewExerciseModalProps = {
+  visible: boolean;
+  onClose: () => void;
+  onCreated: () => void;
+};
+
+function NewExerciseModal({ visible, onClose, onCreated }: NewExerciseModalProps) {
+  const [name, setName] = useState('');
+  const [trackingType, setTrackingType] = useState<TrackingType | null>(null);
+  const [primaryMuscle, setPrimaryMuscle] = useState('');
+  const [equipment, setEquipment] = useState('');
+
+  const canSave = name.trim().length > 0 && trackingType !== null && primaryMuscle.trim().length > 0 && equipment.trim().length > 0;
+
+  const reset = () => {
+    setName('');
+    setTrackingType(null);
+    setPrimaryMuscle('');
+    setEquipment('');
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => {
+        reset();
+        onClose();
+      }}
+    >
+      <KeyboardAvoidingView
+        style={styles.backdrop}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>New exercise</Text>
+
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Name"
+            placeholderTextColor={theme.colors.textMuted}
+            style={styles.input}
+          />
+
+          <Text style={styles.fieldLabel}>Tracking type</Text>
+          <View style={styles.trackingTypeRow}>
+            {TRACKING_TYPES.map((type) => (
+              <Pressable
+                key={type}
+                accessibilityRole="button"
+                accessibilityLabel={TRACKING_TYPE_LABELS[type]}
+                onPress={() => setTrackingType(type)}
+                style={[styles.chip, trackingType === type && styles.chipSelected]}
+              >
+                <Text style={[styles.chipLabel, trackingType === type && styles.chipLabelSelected]}>
+                  {TRACKING_TYPE_LABELS[type]}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <TextInput
+            value={primaryMuscle}
+            onChangeText={setPrimaryMuscle}
+            placeholder="Primary muscle"
+            placeholderTextColor={theme.colors.textMuted}
+            style={styles.input}
+          />
+
+          <TextInput
+            value={equipment}
+            onChangeText={setEquipment}
+            placeholder="Equipment"
+            placeholderTextColor={theme.colors.textMuted}
+            style={styles.input}
+          />
+
+          <Button
+            title="Save"
+            onPress={() => {
+              if (!canSave || trackingType === null) return;
+              createCustomExercise(db, {
+                name: name.trim(),
+                trackingType,
+                primaryMuscle: primaryMuscle.trim(),
+                equipment: equipment.trim(),
+              });
+              reset();
+              onCreated();
+            }}
+          />
+          <Button
+            title="Cancel"
+            variant="secondary"
+            onPress={() => {
+              reset();
+              onClose();
+            }}
+          />
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
+  newExerciseContainer: { paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.md },
   empty: { ...theme.text.body, color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radius.md,
+    borderTopRightRadius: theme.radius.md,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
+  },
+  modalTitle: { ...theme.text.title, color: theme.colors.text },
+  fieldLabel: { ...theme.text.caption, color: theme.colors.textMuted },
+  input: {
+    ...theme.text.body,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radius.sm,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+  },
+  trackingTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
+  chip: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.sm,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+  },
+  chipSelected: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  chipLabel: { ...theme.text.caption, color: theme.colors.text },
+  chipLabelSelected: { color: '#FFFFFF', fontWeight: '600' },
 });
