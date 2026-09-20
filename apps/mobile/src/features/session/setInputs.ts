@@ -36,8 +36,13 @@ export function parseDuration(text: string): number | null {
   const parts = trimmed.split(':');
   if (parts.length > 2) return null;
 
+  // Number.parseInt parses a leading numeric prefix and ignores trailing
+  // garbage ('45abc' -> 45) and truncates decimals ('12.5' -> 12). Reject
+  // anything that isn't purely digits before converting, so a paste or a
+  // stray keystroke never turns into a plausible-looking wrong number.
+  if (parts.some((p) => !/^\d+$/.test(p))) return null;
+
   const numbers = parts.map((p) => Number.parseInt(p, 10));
-  if (numbers.some((n) => !Number.isFinite(n) || n < 0)) return null;
 
   return parts.length === 2 ? numbers[0]! * 60 + numbers[1]! : numbers[0]!;
 }

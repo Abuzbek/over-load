@@ -41,4 +41,16 @@ describe('parseDuration', () => {
   it('round-trips through formatDurationInput', () => {
     expect(parseDuration(formatDurationInput(90))).toBe(90);
   });
+
+  it('rejects trailing garbage after bare seconds', () => {
+    expect(parseDuration('45abc')).toBeNull();
+  });
+
+  it('rejects trailing garbage after mm:ss', () => {
+    expect(parseDuration('1:30xyz')).toBeNull();
+  });
+
+  it('rejects a decimal instead of silently truncating it', () => {
+    expect(parseDuration('12.5')).toBeNull();
+  });
 });
