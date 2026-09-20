@@ -188,6 +188,21 @@ describe('lastPerformance', () => {
     const current = startEmptyWorkout(db, 'Today', AT);
     expect(lastPerformance(db, bench.id, current)).toEqual([]);
   });
+
+  it('ignores sets whose exercise is tombstoned', () => {
+    const workoutId = startEmptyWorkout(db, 'Older', AT - 100_000);
+    const we = addExerciseToWorkout(db, workoutId, bench.id, AT - 100_000);
+    const set = addSet(db, we.id, AT - 100_000);
+    completeSet(db, set.id, { weightKg: 100, reps: 5 }, AT - 100_000);
+    finishWorkout(db, workoutId, AT - 90_000);
+
+    const current = startEmptyWorkout(db, 'Today', AT);
+    expect(lastPerformance(db, bench.id, current)).toHaveLength(1);
+
+    db.update(exercises).set({ deletedAt: now() }).where(eq(exercises.id, bench.id)).run();
+
+    expect(lastPerformance(db, bench.id, current)).toEqual([]);
+  });
 });
 
 describe('finishWorkout', () => {
