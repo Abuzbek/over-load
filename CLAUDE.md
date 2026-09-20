@@ -1,7 +1,9 @@
-# Workouts — offline-first workout logger
+# Overload — offline-first workout logger
 
 Expo/React Native app targeting **iOS and Android**, pnpm monorepo, SQLite via
-Drizzle. Release 1 (the logging loop) is built and merged; see
+Drizzle. Packages are scoped `@overload/*`; the app's bundle id is
+`com.overload.app`. Note that `workouts` is also domain vocabulary — the table,
+`workout_exercises`, `getWorkoutDetail` — and is unrelated to the project name. Release 1 (the logging loop) is built and merged; see
 `docs/superpowers/2026-09-20-session-handoff.md` for full state and history.
 
 ## Commands
@@ -43,7 +45,7 @@ tools/seed-exercises/    curated.json (743 exercises), committed
   rebuilt from `sets`. Its hard `DELETE` is correct; do not "fix" it.
 - **`packages/domain` imports nothing.** No React, no expo, no drizzle, no I/O. It has
   zero dependencies in its package.json and that is what enforces the boundary.
-- **Screens never touch Drizzle.** Type-only imports from `@workouts/schema` are fine;
+- **Screens never touch Drizzle.** Type-only imports from `@overload/schema` are fine;
   query-builder imports are not.
 - **Ordering indexes use `max(orderIndex) + 1` over ALL rows including tombstoned** —
   never a count of live rows, which collides after a soft delete.
@@ -60,7 +62,7 @@ tools/seed-exercises/    curated.json (743 exercises), committed
   merely transitively present. The app failed to bundle until `babel-preset-expo`,
   `@babel/runtime` and `query-string` were declared explicitly.
 - **Metro needs `unstable_enablePackageExports`** (set in `apps/mobile/metro.config.js`)
-  because `@workouts/schema` exposes `./migrations` and `./testing` only via its
+  because `@overload/schema` exposes `./migrations` and `./testing` only via its
   `exports` map.
 - **A screen reading the DB in its render body will show stale data** when another
   screen mutates it — the stack keeps it mounted. Use `useFocusEffect` to bump a

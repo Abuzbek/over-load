@@ -1,5 +1,5 @@
 {
-  "name": "workouts",
+  "name": "overload",
   "private": true,
   "packageManager": "pnpm@9.12.0",
   "engines": {
@@ -7,15 +7,15 @@
     "pnpm": ">=9"
   },
   "scripts": {
-    "start": "pnpm --filter @workouts/mobile start",
-    "ios": "pnpm --filter @workouts/mobile ios",
-    "android": "pnpm --filter @workouts/mobile android",
+    "start": "pnpm --filter @overload/mobile start",
+    "ios": "pnpm --filter @overload/mobile ios",
+    "android": "pnpm --filter @overload/mobile android",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "pnpm -r exec tsc --noEmit",
-    "bundle": "pnpm --filter @workouts/mobile exec expo export --platform ios",
-    "seed:build": "pnpm --filter @workouts/seed-exercises build",
-    "db:generate": "pnpm --filter @workouts/schema generate"
+    "bundle": "pnpm --filter @overload/mobile exec expo export --platform ios",
+    "seed:build": "pnpm --filter @overload/seed-exercises build",
+    "db:generate": "pnpm --filter @overload/schema generate"
   },
   "devDependencies": {
     "react-native-web": "^0.21.2",

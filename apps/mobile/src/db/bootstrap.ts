@@ -1,4 +1,4 @@
-import migrations from '@workouts/schema/migrations';
+import migrations from '@overload/schema/migrations';
 import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
 import curated from '../../../../tools/seed-exercises/curated.json';
 import { seedExercisesIfEmpty, type SeedExercise } from '../data/seedRepo';

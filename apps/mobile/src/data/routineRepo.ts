@@ -10,7 +10,7 @@ import {
   type Routine,
   type RoutineExercise,
   type RoutineSet,
-} from '@workouts/schema';
+} from '@overload/schema';
 import { and, asc, eq, isNull, max } from 'drizzle-orm';
 
 export type RoutineDetailExercise = {

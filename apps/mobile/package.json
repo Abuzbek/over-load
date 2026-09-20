@@ -1,5 +1,5 @@
 {
-  "name": "@workouts/mobile",
+  "name": "@overload/mobile",
   "version": "0.0.0",
   "private": true,
   "main": "expo-router/entry",
@@ -9,8 +9,8 @@
     "android": "expo start --android"
   },
   "dependencies": {
-    "@workouts/domain": "workspace:*",
-    "@workouts/schema": "workspace:*",
+    "@overload/domain": "workspace:*",
+    "@overload/schema": "workspace:*",
     "@babel/runtime": "^7.25.0",
     "drizzle-orm": "^0.36.0",
     "expo": "~52.0.0",

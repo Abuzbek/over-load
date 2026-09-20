@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "Workouts",
-    "slug": "workouts",
-    "scheme": "workouts",
+    "name": "Overload",
+    "slug": "overload",
+    "scheme": "overload",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "plugins": ["expo-router"],
-    "ios": { "supportsTablet": false, "bundleIdentifier": "com.workouts.app" },
-    "android": { "package": "com.workouts.app" }
+    "ios": { "supportsTablet": false, "bundleIdentifier": "com.overload.app" },
+    "android": { "package": "com.overload.app" }
   }
 }

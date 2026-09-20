@@ -1,4 +1,4 @@
-import type { Exercise } from '@workouts/schema';
+import type { Exercise } from '@overload/schema';
 import { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { listExercises } from '../../data/exerciseRepo';

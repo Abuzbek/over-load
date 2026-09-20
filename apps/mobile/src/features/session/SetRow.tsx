@@ -1,5 +1,5 @@
-import type { CompletedSet } from '@workouts/domain';
-import type { WorkoutSet } from '@workouts/schema';
+import type { CompletedSet } from '@overload/domain';
+import type { WorkoutSet } from '@overload/schema';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { theme } from '../../ui/theme';

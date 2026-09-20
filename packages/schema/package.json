@@ -1,5 +1,5 @@
 {
-  "name": "@workouts/schema",
+  "name": "@overload/schema",
   "version": "0.0.0",
   "private": true,
   "type": "module",

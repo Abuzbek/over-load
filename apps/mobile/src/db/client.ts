@@ -1,9 +1,9 @@
-import * as schema from '@workouts/schema';
-import type { Db } from '@workouts/schema';
+import * as schema from '@overload/schema';
+import type { Db } from '@overload/schema';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseSync } from 'expo-sqlite';
 
-export const DB_NAME = 'workouts.db';
+export const DB_NAME = 'overload.db';
 
 /** enableChangeListener powers useLiveQuery, so screens re-render on write. */
 export const expoDb = openDatabaseSync(DB_NAME, { enableChangeListener: true });

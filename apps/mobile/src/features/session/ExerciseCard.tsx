@@ -1,4 +1,4 @@
-import type { CompletedSet } from '@workouts/domain';
+import type { CompletedSet } from '@overload/domain';
 import { StyleSheet, Text, View } from 'react-native';
 import { addSet, completeSet, uncompleteSet, type WorkoutDetailExercise } from '../../data/sessionRepo';
 import { db } from '../../db/client';

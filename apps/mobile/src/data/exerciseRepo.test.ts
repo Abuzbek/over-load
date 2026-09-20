@@ -1,5 +1,5 @@
-import { exercises, newId, now } from '@workouts/schema';
-import { createTestDb } from '@workouts/schema/testing';
+import { exercises, newId, now } from '@overload/schema';
+import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createCustomExercise, getExercise, listExercises } from './exerciseRepo';

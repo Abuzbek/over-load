@@ -1,4 +1,4 @@
-import { createTestDb } from '@workouts/schema/testing';
+import { createTestDb } from '@overload/schema/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import curated from '../../../../tools/seed-exercises/curated.json';
 import { listExercises } from './exerciseRepo';

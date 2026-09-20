@@ -1,4 +1,4 @@
-import { computePersonalRecords, type CompletedSet } from '@workouts/domain';
+import { computePersonalRecords, type CompletedSet } from '@overload/domain';
 import {
   exercises,
   newId,
@@ -13,7 +13,7 @@ import {
   type Workout,
   type WorkoutExercise,
   type WorkoutSet,
-} from '@workouts/schema';
+} from '@overload/schema';
 import { and, asc, desc, eq, inArray, isNotNull, isNull, max } from 'drizzle-orm';
 import { getRoutineDetail } from './routineRepo';
 

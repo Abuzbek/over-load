@@ -10,7 +10,7 @@ vi.mock('./backup', () => ({
   restoreDatabase: vi.fn(async () => true),
   discardBackup: vi.fn(),
 }));
-vi.mock('@workouts/schema/migrations', () => ({ default: {} }));
+vi.mock('@overload/schema/migrations', () => ({ default: {} }));
 vi.mock('drizzle-orm/expo-sqlite/migrator', () => ({ migrate: vi.fn() }));
 vi.mock('../data/seedRepo', () => ({ seedExercisesIfEmpty: vi.fn() }));
 

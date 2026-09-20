@@ -1,5 +1,9 @@
-# Session Handoff — Release 1 Logger
+# Session Handoff — Overload, Release 1
 
+**App name:** Overload (renamed from the working name "workouts" on 2026-09-20 —
+packages are `@overload/*`, bundle id `com.overload.app`, SQLite file `overload.db`).
+The word `workouts` still appears throughout as domain vocabulary and is unrelated.
+**Remote:** https://github.com/Abuzbek/over-load.git
 **Date:** 2026-09-20
 **Branch:** merged to `main` (33 commits; feature branch deleted, worktree removed)
 **State:** 133 tests / 18 files passing · `pnpm typecheck` exit 0 · `npx expo export --platform ios` succeeds

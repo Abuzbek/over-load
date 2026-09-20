@@ -5,8 +5,8 @@ import {
   workoutExercises,
   workouts,
   type Exercise,
-} from '@workouts/schema';
-import { createTestDb } from '@workouts/schema/testing';
+} from '@overload/schema';
+import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {

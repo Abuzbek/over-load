@@ -5,7 +5,7 @@ import {
   type Db,
   type Exercise,
   type TrackingType,
-} from '@workouts/schema';
+} from '@overload/schema';
 import { and, asc, eq, isNull, like } from 'drizzle-orm';
 
 export function listExercises(

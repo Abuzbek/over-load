@@ -1,4 +1,4 @@
-import { exercises, newId, now, type Db, type NewExercise } from '@workouts/schema';
+import { exercises, newId, now, type Db, type NewExercise } from '@overload/schema';
 
 export type SeedExercise = Omit<NewExercise, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>;
 

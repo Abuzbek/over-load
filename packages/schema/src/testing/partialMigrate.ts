@@ -44,7 +44,7 @@ export function createDbAtMigration(throughIndex: number): { db: PartialDb; clos
     throw new Error(`throughIndex ${throughIndex} selects no journal entries`);
   }
 
-  const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'workouts-migrations-'));
+  const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'overload-migrations-'));
   fs.mkdirSync(path.join(scratchDir, 'meta'));
   fs.writeFileSync(path.join(scratchDir, 'meta/_journal.json'), JSON.stringify({ ...journal, entries }));
   for (const entry of entries) {

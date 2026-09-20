@@ -1,4 +1,4 @@
-import { formatDuration, restRemainingSeconds } from '@workouts/domain';
+import { formatDuration, restRemainingSeconds } from '@overload/domain';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from '../../ui/theme';

@@ -1,4 +1,4 @@
-import { DEFAULT_REST_SECONDS, type CompletedSet } from '@workouts/domain';
+import { DEFAULT_REST_SECONDS, type CompletedSet } from '@overload/domain';
 import { useKeepAwake } from 'expo-keep-awake';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';

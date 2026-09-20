@@ -129,7 +129,7 @@ Root `package.json`:
 
 ```json
 {
-  "name": "@workouts/domain",
+  "name": "@overload/domain",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -678,7 +678,7 @@ Establishes the database layer. Migration tooling and the in-memory test harness
 
 ```json
 {
-  "name": "@workouts/schema",
+  "name": "@overload/schema",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -805,7 +805,7 @@ export default defineConfig({
 });
 ```
 
-Run: `pnpm --filter @workouts/schema generate`
+Run: `pnpm --filter @overload/schema generate`
 Expected: `packages/schema/drizzle/0000_*.sql`, `drizzle/meta/_journal.json`, and `drizzle/migrations.js` are created. Open the `.sql` file and confirm it contains `CREATE TABLE \`exercises\``.
 
 - [ ] **Step 5: Write the test harness**
@@ -1112,7 +1112,7 @@ export * from './personalRecords';
 
 - [ ] **Step 4: Generate the migration**
 
-Run: `pnpm --filter @workouts/schema generate`
+Run: `pnpm --filter @overload/schema generate`
 Expected: a new `0001_*.sql` containing `CREATE TABLE` for `routines`, `routine_exercises`, `routine_sets`, `workouts`, `workout_exercises`, `sets`, `personal_records`.
 
 - [ ] **Step 5: Write the failing test**
@@ -1248,7 +1248,7 @@ Turns the public-domain `free-exercise-db` dataset into a committed, curated see
 - Test: `tools/seed-exercises/src/map.test.ts`
 
 **Interfaces:**
-- Consumes: `TrackingType`, `NewExercise` from `@workouts/schema`
+- Consumes: `TrackingType`, `NewExercise` from `@overload/schema`
 - Produces:
   - `type SourceExercise` — the upstream row shape
   - `inferTrackingType(source: SourceExercise): TrackingType`
@@ -1262,7 +1262,7 @@ Turns the public-domain `free-exercise-db` dataset into a committed, curated see
 
 ```json
 {
-  "name": "@workouts/seed-exercises",
+  "name": "@overload/seed-exercises",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -1270,7 +1270,7 @@ Turns the public-domain `free-exercise-db` dataset into a committed, curated see
     "build": "tsx src/build.ts"
   },
   "dependencies": {
-    "@workouts/schema": "workspace:*"
+    "@overload/schema": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.0"
@@ -1357,7 +1357,7 @@ Expected: FAIL — cannot resolve `./map`.
 `tools/seed-exercises/src/map.ts`:
 
 ```ts
-import type { NewExercise, TrackingType } from '@workouts/schema';
+import type { NewExercise, TrackingType } from '@overload/schema';
 
 /** The upstream row shape from yuhonas/free-exercise-db. */
 export type SourceExercise = {
@@ -1462,7 +1462,7 @@ main().catch((error) => {
 
 - [ ] **Step 7: Generate the seed file and sanity-check it**
 
-Run: `pnpm --filter @workouts/seed-exercises build`
+Run: `pnpm --filter @overload/seed-exercises build`
 Expected: prints a count. Then verify manually:
 
 ```bash
@@ -1492,7 +1492,7 @@ The first repositories. Every read filters tombstones; nothing outside this laye
 - Test: `apps/mobile/src/data/exerciseRepo.test.ts`, `apps/mobile/src/data/routineRepo.test.ts`
 
 **Interfaces:**
-- Consumes: all tables from Tasks 4–5, `createTestDb` from `@workouts/schema/testing`
+- Consumes: all tables from Tasks 4–5, `createTestDb` from `@overload/schema/testing`
 - Produces:
   - `type Db = BaseSQLiteDatabase<'sync', any, typeof schema>` — the one database type both expo-sqlite and better-sqlite3 satisfy
   - `listExercises(db: Db, opts?: { search?: string; limit?: number }): Exercise[]`
@@ -1537,13 +1537,13 @@ export type { Db } from './db';
 
 ```json
 {
-  "name": "@workouts/mobile",
+  "name": "@overload/mobile",
   "version": "0.0.0",
   "private": true,
   "main": "expo-router/entry",
   "dependencies": {
-    "@workouts/domain": "workspace:*",
-    "@workouts/schema": "workspace:*",
+    "@overload/domain": "workspace:*",
+    "@overload/schema": "workspace:*",
     "drizzle-orm": "^0.36.0"
   }
 }
@@ -1566,8 +1566,8 @@ Run: `pnpm install`
 `apps/mobile/src/data/exerciseRepo.test.ts`:
 
 ```ts
-import { exercises, newId, now } from '@workouts/schema';
-import { createTestDb } from '@workouts/schema/testing';
+import { exercises, newId, now } from '@overload/schema';
+import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createCustomExercise, getExercise, listExercises } from './exerciseRepo';
@@ -1660,7 +1660,7 @@ import {
   type Db,
   type Exercise,
   type TrackingType,
-} from '@workouts/schema';
+} from '@overload/schema';
 import { and, asc, eq, isNull, like } from 'drizzle-orm';
 
 export function listExercises(
@@ -1718,8 +1718,8 @@ Expected: PASS, 8 tests.
 `apps/mobile/src/data/routineRepo.test.ts`:
 
 ```ts
-import { exercises, newId, type Exercise } from '@workouts/schema';
-import { createTestDb } from '@workouts/schema/testing';
+import { exercises, newId, type Exercise } from '@overload/schema';
+import { createTestDb } from '@overload/schema/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   addExerciseToRoutine,
@@ -1815,7 +1815,7 @@ import {
   type Routine,
   type RoutineExercise,
   type RoutineSet,
-} from '@workouts/schema';
+} from '@overload/schema';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 
 export type RoutineDetailExercise = {
@@ -1989,8 +1989,8 @@ Starting a routine **copies** it into a workout tree. This is the mechanism that
 `apps/mobile/src/data/sessionRepo.start.test.ts`:
 
 ```ts
-import { exercises, newId, routineSets, type Exercise } from '@workouts/schema';
-import { createTestDb } from '@workouts/schema/testing';
+import { exercises, newId, routineSets, type Exercise } from '@overload/schema';
+import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { addExerciseToRoutine, addRoutineSet, createRoutine } from './routineRepo';
@@ -2115,7 +2115,7 @@ import {
   type Workout,
   type WorkoutExercise,
   type WorkoutSet,
-} from '@workouts/schema';
+} from '@overload/schema';
 import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { getRoutineDetail } from './routineRepo';
 
@@ -2270,7 +2270,7 @@ The write path used during a live session, plus the query behind "last time you 
 - Test: `apps/mobile/src/data/sessionRepo.logging.test.ts`
 
 **Interfaces:**
-- Consumes: everything from Task 8; `computePersonalRecords`, `CompletedSet` from `@workouts/domain`
+- Consumes: everything from Task 8; `computePersonalRecords`, `CompletedSet` from `@overload/domain`
 - Produces:
   - `completeSet(db: Db, setId: string, values: SetValues, at: number): void`
   - `type SetValues = { weightKg?: number | null; reps?: number | null; durationSeconds?: number | null; rpe?: number | null; rir?: number | null }`
@@ -2286,8 +2286,8 @@ The write path used during a live session, plus the query behind "last time you 
 `apps/mobile/src/data/sessionRepo.logging.test.ts`:
 
 ```ts
-import { exercises, newId, workouts, type Exercise } from '@workouts/schema';
-import { createTestDb } from '@workouts/schema/testing';
+import { exercises, newId, workouts, type Exercise } from '@overload/schema';
+import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -2463,8 +2463,8 @@ Expected: FAIL — `completeSet` is not exported.
 Add to the imports at the top of `apps/mobile/src/data/sessionRepo.ts`:
 
 ```ts
-import { computePersonalRecords, type CompletedSet } from '@workouts/domain';
-import { personalRecords, type PersonalRecordRow } from '@workouts/schema';
+import { computePersonalRecords, type CompletedSet } from '@overload/domain';
+import { personalRecords, type PersonalRecordRow } from '@overload/schema';
 import { inArray, isNotNull } from 'drizzle-orm';
 ```
 
@@ -2719,7 +2719,7 @@ Replace the `dependencies` block in `apps/mobile/package.json` and add scripts:
 
 ```json
 {
-  "name": "@workouts/mobile",
+  "name": "@overload/mobile",
   "version": "0.0.0",
   "private": true,
   "main": "expo-router/entry",
@@ -2729,8 +2729,8 @@ Replace the `dependencies` block in `apps/mobile/package.json` and add scripts:
     "android": "expo start --android"
   },
   "dependencies": {
-    "@workouts/domain": "workspace:*",
-    "@workouts/schema": "workspace:*",
+    "@overload/domain": "workspace:*",
+    "@overload/schema": "workspace:*",
     "drizzle-orm": "^0.36.0",
     "expo": "~52.0.0",
     "expo-file-system": "~18.0.0",
@@ -2813,8 +2813,8 @@ module.exports = config;
 `apps/mobile/src/db/client.ts`:
 
 ```ts
-import * as schema from '@workouts/schema';
-import type { Db } from '@workouts/schema';
+import * as schema from '@overload/schema';
+import type { Db } from '@overload/schema';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseSync } from 'expo-sqlite';
 
@@ -2866,7 +2866,7 @@ export async function discardBackup(): Promise<void> {
 `apps/mobile/src/data/seedRepo.test.ts`:
 
 ```ts
-import { createTestDb } from '@workouts/schema/testing';
+import { createTestDb } from '@overload/schema/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { listExercises } from './exerciseRepo';
 import { seedExercisesIfEmpty } from './seedRepo';
@@ -2915,7 +2915,7 @@ Expected: FAIL — cannot resolve `./seedRepo`.
 `apps/mobile/src/data/seedRepo.ts`:
 
 ```ts
-import { exercises, newId, now, type Db, type NewExercise } from '@workouts/schema';
+import { exercises, newId, now, type Db, type NewExercise } from '@overload/schema';
 
 export type SeedExercise = Omit<NewExercise, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>;
 
@@ -2996,7 +2996,7 @@ Expected: PASS, 1 test. **Add a case to this file for every future migration.**
 `apps/mobile/src/db/bootstrap.ts`:
 
 ```ts
-import migrations from '@workouts/schema/migrations';
+import migrations from '@overload/schema/migrations';
 import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
 import curated from '../../../../tools/seed-exercises/curated.json';
 import { seedExercisesIfEmpty, type SeedExercise } from '../data/seedRepo';
@@ -3075,7 +3075,7 @@ const styles = StyleSheet.create({
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { Stack } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
-import { exercises } from '@workouts/schema';
+import { exercises } from '@overload/schema';
 import { db } from '../src/db/client';
 
 export default function HomeScreen() {
@@ -3097,7 +3097,7 @@ const styles = StyleSheet.create({
 
 - [ ] **Step 12: Boot the app and verify seeding**
 
-Run: `pnpm --filter @workouts/mobile start`, then press `i` for the iOS simulator.
+Run: `pnpm --filter @overload/mobile start`, then press `i` for the iOS simulator.
 Expected: after a brief loading spinner, the screen reads "Exercise library: N exercises" with N matching the count printed in Task 6 Step 7. Reload the app; the count must stay the same, not double.
 
 - [ ] **Step 13: Commit**
@@ -3285,7 +3285,7 @@ const styles = StyleSheet.create({
 `apps/mobile/src/features/library/ExerciseList.tsx`:
 
 ```tsx
-import type { Exercise } from '@workouts/schema';
+import type { Exercise } from '@overload/schema';
 import { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { listExercises } from '../../data/exerciseRepo';
@@ -3380,7 +3380,7 @@ const styles = StyleSheet.create({
 
 - [ ] **Step 5: Verify manually**
 
-Run: `pnpm --filter @workouts/mobile start`, press `i`.
+Run: `pnpm --filter @overload/mobile start`, press `i`.
 Expected: tapping "Browse exercises" opens the list showing every seeded exercise. Typing "press" narrows it. Typing "zzzz" shows the empty message.
 
 - [ ] **Step 6: Commit**
@@ -3610,7 +3610,7 @@ Add a routines link to `apps/mobile/app/index.tsx`, above the exercises link:
 
 - [ ] **Step 4: Verify manually**
 
-Run: `pnpm --filter @workouts/mobile start`, press `i`.
+Run: `pnpm --filter @overload/mobile start`, press `i`.
 Expected: create a routine named "Push Day", add Bench Press, add two sets, back out to the routine list and reopen it. The exercise and both sets are still there — confirming writes hit the database rather than component state.
 
 - [ ] **Step 5: Commit**
@@ -3644,8 +3644,8 @@ The core screen. Every completed set writes to SQLite before anything renders, a
 `apps/mobile/src/features/session/SetRow.tsx`:
 
 ```tsx
-import type { CompletedSet } from '@workouts/domain';
-import type { WorkoutSet } from '@workouts/schema';
+import type { CompletedSet } from '@overload/domain';
+import type { WorkoutSet } from '@overload/schema';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { theme } from '../../ui/theme';
@@ -3747,7 +3747,7 @@ const styles = StyleSheet.create({
 `apps/mobile/src/features/session/ExerciseCard.tsx`:
 
 ```tsx
-import type { CompletedSet } from '@workouts/domain';
+import type { CompletedSet } from '@overload/domain';
 import { StyleSheet, Text, View } from 'react-native';
 import { addSet, completeSet, uncompleteSet, type WorkoutDetailExercise } from '../../data/sessionRepo';
 import { db } from '../../db/client';
@@ -3813,7 +3813,7 @@ const styles = StyleSheet.create({
 `apps/mobile/src/features/session/ActiveSession.tsx`:
 
 ```tsx
-import type { CompletedSet } from '@workouts/domain';
+import type { CompletedSet } from '@overload/domain';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -3920,7 +3920,7 @@ and add this button directly above the "Add exercise" button:
 
 - [ ] **Step 5: Verify manually**
 
-Run: `pnpm --filter @workouts/mobile start`, press `i`.
+Run: `pnpm --filter @overload/mobile start`, press `i`.
 Expected:
 1. Open "Push Day", tap "Start workout". Both planned sets appear with targets pre-filled and the previous column showing "—".
 2. Enter 80 and 8, tap the checkmark. The row dims and the check turns green.
@@ -4092,7 +4092,7 @@ export async function cancelRestNotification(): Promise<void> {
 `apps/mobile/src/features/session/RestTimer.tsx`:
 
 ```tsx
-import { formatDuration, restRemainingSeconds } from '@workouts/domain';
+import { formatDuration, restRemainingSeconds } from '@overload/domain';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from '../../ui/theme';
@@ -4149,7 +4149,7 @@ const styles = StyleSheet.create({
 In `apps/mobile/src/features/session/ActiveSession.tsx`, add imports:
 
 ```tsx
-import { DEFAULT_REST_SECONDS } from '@workouts/domain';
+import { DEFAULT_REST_SECONDS } from '@overload/domain';
 import { useKeepAwake } from 'expo-keep-awake';
 import { RestTimer } from './RestTimer';
 import { cancelRestNotification, scheduleRestNotification } from './notifications';
@@ -4191,7 +4191,7 @@ And render the rest bar as the last child of the `ScrollView`, after the "Finish
 
 - [ ] **Step 8: Verify manually**
 
-Run: `pnpm --filter @workouts/mobile start`, press `i`.
+Run: `pnpm --filter @overload/mobile start`, press `i`.
 Expected:
 1. Complete a set — the rest bar appears and counts down from 2:00.
 2. Background the app for 30 seconds and return. **The timer shows roughly 30 seconds less, not a frozen value.** This is the behaviour the timestamp design exists for.
@@ -4229,8 +4229,8 @@ Closes the loop: crash recovery becomes reachable from the UI, and finished work
 `apps/mobile/src/data/historyRepo.test.ts`:
 
 ```ts
-import { exercises, newId, type Exercise } from '@workouts/schema';
-import { createTestDb } from '@workouts/schema/testing';
+import { exercises, newId, type Exercise } from '@overload/schema';
+import { createTestDb } from '@overload/schema/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { listFinishedWorkouts } from './historyRepo';
 import { addExerciseToWorkout, addSet, completeSet, finishWorkout, startEmptyWorkout } from './sessionRepo';
@@ -4310,14 +4310,14 @@ Expected: FAIL — cannot resolve `./historyRepo`.
 `apps/mobile/src/data/historyRepo.ts`:
 
 ```ts
-import { totalVolumeKg, type CompletedSet } from '@workouts/domain';
+import { totalVolumeKg, type CompletedSet } from '@overload/domain';
 import {
   sets,
   workoutExercises,
   workouts,
   type Db,
   type Workout,
-} from '@workouts/schema';
+} from '@overload/schema';
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 
 export type WorkoutSummary = {
@@ -4551,7 +4551,7 @@ Expected: PASS, every test across all packages.
 
 - [ ] **Step 8: Verify the whole loop manually**
 
-Run: `pnpm --filter @workouts/mobile start`, press `i`.
+Run: `pnpm --filter @overload/mobile start`, press `i`.
 Expected:
 1. Start "Push Day", complete one set, then force-quit the app.
 2. Reopen it. The home screen shows "You have a workout in progress." Tap Resume — the completed set is still checked.

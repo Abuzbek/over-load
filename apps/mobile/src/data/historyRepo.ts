@@ -1,4 +1,4 @@
-import { totalVolumeKg, type CompletedSet } from '@workouts/domain';
+import { totalVolumeKg, type CompletedSet } from '@overload/domain';
 import {
   exercises,
   sets,
@@ -6,7 +6,7 @@ import {
   workouts,
   type Db,
   type Workout,
-} from '@workouts/schema';
+} from '@overload/schema';
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { toCompletedSet } from './sessionRepo';
 

@@ -1,4 +1,4 @@
-import type { NewExercise, TrackingType } from '@workouts/schema';
+import type { NewExercise, TrackingType } from '@overload/schema';
 
 /** The upstream row shape from yuhonas/free-exercise-db. */
 export type SourceExercise = {

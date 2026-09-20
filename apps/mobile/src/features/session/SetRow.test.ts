@@ -1,4 +1,4 @@
-import type { CompletedSet } from '@workouts/domain';
+import type { CompletedSet } from '@overload/domain';
 import { describe, expect, it } from 'vitest';
 import { formatPrevious } from './SetRow';
 
