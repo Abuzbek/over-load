@@ -14,7 +14,7 @@ pnpm ios            # straight to the iOS simulator
 pnpm android        # straight to an Android emulator/device
 
 pnpm test           # full suite (133 tests, 18 files)
-pnpm typecheck      # the ONLY type gate — there is no CI
+pnpm typecheck      # type gate; CI runs this too (.github/workflows/ci.yml)
 pnpm bundle         # expo export — catches packaging breaks tests cannot see
 
 pnpm db:generate    # regenerate migrations after a schema change
@@ -67,6 +67,9 @@ tools/seed-exercises/    curated.json (743 exercises), committed
   version counter. Do not use `key={version}`; it remounts and resets scroll.
 - **Tests run under `PRAGMA foreign_keys = ON`, and so does production** (`client.ts`).
   Keep them aligned.
+- **CI runs install → typecheck → test → bundle** on every push to `main` and every PR.
+  The bundle step is not decoration: two defects during the build made the app fail to
+  bundle while the suite stayed green.
 
 ## Verification reality
 

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push to the same branch cancels the first — no point finishing a run
+# whose commit is already superseded.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # --frozen-lockfile fails if pnpm-lock.yaml is out of sync with the
+      # manifests, which is how an undeclared dependency gets caught.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # The only enforcement for the type-safety story, including the
+      # @ts-expect-error guard in packages/schema that is meaningless unless
+      # tsc actually runs.
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      # Bundling catches a class of breakage tests and typecheck cannot see.
+      # During the build, two separate defects made the app fail to bundle
+      # while the suite stayed green: undeclared build dependencies that
+      # pnpm's strict linking would not resolve, and Metro not reading the
+      # schema package's exports map. This step is here because of those.
+      #
+      # Runs on Linux: expo export is host-agnostic JS bundling plus Hermes,
+      # and react-native ships a linux64 hermesc.
+      - name: Bundle
+        run: pnpm bundle
