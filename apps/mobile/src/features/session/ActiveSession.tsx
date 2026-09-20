@@ -21,8 +21,15 @@ export function ActiveSession({ workoutId }: Props) {
   const [rest, setRest] = useState<{ startedAt: number; seconds: number } | null>(null);
 
   // Bumping this re-renders, which re-reads the workout from SQLite and the
-  // weight-unit preference — the latter matters when Settings is reachable
-  // from this stack and the user navigates back here.
+  // weight-unit preference. The re-read only affects placeholders and newly
+  // mounted rows, though: each SetRow freezes its own `values` state (the
+  // typed weight) at mount, so an already-rendered box does NOT reconvert if
+  // the unit changes underneath it — a box showing "60" typed as kg would
+  // still submit as toStorageKg(60, 'lb') if the unit flipped to lb without
+  // remounting the row. Unreachable today, since Settings is only linked from
+  // Home and reaching it pops this screen off the stack, so there is nothing
+  // to fix yet — but the next person who links Settings from within a session
+  // needs to know this trap exists before doing that.
   const [, setVersion] = useState(0);
   const detail = getWorkoutDetail(db, workoutId);
   const unit = getWeightUnit(db);
@@ -86,6 +93,12 @@ export function ActiveSession({ workoutId }: Props) {
         {detail.exercises.length === 0 ? (
           <Text style={styles.empty}>This workout has no exercises.</Text>
         ) : null}
+
+        <Button
+          title="Add exercise"
+          variant="secondary"
+          onPress={() => router.push(`/session/${workoutId}/add-exercise`)}
+        />
 
         <Button
           title="Finish workout"
