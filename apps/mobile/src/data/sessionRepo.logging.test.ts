@@ -18,6 +18,7 @@ import {
   finishWorkout,
   getWorkoutDetail,
   lastPerformance,
+  listAllPersonalRecords,
   listPersonalRecords,
   startEmptyWorkout,
   uncompleteSet,
@@ -229,6 +230,22 @@ describe('finishWorkout', () => {
 
     loggedWorkout(110, 5, AT);
     expect(listPersonalRecords(db, bench.id)).toHaveLength(firstCount);
+  });
+});
+
+describe('listAllPersonalRecords', () => {
+  it('lists records for every exercise with the exercise name', () => {
+    loggedWorkout(100, 5, AT);
+
+    const records = listAllPersonalRecords(db);
+    expect(records.some((r) => r.exerciseName === 'Bench Press')).toBe(true);
+  });
+
+  it('omits records whose exercise is tombstoned', () => {
+    loggedWorkout(100, 5, AT);
+    db.update(exercises).set({ deletedAt: AT + 1 }).where(eq(exercises.id, bench.id)).run();
+
+    expect(listAllPersonalRecords(db).some((r) => r.exerciseName === 'Bench Press')).toBe(false);
   });
 });
 

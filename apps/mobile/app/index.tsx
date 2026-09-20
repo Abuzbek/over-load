@@ -38,6 +38,9 @@ export default function HomeScreen() {
       <Link href="/history" asChild>
         <Button title="History" onPress={() => {}} />
       </Link>
+      <Link href="/records" asChild>
+        <Button title="Records" onPress={() => {}} />
+      </Link>
       <Link href="/exercises" asChild>
         <Button title="Browse exercises" onPress={() => {}} />
       </Link>

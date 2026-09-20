@@ -1,4 +1,4 @@
-import { computePersonalRecords, type CompletedSet } from '@overload/domain';
+import { computePersonalRecords, type CompletedSet, type PersonalRecordType } from '@overload/domain';
 import {
   exercises,
   newId,
@@ -415,4 +415,34 @@ export function listPersonalRecords(db: Db, exerciseId: string): PersonalRecordR
     .from(personalRecords)
     .where(eq(personalRecords.exerciseId, exerciseId))
     .all();
+}
+
+export type PersonalRecordSummary = {
+  exerciseName: string;
+  type: PersonalRecordType;
+  value: number;
+  achievedAt: number;
+};
+
+/**
+ * Every current record, across every exercise, for the records screen.
+ * `personal_records` has no `deleted_at` of its own — it is a derived cache —
+ * so a tombstoned exercise's records only disappear here because this join
+ * filters `exercises.deletedAt`. Dropping that filter would surface records
+ * for exercises the lifter deleted.
+ */
+export function listAllPersonalRecords(db: Db): PersonalRecordSummary[] {
+  return db
+    .select({
+      exerciseName: exercises.name,
+      type: personalRecords.type,
+      value: personalRecords.value,
+      achievedAt: personalRecords.achievedAt,
+    })
+    .from(personalRecords)
+    .innerJoin(exercises, eq(exercises.id, personalRecords.exerciseId))
+    .where(isNull(exercises.deletedAt))
+    .orderBy(asc(exercises.name), asc(personalRecords.type))
+    .all()
+    .map((row) => ({ ...row, type: row.type as PersonalRecordType }));
 }
