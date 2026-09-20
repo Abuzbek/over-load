@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { addRoutineSet, getRoutineDetail } from '../../data/routineRepo';
 import { discardWorkout, getActiveWorkoutId, startWorkoutFromRoutine } from '../../data/sessionRepo';
 import { db } from '../../db/client';
@@ -9,6 +9,11 @@ import { theme } from '../../ui/theme';
 
 type Props = { routineId: string };
 
+function toNumber(value: string): number | null {
+  const parsed = Number.parseFloat(value.replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export function RoutineBuilder({ routineId }: Props) {
   // A local counter is the refresh signal: bumping it forces a re-read of
   // getRoutineDetail. "Add set" bumps it directly; useFocusEffect bumps it
@@ -16,6 +21,8 @@ export function RoutineBuilder({ routineId }: Props) {
   // add-exercise) mutate this routine and navigate back via router.back(),
   // leaving this screen mounted underneath rather than remounting it.
   const [, setVersion] = useState(0);
+  const [newSetWeight, setNewSetWeight] = useState('');
+  const [newSetReps, setNewSetReps] = useState('');
   const detail = getRoutineDetail(db, routineId);
 
   // The unfinished workout that blocks starting a new one. getActiveWorkoutId
@@ -77,18 +84,39 @@ export function RoutineBuilder({ routineId }: Props) {
                 Set {index + 1}: {set.targetWeightKg ?? '—'} kg × {set.targetReps ?? '—'}
               </Text>
             ))}
-            <Button
-              title="Add set"
-              variant="secondary"
-              onPress={() => {
-                const last = entry.sets[entry.sets.length - 1];
-                addRoutineSet(db, entry.routineExercise.id, {
-                  targetReps: last?.targetReps ?? 8,
-                  targetWeightKg: last?.targetWeightKg ?? undefined,
-                });
-                setVersion((v) => v + 1);
-              }}
-            />
+            <View style={styles.addSetContainer}>
+              <TextInput
+                value={newSetWeight}
+                onChangeText={setNewSetWeight}
+                placeholder="Weight (kg)"
+                keyboardType="decimal-pad"
+                placeholderTextColor={theme.colors.textMuted}
+                style={styles.setInput}
+              />
+              <TextInput
+                value={newSetReps}
+                onChangeText={setNewSetReps}
+                placeholder="Reps"
+                keyboardType="number-pad"
+                placeholderTextColor={theme.colors.textMuted}
+                style={styles.setInput}
+              />
+              <Button
+                title="Add set"
+                variant="secondary"
+                onPress={() => {
+                  const weightValue = newSetWeight ? toNumber(newSetWeight) : undefined;
+                  const repsValue = newSetReps ? toNumber(newSetReps) : 8;
+                  addRoutineSet(db, entry.routineExercise.id, {
+                    targetReps: repsValue ?? 8,
+                    targetWeightKg: weightValue ?? undefined,
+                  });
+                  setNewSetWeight('');
+                  setNewSetReps('');
+                  setVersion((v) => v + 1);
+                }}
+              />
+            </View>
           </View>
         ))}
 
@@ -138,6 +166,16 @@ const styles = StyleSheet.create({
   },
   cardTitle: { ...theme.text.title, color: theme.colors.text },
   setLine: { ...theme.text.body, color: theme.colors.textMuted },
+  addSetContainer: { gap: theme.spacing.sm, marginTop: theme.spacing.sm },
+  setInput: {
+    ...theme.text.body,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radius.sm,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    textAlign: 'center',
+  },
   empty: { ...theme.text.body, color: theme.colors.textMuted, textAlign: 'center' },
   backdrop: {
     flex: 1,

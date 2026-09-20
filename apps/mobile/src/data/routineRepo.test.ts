@@ -116,3 +116,24 @@ describe('orderIndex after a soft delete', () => {
     expect(new Set([a.orderIndex, b.orderIndex, c.orderIndex]).size).toBe(3);
   });
 });
+
+describe('addRoutineSet with targetWeightKg', () => {
+  it('stores a target weight when one is given', () => {
+    const routine = createRoutine(db, 'Push');
+    const re = addExerciseToRoutine(db, routine.id, bench.id);
+    const set = addRoutineSet(db, re.id, { targetReps: 5, targetWeightKg: 60 });
+
+    const stored = db.select().from(routineSets).where(eq(routineSets.id, set.id)).get();
+    expect(stored!.targetWeightKg).toBe(60);
+    expect(stored!.targetReps).toBe(5);
+  });
+
+  it('leaves the target weight null when none is given', () => {
+    const routine = createRoutine(db, 'Push');
+    const re = addExerciseToRoutine(db, routine.id, bench.id);
+    const set = addRoutineSet(db, re.id, { targetReps: 5 });
+
+    const stored = db.select().from(routineSets).where(eq(routineSets.id, set.id)).get();
+    expect(stored!.targetWeightKg).toBeNull();
+  });
+});
