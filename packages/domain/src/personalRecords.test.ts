@@ -2,15 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { computePersonalRecords } from './personalRecords';
 import type { CompletedSet } from './sets';
 
-function set(partial: Partial<CompletedSet> & { id: string }): CompletedSet {
+function set(over: Partial<CompletedSet> = {}): CompletedSet {
   return {
-    exerciseId: 'bench',
-    setType: 'normal',
-    weightKg: 100,
-    reps: 5,
-    durationSeconds: null,
-    completedAt: 1_700_000_000_000,
-    ...partial,
+    id: 'a', exerciseId: 'e', trackingType: 'weight_reps', setType: 'normal',
+    weightKg: 10, reps: 5, durationSeconds: null, distanceM: null,
+    completedAt: 1, ...over,
   };
 }
 
@@ -25,7 +21,7 @@ describe('computePersonalRecords', () => {
       set({ id: 'b', weightKg: 120, reps: 1 }),
     ]);
     const maxWeight = records.find((r) => r.type === 'max_weight');
-    expect(maxWeight).toMatchObject({ value: 120, setId: 'b', exerciseId: 'bench' });
+    expect(maxWeight).toMatchObject({ value: 120, setId: 'b', exerciseId: 'e' });
   });
 
   it('finds the highest estimated 1RM, which need not be the heaviest set', () => {
@@ -68,15 +64,15 @@ describe('computePersonalRecords', () => {
 
   it('omits weight-based records for sets with no weight', () => {
     const records = computePersonalRecords([
-      set({ id: 'plank', exerciseId: 'plank', weightKg: null, reps: null, durationSeconds: 60 }),
+      set({ id: 'plank', exerciseId: 'plank', trackingType: 'reps', weightKg: null, reps: null, durationSeconds: 60 }),
     ]);
     expect(records).toEqual([]);
   });
 
   it('records a max_reps PR for a bodyweight exercise, which carries no weight', () => {
     const records = computePersonalRecords([
-      set({ id: 'pullup-a', exerciseId: 'pullup', weightKg: null, reps: 8 }),
-      set({ id: 'pullup-b', exerciseId: 'pullup', weightKg: null, reps: 12 }),
+      set({ id: 'pullup-a', exerciseId: 'pullup', trackingType: 'reps', weightKg: null, reps: 8 }),
+      set({ id: 'pullup-b', exerciseId: 'pullup', trackingType: 'reps', weightKg: null, reps: 12 }),
     ]);
 
     // max_reps is the only record that means anything without a load, so it
@@ -87,5 +83,38 @@ describe('computePersonalRecords', () => {
       exerciseId: 'pullup',
     });
     expect(records.map((r) => r.type)).toEqual(['max_reps']);
+  });
+});
+
+describe('metric selection by tracking type', () => {
+  it('gives a duration exercise a max_duration record and nothing else', () => {
+    const records = computePersonalRecords([
+      set({ trackingType: 'duration', weightKg: 17, reps: 8, durationSeconds: 60 }),
+    ]);
+    expect(records.map((r) => r.type).sort()).toEqual(['max_duration']);
+  });
+
+  it('never gives a stretch an estimated one-rep max', () => {
+    const records = computePersonalRecords([
+      set({ trackingType: 'duration', weightKg: 17, reps: 8, durationSeconds: 60 }),
+    ]);
+    expect(records.find((r) => r.type === 'est_1rm')).toBeUndefined();
+  });
+
+  it('gives a bodyweight exercise only max_reps', () => {
+    const records = computePersonalRecords([set({ trackingType: 'reps', weightKg: null, reps: 12 })]);
+    expect(records.map((r) => r.type)).toEqual(['max_reps']);
+  });
+
+  it('gives a distance exercise distance and duration records', () => {
+    const records = computePersonalRecords([
+      set({ trackingType: 'distance_duration', weightKg: null, reps: null, distanceM: 5000, durationSeconds: 1500 }),
+    ]);
+    expect(records.map((r) => r.type).sort()).toEqual(['max_distance', 'max_duration']);
+  });
+
+  it('still gives a weight_reps exercise all four records', () => {
+    const records = computePersonalRecords([set()]);
+    expect(records.map((r) => r.type).sort()).toEqual(['est_1rm', 'max_reps', 'max_volume', 'max_weight']);
   });
 });

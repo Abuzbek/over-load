@@ -1,7 +1,14 @@
 import { estimateOneRepMax } from './oneRepMax';
 import { countsTowardRecords, setVolumeKg, type CompletedSet } from './sets';
+import type { TrackingType } from './trackingTypes';
 
-export type PersonalRecordType = 'max_weight' | 'max_reps' | 'max_volume' | 'est_1rm';
+export type PersonalRecordType =
+  | 'max_weight'
+  | 'max_reps'
+  | 'max_volume'
+  | 'est_1rm'
+  | 'max_duration'
+  | 'max_distance';
 
 export type PersonalRecord = {
   exerciseId: string;
@@ -14,14 +21,27 @@ export type PersonalRecord = {
 
 type Metric = { type: PersonalRecordType; of: (set: CompletedSet) => number };
 
-const METRICS: Metric[] = [
-  { type: 'max_weight', of: (s) => s.weightKg ?? 0 },
-  // Reps stand on their own: a bodyweight set carries no weight, and max reps
-  // is the only record that means anything for it.
-  { type: 'max_reps', of: (s) => s.reps ?? 0 },
-  { type: 'max_volume', of: setVolumeKg },
-  { type: 'est_1rm', of: (s) => estimateOneRepMax(s.weightKg ?? 0, s.reps ?? 0) },
-];
+const MAX_WEIGHT: Metric = { type: 'max_weight', of: (s) => s.weightKg ?? 0 };
+const MAX_REPS: Metric = { type: 'max_reps', of: (s) => s.reps ?? 0 };
+const MAX_VOLUME: Metric = { type: 'max_volume', of: setVolumeKg };
+const EST_1RM: Metric = {
+  type: 'est_1rm',
+  of: (s) => estimateOneRepMax(s.weightKg ?? 0, s.reps ?? 0),
+};
+const MAX_DURATION: Metric = { type: 'max_duration', of: (s) => s.durationSeconds ?? 0 };
+const MAX_DISTANCE: Metric = { type: 'max_distance', of: (s) => s.distanceM ?? 0 };
+
+/**
+ * A record only means something if the exercise measures it. Before this map
+ * existed, every metric ran against every exercise, which cached an estimated
+ * one-rep max in kilograms for a stretch.
+ */
+const METRICS_BY_TRACKING_TYPE: Record<TrackingType, Metric[]> = {
+  weight_reps: [MAX_WEIGHT, MAX_REPS, MAX_VOLUME, EST_1RM],
+  reps: [MAX_REPS],
+  duration: [MAX_DURATION],
+  distance_duration: [MAX_DISTANCE, MAX_DURATION],
+};
 
 /**
  * Recomputes every record from scratch. This is a derived cache, never a
@@ -41,7 +61,9 @@ export function computePersonalRecords(sets: CompletedSet[]): PersonalRecord[] {
   const records: PersonalRecord[] = [];
 
   for (const [exerciseId, group] of byExercise) {
-    for (const metric of METRICS) {
+    const metrics = METRICS_BY_TRACKING_TYPE[group[0]!.trackingType];
+
+    for (const metric of metrics) {
       let best: CompletedSet | undefined;
       let bestValue = 0;
 
