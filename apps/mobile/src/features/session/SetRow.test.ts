@@ -6,10 +6,12 @@ function completedSet(overrides: Partial<CompletedSet> = {}): CompletedSet {
   return {
     id: 'set-1',
     exerciseId: 'ex-1',
+    trackingType: 'weight_reps',
     setType: 'normal',
     weightKg: 80,
     reps: 8,
     durationSeconds: null,
+    distanceM: null,
     completedAt: 1_700_000_000_000,
     ...overrides,
   };
