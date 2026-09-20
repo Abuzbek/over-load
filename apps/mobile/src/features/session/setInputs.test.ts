@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatDurationInput, inputsFor, parseDuration } from './setInputs';
+import {
+  formatDurationInput,
+  inputsFor,
+  parseDecimalInput,
+  parseDuration,
+  parseIntegerInput,
+} from './setInputs';
 
 describe('inputsFor', () => {
   it('gives weight and reps for weight_reps', () => {
@@ -52,5 +58,46 @@ describe('parseDuration', () => {
 
   it('rejects a decimal instead of silently truncating it', () => {
     expect(parseDuration('12.5')).toBeNull();
+  });
+});
+
+describe('parseIntegerInput', () => {
+  it('reads a bare integer', () => {
+    expect(parseIntegerInput('8')).toBe(8);
+  });
+
+  it('rejects a decimal point instead of silently truncating it', () => {
+    expect(parseIntegerInput('8.5')).toBeNull();
+  });
+
+  it('rejects a comma decimal', () => {
+    expect(parseIntegerInput('8,5')).toBeNull();
+  });
+
+  it('rejects trailing garbage', () => {
+    expect(parseIntegerInput('8abc')).toBeNull();
+  });
+
+  it('returns null for empty or whitespace-only input', () => {
+    expect(parseIntegerInput('')).toBeNull();
+    expect(parseIntegerInput('   ')).toBeNull();
+  });
+});
+
+describe('parseDecimalInput', () => {
+  it('reads a bare integer', () => {
+    expect(parseDecimalInput('60')).toBe(60);
+  });
+
+  it('accepts a decimal point', () => {
+    expect(parseDecimalInput('60.5')).toBe(60.5);
+  });
+
+  it('accepts a comma as the decimal separator', () => {
+    expect(parseDecimalInput('60,5')).toBe(60.5);
+  });
+
+  it('returns null for nonsense', () => {
+    expect(parseDecimalInput('abc')).toBeNull();
   });
 });

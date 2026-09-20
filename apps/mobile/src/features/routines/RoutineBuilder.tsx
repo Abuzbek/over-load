@@ -9,13 +9,9 @@ import { discardWorkout, getActiveWorkoutId, startWorkoutFromRoutine } from '../
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { theme } from '../../ui/theme';
+import { parseDecimalInput, parseIntegerInput } from '../session/setInputs';
 
 type Props = { routineId: string };
-
-function toNumber(value: string): number | null {
-  const parsed = Number.parseFloat(value.replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : null;
-}
 
 type ExerciseCardProps = {
   entry: RoutineDetailExercise;
@@ -64,8 +60,8 @@ function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: Exercis
           title="Add set"
           variant="secondary"
           onPress={() => {
-            const weightValue = newSetWeight ? toNumber(newSetWeight) : undefined;
-            const repsValue = newSetReps ? toNumber(newSetReps) : 8;
+            const weightValue = newSetWeight ? parseDecimalInput(newSetWeight) : undefined;
+            const repsValue = newSetReps ? parseIntegerInput(newSetReps) : 8;
             addRoutineSet(db, entry.routineExercise.id, {
               targetReps: repsValue ?? 8,
               targetWeightKg: weightValue != null ? toStorageKg(weightValue, unit) : undefined,

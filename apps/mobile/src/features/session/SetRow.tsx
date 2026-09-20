@@ -4,7 +4,14 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { SetValues } from '../../data/sessionRepo';
 import { theme } from '../../ui/theme';
-import { formatDurationInput, inputsFor, parseDuration, type SetField } from './setInputs';
+import {
+  formatDurationInput,
+  inputsFor,
+  parseDecimalInput,
+  parseDuration,
+  parseIntegerInput,
+  type SetField,
+} from './setInputs';
 
 type Props = {
   set: WorkoutSet;
@@ -27,11 +34,6 @@ export function formatPrevious(sets: CompletedSet[], index: number, unit: Unit):
   const match = sets[index];
   if (!match) return '—';
   return formatTrackedSet(match.trackingType, match, unit);
-}
-
-function toNumber(value: string): number | null {
-  const parsed = Number.parseFloat(value.replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 /** The weight text input holds a plain number in the display unit, never "kg"/"lb" suffixed. */
@@ -64,10 +66,13 @@ export function SetRow({ set, index, trackingType, previous, unit, onComplete, o
       if (input.field === 'durationSeconds') {
         patch.durationSeconds = parseDuration(values.durationSeconds);
       } else if (input.field === 'weightKg') {
-        const entered = toNumber(values.weightKg);
+        const entered = parseDecimalInput(values.weightKg);
         patch.weightKg = entered === null ? null : toStorageKg(entered, unit);
+      } else if (input.field === 'reps') {
+        // Digits only — "8.5" or "8,5" must not silently become 8.5 reps.
+        patch.reps = parseIntegerInput(values.reps);
       } else {
-        patch[input.field] = toNumber(values[input.field]);
+        patch[input.field] = parseDecimalInput(values[input.field]);
       }
     }
     return patch;

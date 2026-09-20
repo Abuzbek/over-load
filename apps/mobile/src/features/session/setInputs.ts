@@ -47,6 +47,27 @@ export function parseDuration(text: string): number | null {
   return parts.length === 2 ? numbers[0]! * 60 + numbers[1]! : numbers[0]!;
 }
 
+/**
+ * Digits only — rejects a decimal point, a comma, or any other character.
+ * For integer fields like reps, where Number.parseFloat would otherwise
+ * silently accept "8.5" or (after the comma-to-dot swap) "8,5" and round-trip
+ * it straight into an `integer` column.
+ */
+export function parseIntegerInput(text: string): number | null {
+  const trimmed = text.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  return Number.parseInt(trimmed, 10);
+}
+
+/**
+ * A decimal number, treating a comma as the decimal separator (e.g. "60,5")
+ * for real-valued fields like weight and distance.
+ */
+export function parseDecimalInput(text: string): number | null {
+  const parsed = Number.parseFloat(text.replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export function formatDurationInput(seconds: number | null): string {
   if (seconds === null) return '';
   const minutes = Math.floor(seconds / 60);
