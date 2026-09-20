@@ -380,6 +380,22 @@ function recomputePersonalRecords(db: Db, exerciseIds: string[]): void {
   });
 }
 
+/**
+ * Recomputes every exercise's records from `sets`. personal_records is a derived
+ * cache, so this is always safe; it exists so installs written before metrics
+ * were gated by tracking type drop records that can no longer occur.
+ */
+export function rebuildAllPersonalRecords(db: Db): void {
+  const ids = db
+    .selectDistinct({ exerciseId: workoutExercises.exerciseId })
+    .from(workoutExercises)
+    .where(isNull(workoutExercises.deletedAt))
+    .all()
+    .map((row) => row.exerciseId);
+
+  recomputePersonalRecords(db, ids);
+}
+
 export function finishWorkout(db: Db, workoutId: string, at: number): void {
   db.update(workouts).set({ endedAt: at, updatedAt: at }).where(eq(workouts.id, workoutId)).run();
 

@@ -1,6 +1,7 @@
 import migrations from '@overload/schema/migrations';
 import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
 import curated from '../../../../tools/seed-exercises/curated.json';
+import { rebuildAllPersonalRecords } from '../data/sessionRepo';
 import { seedExercisesIfEmpty, type SeedExercise } from '../data/seedRepo';
 import { backupDatabase, discardBackup, restoreDatabase } from './backup';
 import { db } from './client';
@@ -24,4 +25,10 @@ export async function initializeDatabase(): Promise<void> {
 
   await discardBackup();
   seedExercisesIfEmpty(db, curated as SeedExercise[]);
+
+  // Rebuilds the derived personal-record cache once migrations and seeding have
+  // landed, so installs written before metrics were gated by tracking type drop
+  // the records the new rules would never produce (e.g. an est_1rm on a duration
+  // exercise). Safe every launch: personal_records is fully recomputable from `sets`.
+  rebuildAllPersonalRecords(db);
 }
