@@ -5,10 +5,12 @@ function set(partial: Partial<CompletedSet> = {}): CompletedSet {
   return {
     id: 's1',
     exerciseId: 'e1',
+    trackingType: 'weight_reps',
     setType: 'normal',
     weightKg: 100,
     reps: 5,
     durationSeconds: null,
+    distanceM: null,
     completedAt: 1_700_000_000_000,
     ...partial,
   };
@@ -58,5 +60,31 @@ describe('totalVolumeKg', () => {
 
   it('is zero for an empty list', () => {
     expect(totalVolumeKg([])).toBe(0);
+  });
+});
+
+function setWithTracking(over: Partial<CompletedSet> = {}): CompletedSet {
+  return {
+    id: 'a', exerciseId: 'e', trackingType: 'weight_reps', setType: 'normal',
+    weightKg: 10, reps: 5, durationSeconds: null, distanceM: null,
+    completedAt: 1, ...over,
+  };
+}
+
+describe('setVolumeKg tracking-type gating', () => {
+  it('counts volume for weight_reps', () => {
+    expect(setVolumeKg(setWithTracking())).toBe(50);
+  });
+
+  it('is zero for a duration exercise even when a weight was stored', () => {
+    expect(setVolumeKg(setWithTracking({ trackingType: 'duration', weightKg: 17, reps: 8 }))).toBe(0);
+  });
+
+  it('is zero for a bodyweight reps exercise', () => {
+    expect(setVolumeKg(setWithTracking({ trackingType: 'reps', weightKg: 17, reps: 8 }))).toBe(0);
+  });
+
+  it('excludes non-weight sets from a mixed total', () => {
+    expect(totalVolumeKg([setWithTracking(), setWithTracking({ trackingType: 'duration', weightKg: 17, reps: 8 })])).toBe(50);
   });
 });

@@ -1,3 +1,5 @@
+import { tracksWeight, type TrackingType } from './trackingTypes';
+
 export type SetType = 'normal' | 'warmup' | 'drop' | 'failure';
 
 /**
@@ -8,10 +10,12 @@ export type SetType = 'normal' | 'warmup' | 'drop' | 'failure';
 export type CompletedSet = {
   id: string;
   exerciseId: string;
+  trackingType: TrackingType;
   setType: SetType;
   weightKg: number | null;
   reps: number | null;
   durationSeconds: number | null;
+  distanceM: number | null;
   /** Epoch milliseconds. */
   completedAt: number;
 };
@@ -22,6 +26,9 @@ export function countsTowardRecords(set: CompletedSet): boolean {
 }
 
 export function setVolumeKg(set: CompletedSet): number {
+  // A plank with a stray weight value is not 136 kg of work. Gating here rather
+  // than at each call site keeps every consumer consistent.
+  if (!tracksWeight(set.trackingType)) return 0;
   if (set.weightKg === null || set.reps === null) return 0;
   if (set.weightKg <= 0 || set.reps <= 0) return 0;
   return set.weightKg * set.reps;
