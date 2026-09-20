@@ -37,7 +37,7 @@ export async function scheduleRestNotification(seconds: number): Promise<void> {
   }
 
   scheduledId = await Notifications.scheduleNotificationAsync({
-    content: { title: 'Rest complete', body: 'Time for your next set.' },
+    content: { title: 'Rest complete', body: 'Time for your next set.', sound: true },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
       seconds,
