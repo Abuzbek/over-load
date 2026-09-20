@@ -238,7 +238,7 @@ export function uncompleteSet(db: Db, setId: string): void {
   db.update(sets).set({ completedAt: null, updatedAt: now() }).where(eq(sets.id, setId)).run();
 }
 
-function toCompletedSet(row: WorkoutSet, exerciseId: string): CompletedSet {
+export function toCompletedSet(row: WorkoutSet, exerciseId: string): CompletedSet {
   return {
     id: row.id,
     exerciseId,
