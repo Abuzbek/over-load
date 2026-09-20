@@ -17,8 +17,10 @@ import { ListRow } from '../../ui/ListRow';
 import { theme } from '../../ui/theme';
 
 export function RoutineList() {
-  // A local counter is the refresh signal: every mutation bumps it and re-reads.
-  const [version, setVersion] = useState(0);
+  // A local counter is the refresh signal: every mutation bumps it and
+  // re-reads listRoutines below. It is not used as a `key` on the container —
+  // that would remount the FlatList and reset scroll position.
+  const [, setVersion] = useState(0);
   const routines = listRoutines(db);
 
   const [isModalVisible, setModalVisible] = useState(false);
@@ -46,7 +48,7 @@ export function RoutineList() {
   }, [name]);
 
   return (
-    <View style={styles.container} key={version}>
+    <View style={styles.container}>
       <FlatList
         data={routines}
         keyExtractor={(item) => item.id}
