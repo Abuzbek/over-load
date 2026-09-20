@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { RoutineDetailExercise } from '../../data/routineRepo';
 import { addRoutineSet, getRoutineDetail } from '../../data/routineRepo';
 import { discardWorkout, getActiveWorkoutId, startWorkoutFromRoutine } from '../../data/sessionRepo';
 import { db } from '../../db/client';
@@ -14,6 +15,60 @@ function toNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+type ExerciseCardProps = {
+  entry: RoutineDetailExercise;
+  onSetAdded: () => void;
+};
+
+function ExerciseCard({ entry, onSetAdded }: ExerciseCardProps) {
+  const [newSetWeight, setNewSetWeight] = useState('');
+  const [newSetReps, setNewSetReps] = useState('');
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>{entry.exercise.name}</Text>
+      {entry.sets.map((set, index) => (
+        <Text key={set.id} style={styles.setLine}>
+          Set {index + 1}: {set.targetWeightKg ?? '—'} kg × {set.targetReps ?? '—'}
+        </Text>
+      ))}
+      <View style={styles.addSetContainer}>
+        <TextInput
+          value={newSetWeight}
+          onChangeText={setNewSetWeight}
+          placeholder="Weight (kg)"
+          keyboardType="decimal-pad"
+          placeholderTextColor={theme.colors.textMuted}
+          style={styles.setInput}
+        />
+        <TextInput
+          value={newSetReps}
+          onChangeText={setNewSetReps}
+          placeholder="Reps"
+          keyboardType="number-pad"
+          placeholderTextColor={theme.colors.textMuted}
+          style={styles.setInput}
+        />
+        <Button
+          title="Add set"
+          variant="secondary"
+          onPress={() => {
+            const weightValue = newSetWeight ? toNumber(newSetWeight) : undefined;
+            const repsValue = newSetReps ? toNumber(newSetReps) : 8;
+            addRoutineSet(db, entry.routineExercise.id, {
+              targetReps: repsValue ?? 8,
+              targetWeightKg: weightValue ?? undefined,
+            });
+            setNewSetWeight('');
+            setNewSetReps('');
+            onSetAdded();
+          }}
+        />
+      </View>
+    </View>
+  );
+}
+
 export function RoutineBuilder({ routineId }: Props) {
   // A local counter is the refresh signal: bumping it forces a re-read of
   // getRoutineDetail. "Add set" bumps it directly; useFocusEffect bumps it
@@ -21,8 +76,6 @@ export function RoutineBuilder({ routineId }: Props) {
   // add-exercise) mutate this routine and navigate back via router.back(),
   // leaving this screen mounted underneath rather than remounting it.
   const [, setVersion] = useState(0);
-  const [newSetWeight, setNewSetWeight] = useState('');
-  const [newSetReps, setNewSetReps] = useState('');
   const detail = getRoutineDetail(db, routineId);
 
   // The unfinished workout that blocks starting a new one. getActiveWorkoutId
@@ -77,47 +130,11 @@ export function RoutineBuilder({ routineId }: Props) {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         {detail.exercises.map((entry) => (
-          <View key={entry.routineExercise.id} style={styles.card}>
-            <Text style={styles.cardTitle}>{entry.exercise.name}</Text>
-            {entry.sets.map((set, index) => (
-              <Text key={set.id} style={styles.setLine}>
-                Set {index + 1}: {set.targetWeightKg ?? '—'} kg × {set.targetReps ?? '—'}
-              </Text>
-            ))}
-            <View style={styles.addSetContainer}>
-              <TextInput
-                value={newSetWeight}
-                onChangeText={setNewSetWeight}
-                placeholder="Weight (kg)"
-                keyboardType="decimal-pad"
-                placeholderTextColor={theme.colors.textMuted}
-                style={styles.setInput}
-              />
-              <TextInput
-                value={newSetReps}
-                onChangeText={setNewSetReps}
-                placeholder="Reps"
-                keyboardType="number-pad"
-                placeholderTextColor={theme.colors.textMuted}
-                style={styles.setInput}
-              />
-              <Button
-                title="Add set"
-                variant="secondary"
-                onPress={() => {
-                  const weightValue = newSetWeight ? toNumber(newSetWeight) : undefined;
-                  const repsValue = newSetReps ? toNumber(newSetReps) : 8;
-                  addRoutineSet(db, entry.routineExercise.id, {
-                    targetReps: repsValue ?? 8,
-                    targetWeightKg: weightValue ?? undefined,
-                  });
-                  setNewSetWeight('');
-                  setNewSetReps('');
-                  setVersion((v) => v + 1);
-                }}
-              />
-            </View>
-          </View>
+          <ExerciseCard
+            key={entry.routineExercise.id}
+            entry={entry}
+            onSetAdded={() => setVersion((v) => v + 1)}
+          />
         ))}
 
         {detail.exercises.length === 0 ? (
