@@ -6,12 +6,19 @@ Drizzle. Release 1 (the logging loop) is built and merged; see
 
 ## Commands
 
+All from the repo root:
+
 ```bash
-pnpm vitest run                      # full suite (133 tests, 18 files)
-pnpm typecheck                       # pnpm -r exec tsc --noEmit — the ONLY type gate; there is no CI
-pnpm --filter @workouts/mobile start # Expo dev server
-cd apps/mobile && npx expo export --platform ios   # bundle check — catches packaging breaks tests cannot
-pnpm --filter @workouts/schema generate            # regenerate migrations after a schema change
+pnpm start          # Expo dev server — then press i (iOS) or a (Android)
+pnpm ios            # straight to the iOS simulator
+pnpm android        # straight to an Android emulator/device
+
+pnpm test           # full suite (133 tests, 18 files)
+pnpm typecheck      # the ONLY type gate — there is no CI
+pnpm bundle         # expo export — catches packaging breaks tests cannot see
+
+pnpm db:generate    # regenerate migrations after a schema change
+pnpm seed:build     # rebuild curated.json from the upstream dataset
 ```
 
 ## Layout
