@@ -1,3 +1,4 @@
+import { summariseMuscles } from '@overload/domain';
 import {
   exercises,
   newId,
@@ -5,13 +6,14 @@ import {
   routineExercises,
   routineSets,
   routines,
+  workouts,
   type Db,
   type Exercise,
   type Routine,
   type RoutineExercise,
   type RoutineSet,
 } from '@overload/schema';
-import { and, asc, eq, isNull, max } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, max } from 'drizzle-orm';
 
 export type RoutineDetailExercise = {
   routineExercise: RoutineExercise;
@@ -180,4 +182,54 @@ export function getRoutineDetail(db: Db, routineId: string): RoutineDetail | und
   }));
 
   return { routine, exercises: detailExercises };
+}
+
+export type RoutineSummary = {
+  routine: Routine;
+  exerciseCount: number;
+  lastTrainedAt: number | null;
+  primaryMuscles: string[];
+};
+
+/**
+ * One grouped read per concern rather than a query per routine. lastPerformance
+ * already shows what the per-row loop costs, and it is a known deferred minor.
+ *
+ * Four levels carry a tombstone filter: routines, routine_exercises, exercises
+ * and workouts. Dropping any one of them silently changes the numbers on the
+ * Train screen rather than throwing.
+ */
+export function listRoutineSummaries(db: Db): RoutineSummary[] {
+  const live = listRoutines(db); // already filters routines.deletedAt
+
+  const entries = db
+    .select({
+      routineId: routineExercises.routineId,
+      orderIndex: routineExercises.orderIndex,
+      primaryMuscle: exercises.primaryMuscle,
+    })
+    .from(routineExercises)
+    .innerJoin(exercises, eq(routineExercises.exerciseId, exercises.id))
+    .where(and(isNull(routineExercises.deletedAt), isNull(exercises.deletedAt)))
+    .orderBy(asc(routineExercises.orderIndex))
+    .all();
+
+  const lastTrained = db
+    .select({ routineId: workouts.routineId, lastAt: max(workouts.startedAt) })
+    .from(workouts)
+    .where(and(isNull(workouts.deletedAt), isNotNull(workouts.endedAt)))
+    .groupBy(workouts.routineId)
+    .all();
+
+  const lastByRoutine = new Map(lastTrained.map((r) => [r.routineId, r.lastAt ?? null]));
+
+  return live.map((routine) => {
+    const mine = entries.filter((e) => e.routineId === routine.id);
+    return {
+      routine,
+      exerciseCount: mine.length,
+      lastTrainedAt: lastByRoutine.get(routine.id) ?? null,
+      primaryMuscles: summariseMuscles(mine.map((e) => e.primaryMuscle), 3),
+    };
+  });
 }

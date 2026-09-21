@@ -1,4 +1,4 @@
-import { exercises, newId, now, routineExercises, routineSets, type Exercise } from '@overload/schema';
+import { exercises, newId, now, routineExercises, routineSets, workouts, type Exercise } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -7,6 +7,7 @@ import {
   addRoutineSet,
   createRoutine,
   getRoutineDetail,
+  listRoutineSummaries,
   listRoutines,
   reorderRoutineExercises,
   softDeleteRoutine,
@@ -175,5 +176,82 @@ describe('reorderRoutineExercises', () => {
     const d = addExerciseToRoutine(db, routine.id, bench.id);
     const all = db.select().from(routineExercises).all();
     expect(d.orderIndex).toBe(Math.max(...all.filter((r) => r.id !== d.id).map((r) => r.orderIndex)) + 1);
+  });
+});
+
+describe('listRoutineSummaries', () => {
+  it('counts live exercises and lists their primary muscles in order', () => {
+    const routine = createRoutine(db, 'Push Day');
+    addExerciseToRoutine(db, routine.id, bench.id);
+    addExerciseToRoutine(db, routine.id, squat.id);
+
+    const [summary] = listRoutineSummaries(db);
+    expect(summary!.exerciseCount).toBe(2);
+    expect(summary!.primaryMuscles).toEqual(['chest', 'quads']);
+    expect(summary!.lastTrainedAt).toBeNull();
+  });
+
+  it('reports the most recent finished workout as lastTrainedAt', () => {
+    const routine = createRoutine(db, 'Push Day');
+    const ts = now();
+    db.insert(workouts).values([
+      { id: newId(), routineId: routine.id, name: 'Push Day', startedAt: ts - 5000, endedAt: ts - 4000 },
+      { id: newId(), routineId: routine.id, name: 'Push Day', startedAt: ts - 1000, endedAt: ts },
+    ]).run();
+
+    expect(listRoutineSummaries(db)[0]!.lastTrainedAt).toBe(ts - 1000);
+  });
+
+  it('ignores a workout that is still in progress', () => {
+    const routine = createRoutine(db, 'Push Day');
+    db.insert(workouts).values({
+      id: newId(), routineId: routine.id, name: 'Push Day', startedAt: now(), endedAt: null,
+    }).run();
+
+    expect(listRoutineSummaries(db)[0]!.lastTrainedAt).toBeNull();
+  });
+
+  // --- one tombstone test per joined level ---
+
+  it('level 1: excludes a tombstoned routine', () => {
+    const routine = createRoutine(db, 'Push Day');
+    softDeleteRoutine(db, routine.id);
+    expect(listRoutineSummaries(db)).toHaveLength(0);
+  });
+
+  it('level 2: does not count a tombstoned routine_exercise', () => {
+    const routine = createRoutine(db, 'Push Day');
+    const entry = addExerciseToRoutine(db, routine.id, bench.id);
+    addExerciseToRoutine(db, routine.id, squat.id);
+    db.update(routineExercises).set({ deletedAt: now() }).where(eq(routineExercises.id, entry.id)).run();
+
+    const [summary] = listRoutineSummaries(db);
+    expect(summary!.exerciseCount).toBe(1);
+    expect(summary!.primaryMuscles).toEqual(['quads']);
+  });
+
+  it('level 3: does not count an entry whose exercise is tombstoned', () => {
+    const routine = createRoutine(db, 'Push Day');
+    addExerciseToRoutine(db, routine.id, bench.id);
+    addExerciseToRoutine(db, routine.id, squat.id);
+    db.update(exercises).set({ deletedAt: now() }).where(eq(exercises.id, bench.id)).run();
+
+    const [summary] = listRoutineSummaries(db);
+    expect(summary!.exerciseCount).toBe(1);
+    expect(summary!.primaryMuscles).toEqual(['quads']);
+  });
+
+  it('level 4: ignores a tombstoned workout when computing lastTrainedAt', () => {
+    const routine = createRoutine(db, 'Push Day');
+    const ts = now();
+    const kept = newId();
+    const dropped = newId();
+    db.insert(workouts).values([
+      { id: kept, routineId: routine.id, name: 'Push Day', startedAt: ts - 5000, endedAt: ts - 4000 },
+      { id: dropped, routineId: routine.id, name: 'Push Day', startedAt: ts - 1000, endedAt: ts },
+    ]).run();
+    db.update(workouts).set({ deletedAt: ts }).where(eq(workouts.id, dropped)).run();
+
+    expect(listRoutineSummaries(db)[0]!.lastTrainedAt).toBe(ts - 5000);
   });
 });
