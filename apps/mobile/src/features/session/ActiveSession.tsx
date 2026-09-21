@@ -110,6 +110,13 @@ export function ActiveSession({ workoutId }: Props) {
           title="Finish workout"
           onPress={() => {
             finishWorkout(db, workoutId, Date.now());
+            // A rest notification outlives the screen that scheduled it: it is
+            // an OS-level scheduled notification, and it survives navigation
+            // and even a force-quit. Without this, finishing a workout inside
+            // the rest period still buzzes "Time for your next set" minutes
+            // after the workout is over. Skip cancels it; finishing must too.
+            setRest(null);
+            void cancelRestNotification();
             // replace() alone swaps only the top route, leaving
             // Home -> Routines -> Builder -> Home with a back button into the
             // builder of a workout that is already over. Pop to the root first.
