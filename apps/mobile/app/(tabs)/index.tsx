@@ -1,11 +1,11 @@
-import { Link, router, Stack, useFocusEffect } from 'expo-router';
+import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
-import { discardWorkout, getActiveWorkoutId, startEmptyWorkout } from '../src/data/sessionRepo';
-import { db } from '../src/db/client';
-import { Button } from '../src/ui/Button';
-import { Text } from '../src/ui/Text';
-import { theme } from '../src/ui/theme';
+import { discardWorkout, getActiveWorkoutId, startEmptyWorkout } from '../../src/data/sessionRepo';
+import { db } from '../../src/db/client';
+import { Button } from '../../src/ui/Button';
+import { Text } from '../../src/ui/Text';
+import { theme } from '../../src/ui/theme';
 
 export default function HomeScreen() {
   // A local counter is the refresh signal: bumping it forces a re-read of
@@ -57,8 +57,6 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Overload' }} />
-
       {activeWorkoutId ? (
         <View style={styles.resume}>
           <Text>You have a workout in progress.</Text>
@@ -70,17 +68,8 @@ export default function HomeScreen() {
         <Button title="Routines" onPress={() => {}} />
       </Link>
       <Button title="Start empty workout" variant="secondary" onPress={onStartEmptyPressed} />
-      <Link href="/history" asChild>
-        <Button title="History" onPress={() => {}} />
-      </Link>
-      <Link href="/records" asChild>
-        <Button title="Records" onPress={() => {}} />
-      </Link>
       <Link href="/exercises" asChild>
         <Button title="Browse exercises" onPress={() => {}} />
-      </Link>
-      <Link href="/settings" asChild>
-        <Button title="Settings" variant="secondary" onPress={() => {}} />
       </Link>
 
       <Modal
