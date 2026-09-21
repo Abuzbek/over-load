@@ -1,4 +1,5 @@
-import { Newsreader_600SemiBold, useFonts } from '@expo-google-fonts/newsreader';
+import { Newsreader_600SemiBold } from '@expo-google-fonts/newsreader/600SemiBold';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
