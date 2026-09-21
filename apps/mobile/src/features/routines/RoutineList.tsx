@@ -12,6 +12,7 @@ import {
 import { createRoutine, listRoutines } from '../../data/routineRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
+import { EmptyState } from '../../ui/EmptyState';
 import { ListRow } from '../../ui/ListRow';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
@@ -54,9 +55,7 @@ export function RoutineList() {
         data={routines}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
-          <Text color="textMuted" style={styles.empty}>
-            No routines yet.
-          </Text>
+          <EmptyState title="No routines yet" body="Create one and it will show up here." />
         }
         renderItem={({ item }) => (
           <ListRow title={item.name} onPress={() => router.push(`/routines/${item.id}`)} />
@@ -108,7 +107,6 @@ export function RoutineList() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   footer: { padding: theme.spacing.lg },
-  empty: { textAlign: 'center', padding: theme.spacing.xl },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

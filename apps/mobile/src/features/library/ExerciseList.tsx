@@ -13,6 +13,7 @@ import {
 import { createCustomExercise, listExercises as listExercisesRepo } from '../../data/exerciseRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
+import { EmptyState } from '../../ui/EmptyState';
 import { ListRow } from '../../ui/ListRow';
 import { SearchField } from '../../ui/SearchField';
 import { Text } from '../../ui/Text';
@@ -58,9 +59,7 @@ export function ExerciseList({ onSelect }: Props) {
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          <Text color="textMuted" style={styles.empty}>
-            No exercises match "{search}"
-          </Text>
+          <EmptyState title="No exercises match" body="Try a different name or equipment." />
         }
         renderItem={({ item }) => (
           <ListRow
@@ -195,7 +194,6 @@ function NewExerciseModal({ visible, onClose, onCreated }: NewExerciseModalProps
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   newExerciseContainer: { paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.md },
-  empty: { textAlign: 'center', padding: theme.spacing.xl },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

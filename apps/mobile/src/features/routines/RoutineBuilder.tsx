@@ -1,16 +1,19 @@
 import { toStorageKg, type Unit } from '@overload/domain';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { RoutineDetailExercise } from '../../data/routineRepo';
 import { addRoutineSet, getRoutineDetail, reorderRoutineExercises } from '../../data/routineRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { discardWorkout, getActiveWorkoutId, startWorkoutFromRoutine } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
+import { Card } from '../../ui/Card';
+import { NumericField } from '../../ui/NumericField';
+import { Screen } from '../../ui/Screen';
+import { Sheet } from '../../ui/Sheet';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
-import { textStyle } from '../../ui/typography';
 import { parseDecimalInput, parseIntegerInput } from '../session/setInputs';
 import {
   formatRoutineTarget,
@@ -32,11 +35,15 @@ const EMPTY_DRAFT: Record<RoutineTargetField, string> = { weightKg: '', reps: ''
 
 function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: ExerciseCardProps) {
   const trackingType = entry.exercise.trackingType;
+  // A duration/distance_duration exercise gets [] here — routine_sets has no
+  // column for a target duration or distance, so rendering a box for it would
+  // silently discard whatever the user typed. Keep this empty rather than
+  // inventing a weight/reps pair for every tracking type.
   const inputs = targetInputsFor(trackingType, unit);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
 
   return (
-    <View style={styles.card}>
+    <Card>
       <View style={styles.cardHeader}>
         <Text variant="title" style={styles.cardTitle}>
           {entry.exercise.name}
@@ -47,6 +54,8 @@ function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: Exercis
         </View>
       </View>
       {entry.sets.map((set, index) => {
+        // null is the signal to render the bare set number — a plank does not
+        // get an invented "— × 8".
         const target = formatRoutineTarget(trackingType, set, unit);
         return (
           <Text key={set.id} color="textMuted">
@@ -55,17 +64,20 @@ function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: Exercis
         );
       })}
       <View style={styles.addSetContainer}>
-        {inputs.map((input) => (
-          <TextInput
-            key={input.field}
-            value={draft[input.field]}
-            onChangeText={(text) => setDraft((current) => ({ ...current, [input.field]: text }))}
-            placeholder={input.placeholder}
-            keyboardType={input.keyboard}
-            placeholderTextColor={theme.colors.textMuted}
-            style={styles.setInput}
-          />
-        ))}
+        {inputs.length > 0 ? (
+          <View style={styles.inputsRow}>
+            {inputs.map((input) => (
+              <NumericField
+                key={input.field}
+                value={draft[input.field]}
+                onChangeText={(text) => setDraft((current) => ({ ...current, [input.field]: text }))}
+                placeholder={input.placeholder}
+                keyboard={input.keyboard}
+                accessibilityLabel={input.placeholder}
+              />
+            ))}
+          </View>
+        ) : null}
         <Button
           title="Add set"
           variant="secondary"
@@ -89,7 +101,7 @@ function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: Exercis
           }}
         />
       </View>
-    </View>
+    </Card>
   );
 }
 
@@ -99,6 +111,8 @@ export function RoutineBuilder({ routineId }: Props) {
   // whenever this screen regains focus, since other screens (e.g.
   // add-exercise) mutate this routine and navigate back via router.back(),
   // leaving this screen mounted underneath rather than remounting it.
+  // Do NOT switch this to key={version} — that remounts and resets scroll
+  // (6b249e9's failure mode).
   const [, setVersion] = useState(0);
   const detail = getRoutineDetail(db, routineId);
   const unit = getWeightUnit(db);
@@ -107,8 +121,8 @@ export function RoutineBuilder({ routineId }: Props) {
   // only ever returns the newest unfinished workout, so silently starting a
   // second one strands the first: no endedAt keeps it out of history, and a
   // newer sibling keeps it out of resume. Its sets then sit in SQLite,
-  // invisible to every screen, forever. A Modal rather than Alert.alert —
-  // Alert's button semantics are iOS-shaped, and this app ships Android too.
+  // invisible to every screen, forever. Sheet renders a Modal underneath,
+  // never Alert — Alert.prompt is iOS-only and this app ships Android too.
   const [blockingWorkoutId, setBlockingWorkoutId] = useState<string | null>(null);
 
   useFocusEffect(
@@ -167,74 +181,52 @@ export function RoutineBuilder({ routineId }: Props) {
 
   if (!detail) {
     return (
-      <View style={styles.container}>
+      <Screen>
         <Text color="textMuted" style={styles.empty}>
           Routine not found.
         </Text>
-      </View>
+      </Screen>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        {detail.exercises.map((entry, index) => (
-          <ExerciseCard
-            key={entry.routineExercise.id}
-            entry={entry}
-            unit={unit}
-            onSetAdded={() => setVersion((v) => v + 1)}
-            onMoveUp={index > 0 ? () => moveExercise(index, -1) : undefined}
-            onMoveDown={index < detail.exercises.length - 1 ? () => moveExercise(index, 1) : undefined}
-          />
-        ))}
-
-        {detail.exercises.length === 0 ? (
-          <Text color="textMuted" style={styles.empty}>
-            No exercises yet. Add one to get started.
-          </Text>
-        ) : null}
-
-        <Button title="Start workout" onPress={onStartPressed} />
-
-        <Button
-          title="Add exercise"
-          onPress={() => router.push(`/routines/${routineId}/add-exercise`)}
+    <Screen scroll>
+      {detail.exercises.map((entry, index) => (
+        <ExerciseCard
+          key={entry.routineExercise.id}
+          entry={entry}
+          unit={unit}
+          onSetAdded={() => setVersion((v) => v + 1)}
+          onMoveUp={index > 0 ? () => moveExercise(index, -1) : undefined}
+          onMoveDown={index < detail.exercises.length - 1 ? () => moveExercise(index, 1) : undefined}
         />
-      </ScrollView>
+      ))}
 
-      <Modal
+      {detail.exercises.length === 0 ? (
+        <Text color="textMuted" style={styles.empty}>
+          No exercises yet. Add one to get started.
+        </Text>
+      ) : null}
+
+      <Button title="Start workout" onPress={onStartPressed} />
+
+      <Button title="Add exercise" onPress={() => router.push(`/routines/${routineId}/add-exercise`)} />
+
+      <Sheet
         visible={blockingWorkoutId !== null}
-        transparent
-        animationType="fade"
         onRequestClose={() => setBlockingWorkoutId(null)}
+        title="A workout is already in progress"
+        body="Resume it, or discard it and start this routine instead. Discarding keeps nothing from the unfinished workout."
       >
-        <View style={styles.backdrop}>
-          <View style={styles.modalCard}>
-            <Text variant="title">A workout is already in progress</Text>
-            <Text color="textMuted">
-              Resume it, or discard it and start this routine instead. Discarding keeps nothing
-              from the unfinished workout.
-            </Text>
-            <Button title="Resume it" onPress={onResume} />
-            <Button title="Discard it and start" variant="secondary" onPress={onDiscardAndStart} />
-            <Button title="Cancel" variant="secondary" onPress={() => setBlockingWorkoutId(null)} />
-          </View>
-        </View>
-      </Modal>
-    </View>
+        <Button title="Resume it" onPress={onResume} />
+        <Button title="Discard it and start" variant="secondary" onPress={onDiscardAndStart} />
+        <Button title="Cancel" variant="secondary" onPress={() => setBlockingWorkoutId(null)} />
+      </Sheet>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  content: { padding: theme.spacing.lg, gap: theme.spacing.lg },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.lg,
-    gap: theme.spacing.sm,
-  },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -244,26 +236,6 @@ const styles = StyleSheet.create({
   cardTitle: { flexShrink: 1 },
   reorderControls: { flexDirection: 'row', gap: theme.spacing.sm },
   addSetContainer: { gap: theme.spacing.sm, marginTop: theme.spacing.sm },
-  setInput: {
-    ...textStyle('body', true),
-    color: theme.colors.text,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radius.sm,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    textAlign: 'center',
-  },
+  inputsRow: { flexDirection: 'row', gap: theme.spacing.sm },
   empty: { textAlign: 'center' },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    padding: theme.spacing.xl,
-  },
-  modalCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
 });
