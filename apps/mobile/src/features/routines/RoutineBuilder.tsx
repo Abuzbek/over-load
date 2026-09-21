@@ -9,6 +9,7 @@ import { discardWorkout, getActiveWorkoutId, startWorkoutFromRoutine } from '../
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { theme } from '../../ui/theme';
+import { textStyle } from '../../ui/typography';
 import { parseDecimalInput, parseIntegerInput } from '../session/setInputs';
 import {
   formatRoutineTarget,
@@ -233,12 +234,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: theme.spacing.sm,
   },
-  cardTitle: { ...theme.text.title, color: theme.colors.text, flexShrink: 1 },
+  cardTitle: { ...textStyle('title', true), color: theme.colors.text, flexShrink: 1 },
   reorderControls: { flexDirection: 'row', gap: theme.spacing.sm },
-  setLine: { ...theme.text.body, color: theme.colors.textMuted },
+  setLine: { ...textStyle('body', true), color: theme.colors.textMuted },
   addSetContainer: { gap: theme.spacing.sm, marginTop: theme.spacing.sm },
   setInput: {
-    ...theme.text.body,
+    ...textStyle('body', true),
     color: theme.colors.text,
     backgroundColor: theme.colors.background,
     borderRadius: theme.radius.sm,
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     textAlign: 'center',
   },
-  empty: { ...theme.text.body, color: theme.colors.textMuted, textAlign: 'center' },
+  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center' },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -259,6 +260,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
   },
-  modalTitle: { ...theme.text.title, color: theme.colors.text },
-  modalBody: { ...theme.text.body, color: theme.colors.textMuted },
+  modalTitle: { ...textStyle('title', true), color: theme.colors.text },
+  modalBody: { ...textStyle('body', true), color: theme.colors.textMuted },
 });

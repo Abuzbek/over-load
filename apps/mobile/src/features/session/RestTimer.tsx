@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../../ui/theme';
+import { textStyle } from '../../ui/typography';
 
 type Props = {
   startedAt: number;
@@ -52,7 +53,7 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.md,
   },
   barDone: { backgroundColor: theme.colors.success },
-  label: { ...theme.text.body, color: theme.colors.text },
-  time: { ...theme.text.title, color: theme.colors.text, fontVariant: ['tabular-nums'] },
-  skip: { ...theme.text.body, color: theme.colors.accent },
+  label: { ...textStyle('body', true), color: theme.colors.text },
+  time: { ...textStyle('title', true), color: theme.colors.text, fontVariant: ['tabular-nums'] },
+  skip: { ...textStyle('body', true), color: theme.colors.accent },
 });

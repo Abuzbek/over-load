@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { SetValues } from '../../data/sessionRepo';
 import { theme } from '../../ui/theme';
+import { textStyle } from '../../ui/typography';
 import {
   formatDurationInput,
   inputsFor,
@@ -116,11 +117,11 @@ export function SetRow({ set, index, trackingType, previous, unit, onComplete, o
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, paddingVertical: theme.spacing.sm },
   rowCompleted: { opacity: 0.6 },
-  index: { ...theme.text.body, color: theme.colors.textMuted, width: 20 },
-  previous: { ...theme.text.caption, color: theme.colors.textMuted, width: 86 },
+  index: { ...textStyle('body', true), color: theme.colors.textMuted, width: 20 },
+  previous: { ...textStyle('caption', true), color: theme.colors.textMuted, width: 86 },
   input: {
     flex: 1,
-    ...theme.text.body,
+    ...textStyle('body', true),
     color: theme.colors.text,
     backgroundColor: theme.colors.background,
     borderRadius: theme.radius.sm,

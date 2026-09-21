@@ -4,6 +4,7 @@ import { addSet, completeSet, uncompleteSet, type WorkoutDetailExercise } from '
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { theme } from '../../ui/theme';
+import { textStyle } from '../../ui/typography';
 import { SetRow } from './SetRow';
 
 type Props = {
@@ -58,5 +59,5 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.sm,
   },
-  title: { ...theme.text.title, color: theme.colors.text },
+  title: { ...textStyle('title', true), color: theme.colors.text },
 });

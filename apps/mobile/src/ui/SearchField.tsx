@@ -1,5 +1,6 @@
 import { StyleSheet, TextInput } from 'react-native';
 import { theme } from './theme';
+import { textStyle } from './typography';
 
 type Props = {
   value: string;
@@ -30,6 +31,6 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
     backgroundColor: theme.colors.surface,
     color: theme.colors.text,
-    ...theme.text.body,
+    ...textStyle('body', true),
   },
 });

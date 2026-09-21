@@ -17,6 +17,7 @@ import { Button } from '../../ui/Button';
 import { ListRow } from '../../ui/ListRow';
 import { SearchField } from '../../ui/SearchField';
 import { theme } from '../../ui/theme';
+import { textStyle } from '../../ui/typography';
 
 type Props = {
   /** Supplying onSelect turns the list into a picker. */
@@ -188,7 +189,7 @@ function NewExerciseModal({ visible, onClose, onCreated }: NewExerciseModalProps
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   newExerciseContainer: { paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.md },
-  empty: { ...theme.text.body, color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
+  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -201,10 +202,10 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
   },
-  modalTitle: { ...theme.text.title, color: theme.colors.text },
-  fieldLabel: { ...theme.text.caption, color: theme.colors.textMuted },
+  modalTitle: { ...textStyle('title', true), color: theme.colors.text },
+  fieldLabel: { ...textStyle('caption', true), color: theme.colors.textMuted },
   input: {
-    ...theme.text.body,
+    ...textStyle('body', true),
     color: theme.colors.text,
     backgroundColor: theme.colors.background,
     borderRadius: theme.radius.sm,
@@ -220,6 +221,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
   },
   chipSelected: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  chipLabel: { ...theme.text.caption, color: theme.colors.text },
+  chipLabel: { ...textStyle('caption', true), color: theme.colors.text },
   chipLabelSelected: { color: '#FFFFFF', fontWeight: '600' },
 });

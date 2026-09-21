@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { getWeightUnit, setWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
 import { theme } from '../../ui/theme';
+import { textStyle } from '../../ui/typography';
 
 const UNITS: Unit[] = ['kg', 'lb'];
 
@@ -58,7 +59,7 @@ export function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing.lg, gap: theme.spacing.md },
-  label: { ...theme.text.body, color: theme.colors.text },
+  label: { ...textStyle('body', true), color: theme.colors.text },
   segmented: {
     flexDirection: 'row',
     backgroundColor: theme.colors.surface,
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   segmentActive: { backgroundColor: theme.colors.accent },
-  segmentLabel: { ...theme.text.body, color: theme.colors.textMuted, fontWeight: '600' },
+  segmentLabel: { ...textStyle('body', true), color: theme.colors.textMuted, fontWeight: '600' },
   segmentLabelActive: { color: '#FFFFFF' },
-  hint: { ...theme.text.caption, color: theme.colors.textMuted },
+  hint: { ...textStyle('caption', true), color: theme.colors.textMuted },
 });

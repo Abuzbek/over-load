@@ -5,6 +5,7 @@ import { discardWorkout, getActiveWorkoutId, startEmptyWorkout } from '../src/da
 import { db } from '../src/db/client';
 import { Button } from '../src/ui/Button';
 import { theme } from '../src/ui/theme';
+import { textStyle } from '../src/ui/typography';
 
 export default function HomeScreen() {
   // A local counter is the refresh signal: bumping it forces a re-read of
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
   },
-  resumeText: { ...theme.text.body, color: theme.colors.text },
+  resumeText: { ...textStyle('body', true), color: theme.colors.text },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -126,6 +127,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
   },
-  modalTitle: { ...theme.text.title, color: theme.colors.text },
-  modalBody: { ...theme.text.body, color: theme.colors.textMuted },
+  modalTitle: { ...textStyle('title', true), color: theme.colors.text },
+  modalBody: { ...textStyle('body', true), color: theme.colors.textMuted },
 });

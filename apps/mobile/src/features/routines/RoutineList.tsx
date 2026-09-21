@@ -15,6 +15,7 @@ import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { ListRow } from '../../ui/ListRow';
 import { theme } from '../../ui/theme';
+import { textStyle } from '../../ui/typography';
 
 export function RoutineList() {
   // A local counter is the refresh signal: every mutation bumps it and
@@ -103,7 +104,7 @@ export function RoutineList() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   footer: { padding: theme.spacing.lg },
-  empty: { ...theme.text.body, color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
+  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -116,14 +117,14 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.lg,
   },
-  modalTitle: { ...theme.text.title, color: theme.colors.text },
+  modalTitle: { ...textStyle('title', true), color: theme.colors.text },
   input: {
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.md,
     backgroundColor: theme.colors.background,
     color: theme.colors.text,
-    ...theme.text.body,
+    ...textStyle('body', true),
   },
   modalActions: { flexDirection: 'row', gap: theme.spacing.md },
   modalActionButton: { flex: 1 },

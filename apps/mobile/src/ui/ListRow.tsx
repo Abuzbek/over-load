@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from './theme';
+import { textStyle } from './typography';
 
 type Props = {
   title: string;
@@ -40,6 +41,6 @@ const styles = StyleSheet.create({
   },
   pressed: { backgroundColor: theme.colors.surface },
   main: { flex: 1, gap: 2 },
-  title: { ...theme.text.body, color: theme.colors.text },
-  subtitle: { ...theme.text.caption, color: theme.colors.textMuted },
+  title: { ...textStyle('body', true), color: theme.colors.text },
+  subtitle: { ...textStyle('caption', true), color: theme.colors.textMuted },
 });

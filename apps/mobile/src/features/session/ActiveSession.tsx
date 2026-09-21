@@ -8,6 +8,7 @@ import { finishWorkout, getWorkoutDetail, lastPerformance } from '../../data/ses
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { theme } from '../../ui/theme';
+import { textStyle } from '../../ui/typography';
 import { ExerciseCard } from './ExerciseCard';
 import { cancelRestNotification, scheduleRestNotification } from './notifications';
 import { RestTimer } from './RestTimer';
@@ -144,5 +145,5 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   scroll: { flex: 1 },
   content: { padding: theme.spacing.lg, gap: theme.spacing.lg },
-  empty: { ...theme.text.body, color: theme.colors.textMuted, textAlign: 'center' },
+  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center' },
 });

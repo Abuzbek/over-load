@@ -6,6 +6,7 @@ import { getWorkoutDetail } from '../../data/sessionRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
 import { theme } from '../../ui/theme';
+import { textStyle } from '../../ui/typography';
 
 type Props = { workoutId: string };
 
@@ -52,7 +53,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: theme.spacing.lg, gap: theme.spacing.lg },
   card: { backgroundColor: theme.colors.surface, borderRadius: theme.radius.md, padding: theme.spacing.lg, gap: theme.spacing.xs },
-  title: { ...theme.text.title, color: theme.colors.text },
-  setLine: { ...theme.text.body, color: theme.colors.textMuted },
-  empty: { ...theme.text.body, color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
+  title: { ...textStyle('title', true), color: theme.colors.text },
+  setLine: { ...textStyle('body', true), color: theme.colors.textMuted },
+  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
 });

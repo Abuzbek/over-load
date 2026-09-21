@@ -7,6 +7,7 @@ import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
 import { ListRow } from '../../ui/ListRow';
 import { theme } from '../../ui/theme';
+import { textStyle } from '../../ui/typography';
 
 const RECORD_TYPE_LABELS: Record<PersonalRecordType, string> = {
   max_weight: 'Max weight',
@@ -109,14 +110,14 @@ export function RecordsList() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
-  empty: { ...theme.text.body, color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
+  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
   sectionHeader: {
-    ...theme.text.title,
+    ...textStyle('title', true),
     color: theme.colors.text,
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.lg,
     paddingBottom: theme.spacing.sm,
   },
-  value: { ...theme.text.body, color: theme.colors.text, fontWeight: '600' },
+  value: { ...textStyle('body', true), color: theme.colors.text, fontWeight: '600' },
 });

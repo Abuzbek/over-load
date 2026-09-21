@@ -7,6 +7,7 @@ import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
 import { ListRow } from '../../ui/ListRow';
 import { theme } from '../../ui/theme';
+import { textStyle } from '../../ui/typography';
 
 export function HistoryList() {
   // A local counter is the refresh signal: bumping it forces a re-read of
@@ -43,5 +44,5 @@ export function HistoryList() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
-  empty: { ...theme.text.body, color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
+  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
 });
