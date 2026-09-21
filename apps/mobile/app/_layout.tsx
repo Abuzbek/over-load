@@ -57,6 +57,10 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: theme.colors.background },
         }}
       >
+        {/* headerShown: false is load-bearing. Without it the root Stack draws its
+            own header above the Tabs navigator's, stacking two headers ("(tabs)"
+            then the tab title) — seen on both iOS and Android. No test or bundle
+            check catches this; it only shows up in a screenshot. */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
     </FontsProvider>
