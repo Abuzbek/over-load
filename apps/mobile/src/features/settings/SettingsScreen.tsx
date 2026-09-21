@@ -1,9 +1,13 @@
 import type { Unit } from '@overload/domain';
+import Constants from 'expo-constants';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { getWeightUnit, setWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
+import { Button } from '../../ui/Button';
+import { Screen } from '../../ui/Screen';
+import { SectionLabel } from '../../ui/SectionLabel';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 
@@ -28,51 +32,46 @@ export function SettingsScreen() {
     setVersion((v) => v + 1);
   }
 
+  const appName = Constants.expoConfig?.name ?? 'Overload';
+  const appVersion = Constants.expoConfig?.version;
+
   return (
-    <View style={styles.container}>
-      <Text>Weight unit</Text>
-      <View style={styles.segmented}>
-        {UNITS.map((option) => {
-          const active = option === unit;
-          return (
-            <Pressable
-              key={option}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={option === 'kg' ? 'Kilograms' : 'Pounds'}
-              onPress={() => selectUnit(option)}
-              style={[styles.segment, active && styles.segmentActive]}
-            >
-              <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
-                {option}
-              </Text>
-            </Pressable>
-          );
-        })}
+    <Screen scroll>
+      <Text variant="display">Profile</Text>
+
+      <View style={styles.section}>
+        <SectionLabel>Units</SectionLabel>
+        <View style={styles.units}>
+          {UNITS.map((option) => (
+            <View key={option} style={styles.unitButton}>
+              <Button
+                title={option}
+                variant={option === unit ? 'primary' : 'secondary'}
+                onPress={() => selectUnit(option)}
+              />
+            </View>
+          ))}
+        </View>
+        <Text variant="caption" color="textMuted">
+          Weight is always stored in kilograms. This only changes how it is displayed.
+        </Text>
       </View>
-      <Text variant="caption" color="textMuted">
-        Weight is always stored in kilograms. This only changes how it is displayed.
-      </Text>
-    </View>
+
+      {/* Leave room below for Project B (accounts) rather than adding a fake
+          sign-in row now — a door that leads nowhere is worse than no door. */}
+      <View style={styles.section}>
+        <SectionLabel>About</SectionLabel>
+        <Text variant="body">{appName}</Text>
+        {appVersion ? (
+          <Text variant="caption" color="textMuted">Version {appVersion}</Text>
+        ) : null}
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing.lg, gap: theme.spacing.md },
-  segmented: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.xs,
-    gap: theme.spacing.xs,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radius.sm,
-    alignItems: 'center',
-  },
-  segmentActive: { backgroundColor: theme.colors.accent },
-  segmentLabel: { color: theme.colors.textMuted, fontWeight: '600' },
-  segmentLabelActive: { color: '#FFFFFF' },
+  section: { gap: theme.spacing.sm },
+  units: { flexDirection: 'row', gap: theme.spacing.sm },
+  unitButton: { flex: 1 },
 });
