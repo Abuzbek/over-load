@@ -115,6 +115,21 @@ export function getActiveWorkoutId(db: Db): string | undefined {
 }
 
 /**
+ * The row, not just the id — the in-progress bar needs name and startedAt.
+ * Same predicate as getActiveWorkoutId so the two can never disagree about
+ * which workout is active.
+ */
+export function getActiveWorkout(db: Db): Workout | undefined {
+  return db
+    .select()
+    .from(workouts)
+    .where(and(isNull(workouts.deletedAt), isNull(workouts.endedAt)))
+    .orderBy(desc(workouts.startedAt))
+    .limit(1)
+    .get();
+}
+
+/**
  * Tombstones an unfinished workout the lifter chose to throw away. Without
  * this, starting a second workout strands the first: it has no endedAt so
  * history never lists it, and getActiveWorkoutId only ever returns the newest.

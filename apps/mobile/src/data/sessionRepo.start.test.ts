@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { addExerciseToRoutine, addRoutineSet, createRoutine } from './routineRepo';
 import {
   discardWorkout,
+  finishWorkout,
+  getActiveWorkout,
   getActiveWorkoutId,
   getWorkoutDetail,
   startEmptyWorkout,
@@ -139,5 +141,40 @@ describe('discardWorkout', () => {
     discardWorkout(db, newer, AT + 2000);
 
     expect(getActiveWorkoutId(db)).toBe(older);
+  });
+});
+
+describe('getActiveWorkout', () => {
+  it('returns undefined when nothing is in progress', () => {
+    expect(getActiveWorkout(db)).toBeUndefined();
+  });
+
+  it('returns the unfinished workout with its name and start time', () => {
+    const at = now();
+    const id = startEmptyWorkout(db, 'Empty workout', at);
+    const active = getActiveWorkout(db);
+    expect(active?.id).toBe(id);
+    expect(active?.name).toBe('Empty workout');
+    expect(active?.startedAt).toBe(at);
+  });
+
+  it('returns undefined once the workout is finished', () => {
+    const id = startEmptyWorkout(db, 'Empty workout', now());
+    finishWorkout(db, id, now());
+    expect(getActiveWorkout(db)).toBeUndefined();
+  });
+
+  it('returns undefined for a discarded workout', () => {
+    const id = startEmptyWorkout(db, 'Empty workout', now());
+    discardWorkout(db, id, now());
+    expect(getActiveWorkout(db)).toBeUndefined();
+  });
+
+  // Matches getActiveWorkoutId: newest wins, which is what the resume banner
+  // and the stranded-workout guard both already assume.
+  it('returns the newest unfinished workout when several exist', () => {
+    startEmptyWorkout(db, 'Older', now() - 10_000);
+    const newer = startEmptyWorkout(db, 'Newer', now());
+    expect(getActiveWorkout(db)?.id).toBe(newer);
   });
 });
