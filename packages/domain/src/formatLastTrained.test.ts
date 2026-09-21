@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { formatElapsed, formatLastTrained, summariseMuscles } from './formatLastTrained';
 
 const DAY = 86_400_000;
-// 2026-09-21T12:00:00Z, a Monday.
-const NOW = Date.UTC(2026, 8, 21, 12, 0, 0);
+// Local noon, Monday 21 Sep 2026
+const NOW = new Date(2026, 8, 21, 12, 0, 0).getTime();
 
 describe('formatLastTrained', () => {
   it('says Never when the routine has never been trained', () => {
@@ -32,6 +32,24 @@ describe('formatLastTrained', () => {
 
   it('switches to months past eight weeks', () => {
     expect(formatLastTrained(NOW - 70 * DAY, NOW)).toBe('2 months ago');
+  });
+
+  it('counts calendar days, not elapsed time', () => {
+    const last = new Date(2026, 8, 20, 23, 0).getTime();
+    const now = new Date(2026, 8, 21, 1, 0).getTime();
+    expect(formatLastTrained(last, now)).toBe('Yesterday');
+  });
+
+  it('says 1 week ago at exactly seven days', () => {
+    expect(formatLastTrained(new Date(2026, 8, 14, 12, 0).getTime(), NOW)).toBe('1 week ago');
+  });
+
+  it('still counts weeks at exactly eight weeks', () => {
+    expect(formatLastTrained(new Date(2026, 6, 27, 12, 0).getTime(), NOW)).toBe('8 weeks ago');
+  });
+
+  it('treats a future timestamp as Today', () => {
+    expect(formatLastTrained(NOW + 3_600_000, NOW)).toBe('Today');
   });
 });
 

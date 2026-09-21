@@ -1,4 +1,3 @@
-
 const DAY_MS = 86_400_000;
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -9,8 +8,8 @@ const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 function calendarDaysBetween(earlier: number, later: number): number {
   const a = new Date(earlier);
   const b = new Date(later);
-  const aMidnight = Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), a.getUTCDate());
-  const bMidnight = Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate());
+  const aMidnight = new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime();
+  const bMidnight = new Date(b.getFullYear(), b.getMonth(), b.getDate()).getTime();
   return Math.round((bMidnight - aMidnight) / DAY_MS);
 }
 
@@ -20,7 +19,7 @@ export function formatLastTrained(lastTrainedAt: number | null, now: number): st
   const days = calendarDaysBetween(lastTrainedAt, now);
   if (days <= 0) return 'Today';
   if (days === 1) return 'Yesterday';
-  if (days < 7) return WEEKDAYS[new Date(lastTrainedAt).getUTCDay()]!;
+  if (days < 7) return WEEKDAYS[new Date(lastTrainedAt).getDay()]!;
 
   const weeks = Math.floor(days / 7);
   if (weeks <= 8) return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
