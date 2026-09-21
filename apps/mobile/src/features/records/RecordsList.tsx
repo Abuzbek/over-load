@@ -84,12 +84,20 @@ function ExerciseRecordsCard({ section, unit }: { section: Section; unit: Unit }
       <Text variant="heading">{section.title}</Text>
       <View style={styles.tiles}>
         {section.data.map((record) => (
-          <StatTile
-            key={record.type}
-            label={RECORD_TYPE_LABELS[record.type]}
-            value={formatRecordValue(record, unit)}
-            caption={new Date(record.achievedAt).toLocaleDateString()}
-          />
+          // A bare wrapper, not a style prop on StatTile — the component takes
+          // no style override, and shouldn't need one just to sit in a grid.
+          // flexBasis + flexGrow (not a fixed percentage width) is what makes
+          // this work for both shapes this screen has to render: four tiles
+          // wrap into a 2x2 grid and grow to fill each row exactly, while a
+          // lone tile (a duration-only exercise) has no sibling to share the
+          // row with and so grows to the full card width, same as before.
+          <View key={record.type} style={styles.tileWrap}>
+            <StatTile
+              label={RECORD_TYPE_LABELS[record.type]}
+              value={formatRecordValue(record, unit)}
+              caption={new Date(record.achievedAt).toLocaleDateString()}
+            />
+          </View>
         ))}
       </View>
     </Card>
@@ -133,5 +141,9 @@ export function RecordsList() {
 
 const styles = StyleSheet.create({
   list: { gap: theme.spacing.md },
-  tiles: { flexDirection: 'row', gap: theme.spacing.sm },
+  // flexWrap turns this into a 2-per-row grid once four tiles no longer fit
+  // one line — see the comment on tileWrap for why each tile is sized with
+  // flexBasis/flexGrow rather than a fixed percentage width.
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
+  tileWrap: { flexGrow: 1, flexBasis: '47%' },
 });
