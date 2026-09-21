@@ -5,10 +5,18 @@
     "scheme": "overload",
     "version": "0.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    "plugins": ["expo-router"],
-    "ios": { "supportsTablet": false, "bundleIdentifier": "com.overload.app" },
-    "android": { "package": "com.overload.app" }
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.overload.app"
+    },
+    "android": {
+      "package": "com.overload.app"
+    }
   }
 }
