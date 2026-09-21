@@ -60,11 +60,10 @@ export function ActiveSession({ workoutId }: Props) {
   return (
     // KeyboardAvoidingView doubles as the flex column that pins the rest timer:
     // the ScrollView takes the remaining height and the timer sits under it.
-    // iOS needs the padding behaviour; Android resizes the window itself.
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    // No `behavior` on either platform: iOS keyboard handling is the
+    // ScrollView's `automaticallyAdjustKeyboardInsets` below, and Android
+    // resizes the window itself.
+    <KeyboardAvoidingView style={styles.container}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -74,6 +73,13 @@ export function ActiveSession({ workoutId }: Props) {
         // Without this the first tap after typing only dismisses the keyboard,
         // swallowing the tap on the set's checkmark.
         keyboardShouldPersistTaps="handled"
+        // Resizing the container is not enough: RN does not scroll the focused
+        // input into view on its own, so tapping a lower set row left the
+        // cursor in a box behind the keyboard. This adjusts the content inset
+        // and scrolls the focused field into view. iOS-only, which is why the
+        // KeyboardAvoidingView above no longer also pads on iOS — the two
+        // together apply the keyboard height twice.
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
       >
         {detail.exercises.map((entry) => (
           <ExerciseCard
