@@ -9,3 +9,6 @@ dist/
 # Remove these lines if you switch to the bare workflow and hand-edit native code.
 apps/mobile/ios/
 apps/mobile/android/
+
+# Superpowers brainstorming companion (local mockups)
+.superpowers/
