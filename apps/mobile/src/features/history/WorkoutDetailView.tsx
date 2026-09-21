@@ -1,10 +1,12 @@
 import { formatTrackedSet } from '@overload/domain';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { getWorkoutDetail } from '../../data/sessionRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
+import { Card } from '../../ui/Card';
+import { Screen } from '../../ui/Screen';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 
@@ -25,35 +27,33 @@ export function WorkoutDetailView({ workoutId }: Props) {
 
   if (!detail) {
     return (
-      <View style={styles.container}>
+      <Screen>
         <Text color="textMuted" style={styles.empty}>
           Workout not found.
         </Text>
-      </View>
+      </Screen>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <Screen scroll>
+      <Text variant="display">{detail.workout.name}</Text>
       {detail.exercises.map((entry) => (
-        <View key={entry.workoutExercise.id} style={styles.card}>
-          <Text variant="title">{entry.exercise.name}</Text>
+        <Card key={entry.workoutExercise.id}>
+          <Text variant="heading">{entry.exercise.name}</Text>
           {entry.sets
             .filter((set) => set.completedAt !== null)
             .map((set, index) => (
-              <Text key={set.id} color="textMuted">
+              <Text key={set.id} variant="numeric" color="textMuted">
                 {index + 1}. {formatTrackedSet(entry.exercise.trackingType, set, unit)}
               </Text>
             ))}
-        </View>
+        </Card>
       ))}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  content: { padding: theme.spacing.lg, gap: theme.spacing.lg },
-  card: { backgroundColor: theme.colors.surface, borderRadius: theme.radius.md, padding: theme.spacing.lg, gap: theme.spacing.xs },
   empty: { textAlign: 'center', padding: theme.spacing.xl },
 });
