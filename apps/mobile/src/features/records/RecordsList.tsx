@@ -1,11 +1,14 @@
 import { formatDuration, formatWeight, type PersonalRecordType, type Unit } from '@overload/domain';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { SectionList, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { listAllPersonalRecords, type PersonalRecordSummary } from '../../data/sessionRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
-import { ListRow } from '../../ui/ListRow';
+import { Card } from '../../ui/Card';
+import { EmptyState } from '../../ui/EmptyState';
+import { Screen } from '../../ui/Screen';
+import { StatTile } from '../../ui/StatTile';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 
@@ -71,6 +74,28 @@ function groupByExercise(records: PersonalRecordSummary[]): Section[] {
   return sections;
 }
 
+// Which metrics render, and how many tiles a card has, follows entirely from
+// which record types exist for that exercise (METRICS_BY_TRACKING_TYPE in
+// @overload/domain): a duration exercise only ever has a max_duration
+// record, so it only ever gets a duration tile, never a weight one.
+function ExerciseRecordsCard({ section, unit }: { section: Section; unit: Unit }) {
+  return (
+    <Card>
+      <Text variant="heading">{section.title}</Text>
+      <View style={styles.tiles}>
+        {section.data.map((record) => (
+          <StatTile
+            key={record.type}
+            label={RECORD_TYPE_LABELS[record.type]}
+            value={formatRecordValue(record, unit)}
+            caption={new Date(record.achievedAt).toLocaleDateString()}
+          />
+        ))}
+      </View>
+    </Card>
+  );
+}
+
 export function RecordsList() {
   // A local counter is the refresh signal: bumping it forces a re-read of
   // both the records and the weight-unit preference, since finishing a
@@ -88,42 +113,25 @@ export function RecordsList() {
   );
 
   return (
-    <View style={styles.container}>
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => `${item.exerciseName}-${item.type}`}
-        ListEmptyComponent={
-          <Text color="textMuted" style={styles.empty}>
-            No personal records yet.
-          </Text>
-        }
-        renderSectionHeader={({ section }) => (
-          <Text variant="title" style={styles.sectionHeader}>
-            {section.title}
-          </Text>
-        )}
-        renderItem={({ item }) => (
-          <ListRow
-            title={RECORD_TYPE_LABELS[item.type]}
-            subtitle={new Date(item.achievedAt).toLocaleDateString()}
-            right={
-              <Text style={styles.value}>{formatRecordValue(item, unit)}</Text>
-            }
-          />
-        )}
-      />
-    </View>
+    <Screen scroll>
+      <Text variant="display">Progress</Text>
+      {sections.length === 0 ? (
+        <EmptyState
+          title="No records yet"
+          body="Log a set and your personal records will show up here."
+        />
+      ) : (
+        <View style={styles.list}>
+          {sections.map((section) => (
+            <ExerciseRecordsCard key={section.title} section={section} unit={unit} />
+          ))}
+        </View>
+      )}
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  empty: { textAlign: 'center', padding: theme.spacing.xl },
-  sectionHeader: {
-    backgroundColor: theme.colors.background,
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.sm,
-  },
-  value: { fontWeight: '600' },
+  list: { gap: theme.spacing.md },
+  tiles: { flexDirection: 'row', gap: theme.spacing.sm },
 });
