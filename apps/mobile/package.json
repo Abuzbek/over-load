@@ -11,6 +11,7 @@
   "dependencies": {
     "@babel/runtime": "^7.25.0",
     "@expo-google-fonts/newsreader": "^0.4.1",
+    "@react-navigation/bottom-tabs": "7.19.2",
     "@overload/domain": "workspace:*",
     "@overload/schema": "workspace:*",
     "drizzle-orm": "^0.36.0",
