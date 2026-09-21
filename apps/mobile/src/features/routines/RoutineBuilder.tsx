@@ -1,4 +1,4 @@
-import { formatWeight, toStorageKg, type Unit } from '@overload/domain';
+import { toStorageKg, type Unit } from '@overload/domain';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -10,6 +10,11 @@ import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { theme } from '../../ui/theme';
 import { parseDecimalInput, parseIntegerInput } from '../session/setInputs';
+import {
+  formatRoutineTarget,
+  targetInputsFor,
+  type RoutineTargetField,
+} from './routineTargets';
 
 type Props = { routineId: string };
 
@@ -21,9 +26,12 @@ type ExerciseCardProps = {
   onMoveDown?: () => void;
 };
 
+const EMPTY_DRAFT: Record<RoutineTargetField, string> = { weightKg: '', reps: '' };
+
 function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: ExerciseCardProps) {
-  const [newSetWeight, setNewSetWeight] = useState('');
-  const [newSetReps, setNewSetReps] = useState('');
+  const trackingType = entry.exercise.trackingType;
+  const inputs = targetInputsFor(trackingType, unit);
+  const [draft, setDraft] = useState(EMPTY_DRAFT);
 
   return (
     <View style={styles.card}>
@@ -34,40 +42,45 @@ function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: Exercis
           {onMoveDown ? <Button title="Move down" variant="secondary" onPress={onMoveDown} /> : null}
         </View>
       </View>
-      {entry.sets.map((set, index) => (
-        <Text key={set.id} style={styles.setLine}>
-          Set {index + 1}: {formatWeight(set.targetWeightKg, unit)} × {set.targetReps ?? '—'}
-        </Text>
-      ))}
+      {entry.sets.map((set, index) => {
+        const target = formatRoutineTarget(trackingType, set, unit);
+        return (
+          <Text key={set.id} style={styles.setLine}>
+            {target === null ? `Set ${index + 1}` : `Set ${index + 1}: ${target}`}
+          </Text>
+        );
+      })}
       <View style={styles.addSetContainer}>
-        <TextInput
-          value={newSetWeight}
-          onChangeText={setNewSetWeight}
-          placeholder={`Weight (${unit})`}
-          keyboardType="decimal-pad"
-          placeholderTextColor={theme.colors.textMuted}
-          style={styles.setInput}
-        />
-        <TextInput
-          value={newSetReps}
-          onChangeText={setNewSetReps}
-          placeholder="Reps"
-          keyboardType="number-pad"
-          placeholderTextColor={theme.colors.textMuted}
-          style={styles.setInput}
-        />
+        {inputs.map((input) => (
+          <TextInput
+            key={input.field}
+            value={draft[input.field]}
+            onChangeText={(text) => setDraft((current) => ({ ...current, [input.field]: text }))}
+            placeholder={input.placeholder}
+            keyboardType={input.keyboard}
+            placeholderTextColor={theme.colors.textMuted}
+            style={styles.setInput}
+          />
+        ))}
         <Button
           title="Add set"
           variant="secondary"
           onPress={() => {
-            const weightValue = newSetWeight ? parseDecimalInput(newSetWeight) : undefined;
-            const repsValue = newSetReps ? parseIntegerInput(newSetReps) : 8;
+            const offers = (field: RoutineTargetField) => inputs.some((i) => i.field === field);
+
+            // Only send a target for a field this tracking type actually
+            // offers. The old unconditional `?? 8` gave a plank a rep target.
+            const weightValue =
+              offers('weightKg') && draft.weightKg ? parseDecimalInput(draft.weightKg) : undefined;
+            const repsValue = offers('reps')
+              ? (draft.reps ? parseIntegerInput(draft.reps) : null) ?? 8
+              : undefined;
+
             addRoutineSet(db, entry.routineExercise.id, {
-              targetReps: repsValue ?? 8,
+              targetReps: repsValue,
               targetWeightKg: weightValue != null ? toStorageKg(weightValue, unit) : undefined,
             });
-            setNewSetWeight('');
-            setNewSetReps('');
+            setDraft(EMPTY_DRAFT);
             onSetAdded();
           }}
         />
