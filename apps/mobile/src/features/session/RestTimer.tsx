@@ -33,7 +33,9 @@ export function RestTimer({ startedAt, restSeconds, onDismiss }: Props) {
       ]}
     >
       <Text>{remaining === 0 ? 'Rest complete' : 'Rest'}</Text>
-      <Text variant="numeric">{formatDuration(remaining)}</Text>
+      <Text variant="numeric" style={styles.time}>
+        {formatDuration(remaining)}
+      </Text>
       <Pressable onPress={onDismiss} accessibilityLabel="Skip rest">
         <Text color="accent">Skip</Text>
       </Pressable>
@@ -53,4 +55,9 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.md,
   },
   barDone: { backgroundColor: theme.colors.success },
+  // Countdown is the one glanceable element on this bar — read at arm's length,
+  // mid-set. `numeric` is deliberately body-sized (15/20) for set-input boxes,
+  // so bump it back up here locally rather than resizing the shared variant,
+  // which would also enlarge every set-row input on the session screen.
+  time: { fontSize: 20, lineHeight: 26 },
 });
