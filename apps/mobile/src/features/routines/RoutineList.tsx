@@ -6,7 +6,6 @@ import {
   Modal,
   Platform,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native';
@@ -14,6 +13,7 @@ import { createRoutine, listRoutines } from '../../data/routineRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { ListRow } from '../../ui/ListRow';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import { textStyle } from '../../ui/typography';
 
@@ -53,7 +53,11 @@ export function RoutineList() {
       <FlatList
         data={routines}
         keyExtractor={(item) => item.id}
-        ListEmptyComponent={<Text style={styles.empty}>No routines yet.</Text>}
+        ListEmptyComponent={
+          <Text color="textMuted" style={styles.empty}>
+            No routines yet.
+          </Text>
+        }
         renderItem={({ item }) => (
           <ListRow title={item.name} onPress={() => router.push(`/routines/${item.id}`)} />
         )}
@@ -76,7 +80,7 @@ export function RoutineList() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>New routine</Text>
+            <Text variant="title">New routine</Text>
             <TextInput
               ref={inputRef}
               value={name}
@@ -104,7 +108,7 @@ export function RoutineList() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   footer: { padding: theme.spacing.lg },
-  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
+  empty: { textAlign: 'center', padding: theme.spacing.xl },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -117,7 +121,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.lg,
   },
-  modalTitle: { ...textStyle('title', true), color: theme.colors.text },
   input: {
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,

@@ -2,13 +2,13 @@ import { DEFAULT_REST_SECONDS, type CompletedSet } from '@overload/domain';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useFocusEffect, router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { finishWorkout, getWorkoutDetail, lastPerformance } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
-import { textStyle } from '../../ui/typography';
 import { ExerciseCard } from './ExerciseCard';
 import { cancelRestNotification, scheduleRestNotification } from './notifications';
 import { RestTimer } from './RestTimer';
@@ -53,7 +53,9 @@ export function ActiveSession({ workoutId }: Props) {
   if (!detail) {
     return (
       <View style={styles.container}>
-        <Text style={styles.empty}>Workout not found.</Text>
+        <Text color="textMuted" style={styles.empty}>
+          Workout not found.
+        </Text>
       </View>
     );
   }
@@ -98,7 +100,9 @@ export function ActiveSession({ workoutId }: Props) {
         ))}
 
         {detail.exercises.length === 0 ? (
-          <Text style={styles.empty}>This workout has no exercises.</Text>
+          <Text color="textMuted" style={styles.empty}>
+            This workout has no exercises.
+          </Text>
         ) : null}
 
         <Button
@@ -145,5 +149,5 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   scroll: { flex: 1 },
   content: { padding: theme.spacing.lg, gap: theme.spacing.lg },
-  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center' },
+  empty: { textAlign: 'center' },
 });

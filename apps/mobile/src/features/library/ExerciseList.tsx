@@ -7,7 +7,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native';
@@ -16,6 +15,7 @@ import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { ListRow } from '../../ui/ListRow';
 import { SearchField } from '../../ui/SearchField';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import { textStyle } from '../../ui/typography';
 
@@ -57,7 +57,11 @@ export function ExerciseList({ onSelect }: Props) {
         data={exercises}
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={<Text style={styles.empty}>No exercises match "{search}"</Text>}
+        ListEmptyComponent={
+          <Text color="textMuted" style={styles.empty}>
+            No exercises match "{search}"
+          </Text>
+        }
         renderItem={({ item }) => (
           <ListRow
             title={item.name}
@@ -115,7 +119,7 @@ function NewExerciseModal({ visible, onClose, onCreated }: NewExerciseModalProps
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>New exercise</Text>
+          <Text variant="title">New exercise</Text>
 
           <TextInput
             value={name}
@@ -125,7 +129,9 @@ function NewExerciseModal({ visible, onClose, onCreated }: NewExerciseModalProps
             style={styles.input}
           />
 
-          <Text style={styles.fieldLabel}>Tracking type</Text>
+          <Text variant="caption" color="textMuted">
+            Tracking type
+          </Text>
           <View style={styles.trackingTypeRow}>
             {TRACKING_TYPES.map((type) => (
               <Pressable
@@ -135,7 +141,7 @@ function NewExerciseModal({ visible, onClose, onCreated }: NewExerciseModalProps
                 onPress={() => setTrackingType(type)}
                 style={[styles.chip, trackingType === type && styles.chipSelected]}
               >
-                <Text style={[styles.chipLabel, trackingType === type && styles.chipLabelSelected]}>
+                <Text variant="caption" style={trackingType === type && styles.chipLabelSelected}>
                   {TRACKING_TYPE_LABELS[type]}
                 </Text>
               </Pressable>
@@ -189,7 +195,7 @@ function NewExerciseModal({ visible, onClose, onCreated }: NewExerciseModalProps
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   newExerciseContainer: { paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.md },
-  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
+  empty: { textAlign: 'center', padding: theme.spacing.xl },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -202,8 +208,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
   },
-  modalTitle: { ...textStyle('title', true), color: theme.colors.text },
-  fieldLabel: { ...textStyle('caption', true), color: theme.colors.textMuted },
   input: {
     ...textStyle('body', true),
     color: theme.colors.text,
@@ -221,6 +225,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
   },
   chipSelected: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  chipLabel: { ...textStyle('caption', true), color: theme.colors.text },
   chipLabelSelected: { color: '#FFFFFF', fontWeight: '600' },
 });

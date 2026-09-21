@@ -1,13 +1,13 @@
 import { formatWeight } from '@overload/domain';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { listFinishedWorkouts } from '../../data/historyRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
 import { ListRow } from '../../ui/ListRow';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
-import { textStyle } from '../../ui/typography';
 
 export function HistoryList() {
   // A local counter is the refresh signal: bumping it forces a re-read of
@@ -29,7 +29,11 @@ export function HistoryList() {
       <FlatList
         data={summaries}
         keyExtractor={(item) => item.workout.id}
-        ListEmptyComponent={<Text style={styles.empty}>No finished workouts yet.</Text>}
+        ListEmptyComponent={
+          <Text color="textMuted" style={styles.empty}>
+            No finished workouts yet.
+          </Text>
+        }
         renderItem={({ item }) => (
           <ListRow
             title={item.workout.name}
@@ -44,5 +48,5 @@ export function HistoryList() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
-  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
+  empty: { textAlign: 'center', padding: theme.spacing.xl },
 });

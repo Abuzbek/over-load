@@ -1,11 +1,11 @@
 import { Link, router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, View } from 'react-native';
 import { discardWorkout, getActiveWorkoutId, startEmptyWorkout } from '../src/data/sessionRepo';
 import { db } from '../src/db/client';
 import { Button } from '../src/ui/Button';
+import { Text } from '../src/ui/Text';
 import { theme } from '../src/ui/theme';
-import { textStyle } from '../src/ui/typography';
 
 export default function HomeScreen() {
   // A local counter is the refresh signal: bumping it forces a re-read of
@@ -61,7 +61,7 @@ export default function HomeScreen() {
 
       {activeWorkoutId ? (
         <View style={styles.resume}>
-          <Text style={styles.resumeText}>You have a workout in progress.</Text>
+          <Text>You have a workout in progress.</Text>
           <Button title="Resume workout" onPress={() => router.push(`/session/${activeWorkoutId}`)} />
         </View>
       ) : null}
@@ -91,8 +91,8 @@ export default function HomeScreen() {
       >
         <View style={styles.backdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>A workout is already in progress</Text>
-            <Text style={styles.modalBody}>
+            <Text variant="title">A workout is already in progress</Text>
+            <Text color="textMuted">
               Resume it, or discard it and start an empty workout instead. Discarding keeps
               nothing from the unfinished workout.
             </Text>
@@ -114,7 +114,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
   },
-  resumeText: { ...textStyle('body', true), color: theme.colors.text },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -127,6 +126,4 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
   },
-  modalTitle: { ...textStyle('title', true), color: theme.colors.text },
-  modalBody: { ...textStyle('body', true), color: theme.colors.textMuted },
 });

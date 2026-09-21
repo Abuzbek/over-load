@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { theme } from './theme';
-import { textStyle } from './typography';
 
 type Props = {
   title: string;
@@ -21,8 +21,8 @@ export function ListRow({ title, subtitle, right, onPress }: Props) {
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       <View style={styles.main}>
-        <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        <Text>{title}</Text>
+        {subtitle ? <Text variant="caption" color="textMuted">{subtitle}</Text> : null}
       </View>
       {right}
     </Pressable>
@@ -41,6 +41,4 @@ const styles = StyleSheet.create({
   },
   pressed: { backgroundColor: theme.colors.surface },
   main: { flex: 1, gap: 2 },
-  title: { ...textStyle('body', true), color: theme.colors.text },
-  subtitle: { ...textStyle('caption', true), color: theme.colors.textMuted },
 });

@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
-import { Pressable, StyleSheet, Text, type View } from 'react-native';
+import { Pressable, StyleSheet, type View } from 'react-native';
+import { Text } from './Text';
 import { theme } from './theme';
-import { textStyle } from './typography';
 
 type Props = {
   title: string;
@@ -43,6 +43,6 @@ const styles = StyleSheet.create({
   primary: { backgroundColor: theme.colors.accent },
   secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.colors.border },
   pressed: { opacity: 0.7 },
-  label: { ...textStyle('body', true), color: '#FFFFFF', fontWeight: '600' },
+  label: { color: '#FFFFFF', fontWeight: '600' },
   labelSecondary: { color: theme.colors.text },
 });

@@ -2,11 +2,11 @@ import { Newsreader_600SemiBold } from '@expo-google-fonts/newsreader/600SemiBol
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { initializeDatabase } from '../src/db/bootstrap';
 import { FontsProvider } from '../src/ui/FontsContext';
+import { Text } from '../src/ui/Text';
 import { theme } from '../src/ui/theme';
-import { textStyle } from '../src/ui/typography';
 
 type BootstrapError = Error & { restored?: boolean };
 
@@ -23,9 +23,11 @@ export default function RootLayout() {
   if (state.error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>Database error</Text>
-        <Text style={styles.errorBody}>{state.error.message}</Text>
-        <Text style={styles.errorBody}>
+        <Text variant="heading">Database error</Text>
+        <Text color="textMuted" style={styles.errorBody}>
+          {state.error.message}
+        </Text>
+        <Text color="textMuted" style={styles.errorBody}>
           {state.error.restored
             ? 'Your previous data was restored. Please restart the app.'
             : 'Please restart the app.'}
@@ -68,6 +70,5 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: theme.colors.background,
   },
-  errorTitle: { ...textStyle('heading', false), color: theme.colors.text },
-  errorBody: { ...textStyle('body', false), textAlign: 'center', color: theme.colors.textMuted },
+  errorBody: { textAlign: 'center' },
 });

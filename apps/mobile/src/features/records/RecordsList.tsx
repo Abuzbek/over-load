@@ -1,13 +1,13 @@
 import { formatDuration, formatWeight, type PersonalRecordType, type Unit } from '@overload/domain';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { SectionList, StyleSheet, Text, View } from 'react-native';
+import { SectionList, StyleSheet, View } from 'react-native';
 import { listAllPersonalRecords, type PersonalRecordSummary } from '../../data/sessionRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
 import { ListRow } from '../../ui/ListRow';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
-import { textStyle } from '../../ui/typography';
 
 const RECORD_TYPE_LABELS: Record<PersonalRecordType, string> = {
   max_weight: 'Max weight',
@@ -92,15 +92,23 @@ export function RecordsList() {
       <SectionList
         sections={sections}
         keyExtractor={(item) => `${item.exerciseName}-${item.type}`}
-        ListEmptyComponent={<Text style={styles.empty}>No personal records yet.</Text>}
+        ListEmptyComponent={
+          <Text color="textMuted" style={styles.empty}>
+            No personal records yet.
+          </Text>
+        }
         renderSectionHeader={({ section }) => (
-          <Text style={styles.sectionHeader}>{section.title}</Text>
+          <Text variant="title" style={styles.sectionHeader}>
+            {section.title}
+          </Text>
         )}
         renderItem={({ item }) => (
           <ListRow
             title={RECORD_TYPE_LABELS[item.type]}
             subtitle={new Date(item.achievedAt).toLocaleDateString()}
-            right={<Text style={styles.value}>{formatRecordValue(item, unit)}</Text>}
+            right={
+              <Text style={styles.value}>{formatRecordValue(item, unit)}</Text>
+            }
           />
         )}
       />
@@ -110,14 +118,12 @@ export function RecordsList() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
-  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
+  empty: { textAlign: 'center', padding: theme.spacing.xl },
   sectionHeader: {
-    ...textStyle('title', true),
-    color: theme.colors.text,
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.lg,
     paddingBottom: theme.spacing.sm,
   },
-  value: { ...textStyle('body', true), color: theme.colors.text, fontWeight: '600' },
+  value: { fontWeight: '600' },
 });

@@ -1,10 +1,10 @@
 import type { CompletedSet, Unit } from '@overload/domain';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { addSet, completeSet, uncompleteSet, type WorkoutDetailExercise } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
-import { textStyle } from '../../ui/typography';
 import { SetRow } from './SetRow';
 
 type Props = {
@@ -18,7 +18,7 @@ type Props = {
 export function ExerciseCard({ entry, previous, unit, onChanged, onSetCompleted }: Props) {
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{entry.exercise.name}</Text>
+      <Text variant="title">{entry.exercise.name}</Text>
 
       {entry.sets.map((set, index) => (
         <SetRow
@@ -59,5 +59,4 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.sm,
   },
-  title: { ...textStyle('title', true), color: theme.colors.text },
 });

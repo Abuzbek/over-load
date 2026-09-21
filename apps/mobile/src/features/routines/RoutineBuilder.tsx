@@ -1,13 +1,14 @@
 import { toStorageKg, type Unit } from '@overload/domain';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import type { RoutineDetailExercise } from '../../data/routineRepo';
 import { addRoutineSet, getRoutineDetail, reorderRoutineExercises } from '../../data/routineRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { discardWorkout, getActiveWorkoutId, startWorkoutFromRoutine } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import { textStyle } from '../../ui/typography';
 import { parseDecimalInput, parseIntegerInput } from '../session/setInputs';
@@ -37,7 +38,9 @@ function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: Exercis
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{entry.exercise.name}</Text>
+        <Text variant="title" style={styles.cardTitle}>
+          {entry.exercise.name}
+        </Text>
         <View style={styles.reorderControls}>
           {onMoveUp ? <Button title="Move up" variant="secondary" onPress={onMoveUp} /> : null}
           {onMoveDown ? <Button title="Move down" variant="secondary" onPress={onMoveDown} /> : null}
@@ -46,7 +49,7 @@ function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: Exercis
       {entry.sets.map((set, index) => {
         const target = formatRoutineTarget(trackingType, set, unit);
         return (
-          <Text key={set.id} style={styles.setLine}>
+          <Text key={set.id} color="textMuted">
             {target === null ? `Set ${index + 1}` : `Set ${index + 1}: ${target}`}
           </Text>
         );
@@ -165,7 +168,9 @@ export function RoutineBuilder({ routineId }: Props) {
   if (!detail) {
     return (
       <View style={styles.container}>
-        <Text style={styles.empty}>Routine not found.</Text>
+        <Text color="textMuted" style={styles.empty}>
+          Routine not found.
+        </Text>
       </View>
     );
   }
@@ -185,7 +190,9 @@ export function RoutineBuilder({ routineId }: Props) {
         ))}
 
         {detail.exercises.length === 0 ? (
-          <Text style={styles.empty}>No exercises yet. Add one to get started.</Text>
+          <Text color="textMuted" style={styles.empty}>
+            No exercises yet. Add one to get started.
+          </Text>
         ) : null}
 
         <Button title="Start workout" onPress={onStartPressed} />
@@ -204,8 +211,8 @@ export function RoutineBuilder({ routineId }: Props) {
       >
         <View style={styles.backdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>A workout is already in progress</Text>
-            <Text style={styles.modalBody}>
+            <Text variant="title">A workout is already in progress</Text>
+            <Text color="textMuted">
               Resume it, or discard it and start this routine instead. Discarding keeps nothing
               from the unfinished workout.
             </Text>
@@ -234,9 +241,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: theme.spacing.sm,
   },
-  cardTitle: { ...textStyle('title', true), color: theme.colors.text, flexShrink: 1 },
+  cardTitle: { flexShrink: 1 },
   reorderControls: { flexDirection: 'row', gap: theme.spacing.sm },
-  setLine: { ...textStyle('body', true), color: theme.colors.textMuted },
   addSetContainer: { gap: theme.spacing.sm, marginTop: theme.spacing.sm },
   setInput: {
     ...textStyle('body', true),
@@ -247,7 +253,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     textAlign: 'center',
   },
-  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center' },
+  empty: { textAlign: 'center' },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -260,6 +266,4 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
   },
-  modalTitle: { ...textStyle('title', true), color: theme.colors.text },
-  modalBody: { ...textStyle('body', true), color: theme.colors.textMuted },
 });

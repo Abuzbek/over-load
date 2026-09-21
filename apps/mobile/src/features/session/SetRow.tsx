@@ -1,8 +1,9 @@
 import { formatTrackedSet, formatWeight, toStorageKg, type CompletedSet, type TrackingType, type Unit } from '@overload/domain';
 import type { WorkoutSet } from '@overload/schema';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, TextInput, View } from 'react-native';
 import type { SetValues } from '../../data/sessionRepo';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import { textStyle } from '../../ui/typography';
 import {
@@ -81,8 +82,12 @@ export function SetRow({ set, index, trackingType, previous, unit, onComplete, o
 
   return (
     <View style={[styles.row, completed && styles.rowCompleted]}>
-      <Text style={styles.index}>{index + 1}</Text>
-      <Text style={styles.previous}>{formatPrevious(previous, index, unit)}</Text>
+      <Text color="textMuted" style={styles.index}>
+        {index + 1}
+      </Text>
+      <Text variant="caption" color="textMuted" style={styles.previous}>
+        {formatPrevious(previous, index, unit)}
+      </Text>
 
       {inputs.map((input) => (
         <TextInput
@@ -108,7 +113,7 @@ export function SetRow({ set, index, trackingType, previous, unit, onComplete, o
         onPress={() => (completed ? onUncomplete() : onComplete(collect()))}
         style={[styles.check, completed && styles.checkOn]}
       >
-        <Text style={styles.checkMark}>{completed ? '✓' : ''}</Text>
+        <RNText style={styles.checkMark}>{completed ? '✓' : ''}</RNText>
       </Pressable>
     </View>
   );
@@ -117,8 +122,8 @@ export function SetRow({ set, index, trackingType, previous, unit, onComplete, o
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, paddingVertical: theme.spacing.sm },
   rowCompleted: { opacity: 0.6 },
-  index: { ...textStyle('body', true), color: theme.colors.textMuted, width: 20 },
-  previous: { ...textStyle('caption', true), color: theme.colors.textMuted, width: 86 },
+  index: { width: 20 },
+  previous: { width: 86 },
   input: {
     flex: 1,
     ...textStyle('body', true),

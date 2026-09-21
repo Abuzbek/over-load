@@ -1,12 +1,12 @@
 import { formatTrackedSet } from '@overload/domain';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { getWorkoutDetail } from '../../data/sessionRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
-import { textStyle } from '../../ui/typography';
 
 type Props = { workoutId: string };
 
@@ -26,7 +26,9 @@ export function WorkoutDetailView({ workoutId }: Props) {
   if (!detail) {
     return (
       <View style={styles.container}>
-        <Text style={styles.empty}>Workout not found.</Text>
+        <Text color="textMuted" style={styles.empty}>
+          Workout not found.
+        </Text>
       </View>
     );
   }
@@ -35,11 +37,11 @@ export function WorkoutDetailView({ workoutId }: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {detail.exercises.map((entry) => (
         <View key={entry.workoutExercise.id} style={styles.card}>
-          <Text style={styles.title}>{entry.exercise.name}</Text>
+          <Text variant="title">{entry.exercise.name}</Text>
           {entry.sets
             .filter((set) => set.completedAt !== null)
             .map((set, index) => (
-              <Text key={set.id} style={styles.setLine}>
+              <Text key={set.id} color="textMuted">
                 {index + 1}. {formatTrackedSet(entry.exercise.trackingType, set, unit)}
               </Text>
             ))}
@@ -53,7 +55,5 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: theme.spacing.lg, gap: theme.spacing.lg },
   card: { backgroundColor: theme.colors.surface, borderRadius: theme.radius.md, padding: theme.spacing.lg, gap: theme.spacing.xs },
-  title: { ...textStyle('title', true), color: theme.colors.text },
-  setLine: { ...textStyle('body', true), color: theme.colors.textMuted },
-  empty: { ...textStyle('body', true), color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
+  empty: { textAlign: 'center', padding: theme.spacing.xl },
 });
