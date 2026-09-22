@@ -1,0 +1,3823 @@
+{
+  "items": [
+    {
+      "name": "Ab Wheel",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Aerobic Steps",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Anchor Point For Resistance Band",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Anchor Point For Suspension Trainer",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Bench Press Board/Block",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Bosu Ball",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": [
+        "exercise ball"
+      ]
+    },
+    {
+      "name": "Calf Raise Block",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Cuff Cable Attachments",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Deadlift Blocks",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Dip Bars",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Gymnastics Rings",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Landmine Attachment/Wall Corner",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Multi-Grip Pull-Up Bar",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Nordic Hamstring Curl Strap",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Parallel Handle Landmine Attachment",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Plyometric Boxes",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Push-Up Handles",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Slant Board",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Sled Pulling Belt/Harness",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Slingshot",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Stability Ball",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": [
+        "exercise ball"
+      ]
+    },
+    {
+      "name": "Straight Handle Landmine Attachment",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Straight Pull-Up Bar",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Suspension Trainer",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "V-Bar Row Grip Attachment",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Viking Press Landmine Attachment",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Yoga Blocks",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Battle Ropes",
+      "category": "bands_ropes",
+      "kind": "labels",
+      "labels": [],
+      "satisfies": [
+        "bands"
+      ]
+    },
+    {
+      "name": "Long Resistance Bands",
+      "category": "bands_ropes",
+      "kind": "labels",
+      "labels": [
+        "Orange",
+        "Red",
+        "Blue",
+        "Green",
+        "Black",
+        "Purple",
+        "Red",
+        "Silver"
+      ],
+      "satisfies": [
+        "bands"
+      ]
+    },
+    {
+      "name": "Short Resistance Band",
+      "category": "bands_ropes",
+      "kind": "labels",
+      "labels": [
+        "Orange",
+        "Red",
+        "Blue",
+        "Green",
+        "Black",
+        "Purple"
+      ],
+      "satisfies": [
+        "bands"
+      ]
+    },
+    {
+      "name": "Adjustable Bench",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Decline Bench",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Decline Bench Press Station",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Flat Bench",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Flat Bench Press Station",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Glute Ham Developer",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Hip Thrust Bench",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Incline Bench Press Station",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Nordic Hamstring Curl Bench",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Power Rack",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Preacher Curl Bench",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Roman Chair",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Seal Row Bench",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Seated Bench",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Seated Overhead Press Station",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Split Squat Roller Stand",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Squat Box",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Squat Stand",
+      "category": "benches_racks",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Ankle Weights",
+      "category": "body_weights",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 2.5
+        },
+        {
+          "kg": 5.0
+        },
+        {
+          "kg": 7.5
+        },
+        {
+          "kg": 10.0
+        },
+        {
+          "kg": 12.5
+        },
+        {
+          "kg": 15.0
+        },
+        {
+          "kg": 17.5
+        },
+        {
+          "kg": 20.0
+        },
+        {
+          "kg": 22.5
+        },
+        {
+          "kg": 25.0
+        },
+        {
+          "kg": 27.5
+        },
+        {
+          "kg": 30.0
+        },
+        {
+          "kg": 32.5
+        },
+        {
+          "kg": 35.0
+        },
+        {
+          "kg": 37.5
+        },
+        {
+          "kg": 40.0
+        },
+        {
+          "kg": 42.5
+        },
+        {
+          "kg": 45.0
+        },
+        {
+          "kg": 47.5
+        },
+        {
+          "kg": 50.0
+        },
+        {
+          "kg": 52.5
+        },
+        {
+          "kg": 55.0
+        }
+      ],
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Weighted Vest",
+      "category": "body_weights",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 5.0
+        },
+        {
+          "kg": 6.0
+        },
+        {
+          "kg": 7.0
+        },
+        {
+          "kg": 8.0
+        },
+        {
+          "kg": 9.0
+        },
+        {
+          "kg": 10.0
+        },
+        {
+          "kg": 20.0
+        },
+        {
+          "kg": 30.0
+        }
+      ],
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Dual Cable Lat Pulldown",
+      "category": "cable_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "cable"
+      ]
+    },
+    {
+      "name": "Motorized Dual Cable Machine",
+      "category": "cable_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 0.45,
+      "satisfies": [
+        "cable"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Cable Crossover",
+      "category": "cable_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "cable"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Cable Lat Pulldown",
+      "category": "cable_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "cable"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Dual Handle Cable Tower",
+      "category": "cable_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "cable"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Fixed Lat Pulldown",
+      "category": "cable_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "cable"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Front Lat Pulldown (Chest-Supported)",
+      "category": "cable_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "cable"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Single Cable Machine",
+      "category": "cable_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "cable"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Smith Machine Functional Trainer",
+      "category": "cable_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "cable"
+      ]
+    },
+    {
+      "name": "Seated Cable Row",
+      "category": "cable_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "cable"
+      ]
+    },
+    {
+      "name": "Seated Dual Cable Row",
+      "category": "cable_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "cable"
+      ]
+    },
+    {
+      "name": "Total Quad/Hip Dual Cable Machine",
+      "category": "cable_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "cable"
+      ]
+    },
+    {
+      "name": "Air Bike",
+      "category": "cardio",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Bike",
+      "category": "cardio",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Elliptical",
+      "category": "cardio",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Jacobs Ladder",
+      "category": "cardio",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Jump Rope",
+      "category": "cardio",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Pool",
+      "category": "cardio",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Rowing Machine",
+      "category": "cardio",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "SkiErg",
+      "category": "cardio",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Stair Climber",
+      "category": "cardio",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Staircase",
+      "category": "cardio",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Treadmill",
+      "category": "cardio",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "VersaClimber",
+      "category": "cardio",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Fixed-Weight EZ Bar",
+      "category": "fixed_weight_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 10.0
+        },
+        {
+          "kg": 15.0
+        },
+        {
+          "kg": 20.0
+        },
+        {
+          "kg": 25.0
+        },
+        {
+          "kg": 30.0
+        },
+        {
+          "kg": 35.0
+        },
+        {
+          "kg": 40.0
+        },
+        {
+          "kg": 45.0
+        },
+        {
+          "kg": 50.0
+        }
+      ],
+      "satisfies": [
+        "e-z curl bar"
+      ]
+    },
+    {
+      "name": "Fixed-Weight Straight Bar",
+      "category": "fixed_weight_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 10.0
+        },
+        {
+          "kg": 15.0
+        },
+        {
+          "kg": 20.0
+        },
+        {
+          "kg": 25.0
+        },
+        {
+          "kg": 30.0
+        },
+        {
+          "kg": 35.0
+        },
+        {
+          "kg": 40.0
+        },
+        {
+          "kg": 45.0
+        },
+        {
+          "kg": 50.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Bumper Plates",
+      "category": "free_weights",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 5.0,
+          "label": "Silver"
+        },
+        {
+          "kg": 10.0,
+          "label": "Green"
+        },
+        {
+          "kg": 15.0,
+          "label": "Yellow"
+        },
+        {
+          "kg": 20.0,
+          "label": "Blue"
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Dumbbells",
+      "category": "free_weights",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 1.0
+        },
+        {
+          "kg": 2.0
+        },
+        {
+          "kg": 3.0
+        },
+        {
+          "kg": 4.0
+        },
+        {
+          "kg": 5.0
+        },
+        {
+          "kg": 6.0
+        },
+        {
+          "kg": 7.0
+        },
+        {
+          "kg": 8.0
+        },
+        {
+          "kg": 9.0
+        },
+        {
+          "kg": 10.0
+        },
+        {
+          "kg": 11.0
+        },
+        {
+          "kg": 12.0
+        },
+        {
+          "kg": 12.5
+        },
+        {
+          "kg": 15.0
+        },
+        {
+          "kg": 17.5
+        },
+        {
+          "kg": 20.0
+        },
+        {
+          "kg": 22.5
+        },
+        {
+          "kg": 25.0
+        },
+        {
+          "kg": 27.5
+        },
+        {
+          "kg": 30.0
+        },
+        {
+          "kg": 32.5
+        },
+        {
+          "kg": 35.0
+        },
+        {
+          "kg": 37.5
+        },
+        {
+          "kg": 40.0
+        },
+        {
+          "kg": 42.5
+        },
+        {
+          "kg": 45.0
+        },
+        {
+          "kg": 47.5
+        },
+        {
+          "kg": 50.0
+        },
+        {
+          "kg": 52.5
+        },
+        {
+          "kg": 55.0
+        },
+        {
+          "kg": 57.5
+        },
+        {
+          "kg": 60.0
+        },
+        {
+          "kg": 62.5
+        },
+        {
+          "kg": 65.0
+        },
+        {
+          "kg": 67.5
+        },
+        {
+          "kg": 70.0
+        },
+        {
+          "kg": 72.5
+        },
+        {
+          "kg": 75.0
+        }
+      ],
+      "satisfies": [
+        "dumbbell"
+      ]
+    },
+    {
+      "name": "Hand Gripper",
+      "category": "free_weights",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 23.0
+        },
+        {
+          "kg": 36.0
+        },
+        {
+          "kg": 45.0
+        },
+        {
+          "kg": 54.0
+        },
+        {
+          "kg": 63.0
+        },
+        {
+          "kg": 68.0
+        },
+        {
+          "kg": 76.0
+        },
+        {
+          "kg": 88.0
+        },
+        {
+          "kg": 91.0
+        },
+        {
+          "kg": 108.0
+        },
+        {
+          "kg": 113.0
+        },
+        {
+          "kg": 126.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Kettlebells",
+      "category": "free_weights",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 4.0
+        },
+        {
+          "kg": 6.0
+        },
+        {
+          "kg": 8.0
+        },
+        {
+          "kg": 10.0
+        },
+        {
+          "kg": 12.0
+        },
+        {
+          "kg": 14.0
+        },
+        {
+          "kg": 16.0
+        },
+        {
+          "kg": 18.0
+        },
+        {
+          "kg": 20.0
+        },
+        {
+          "kg": 22.0
+        },
+        {
+          "kg": 24.0
+        },
+        {
+          "kg": 26.0
+        },
+        {
+          "kg": 28.0
+        },
+        {
+          "kg": 30.0
+        },
+        {
+          "kg": 32.0
+        },
+        {
+          "kg": 36.0
+        },
+        {
+          "kg": 40.0
+        },
+        {
+          "kg": 44.0
+        },
+        {
+          "kg": 48.0
+        },
+        {
+          "kg": 52.0
+        },
+        {
+          "kg": 56.0
+        },
+        {
+          "kg": 60.0
+        },
+        {
+          "kg": 64.0
+        },
+        {
+          "kg": 68.0
+        },
+        {
+          "kg": 72.0
+        },
+        {
+          "kg": 76.0
+        },
+        {
+          "kg": 80.0
+        },
+        {
+          "kg": 84.0
+        },
+        {
+          "kg": 88.0
+        },
+        {
+          "kg": 92.0
+        }
+      ],
+      "satisfies": [
+        "kettlebells"
+      ]
+    },
+    {
+      "name": "Medicine Ball",
+      "category": "free_weights",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 1.0
+        },
+        {
+          "kg": 2.0
+        },
+        {
+          "kg": 3.0
+        },
+        {
+          "kg": 4.0
+        },
+        {
+          "kg": 5.0
+        },
+        {
+          "kg": 6.0
+        },
+        {
+          "kg": 7.0
+        },
+        {
+          "kg": 8.0
+        },
+        {
+          "kg": 9.0
+        },
+        {
+          "kg": 10.0
+        },
+        {
+          "kg": 11.0
+        },
+        {
+          "kg": 12.0
+        },
+        {
+          "kg": 13.0
+        },
+        {
+          "kg": 14.0
+        }
+      ],
+      "satisfies": [
+        "medicine ball"
+      ]
+    },
+    {
+      "name": "Weight Plates",
+      "category": "free_weights",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 1.25,
+          "label": "Green"
+        },
+        {
+          "kg": 2.5,
+          "label": "Blue"
+        },
+        {
+          "kg": 5.0,
+          "label": "Silver"
+        },
+        {
+          "kg": 10.0,
+          "label": "Green"
+        },
+        {
+          "kg": 15.0,
+          "label": "Yellow"
+        },
+        {
+          "kg": 20.0,
+          "label": "Blue"
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Dip/Pull-Up/Belt Squat Belt",
+      "category": "loaded_accessories",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": []
+    },
+    {
+      "name": "Farmer’s Handles",
+      "category": "loaded_accessories",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": []
+    },
+    {
+      "name": "Fat Grip Attachments",
+      "category": "loaded_accessories",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": []
+    },
+    {
+      "name": "Neck Harness",
+      "category": "loaded_accessories",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": []
+    },
+    {
+      "name": "Plate-Loaded Wrist Bar",
+      "category": "loaded_accessories",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": []
+    },
+    {
+      "name": "T-Bell",
+      "category": "loaded_accessories",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": []
+    },
+    {
+      "name": "Tib Bar Trainer",
+      "category": "loaded_accessories",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": []
+    },
+    {
+      "name": "Wrist Roller",
+      "category": "loaded_accessories",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": []
+    },
+    {
+      "name": "Axle Bar",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 7.5
+        },
+        {
+          "kg": 11.5
+        },
+        {
+          "kg": 15.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Barbell",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 7.0
+        },
+        {
+          "kg": 15.0
+        },
+        {
+          "kg": 20.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Buffalo Bar",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 23.0
+        },
+        {
+          "kg": 27.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Cambered Bench Press Bar",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 20.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Cambered Squat Bar",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 20.0
+        },
+        {
+          "kg": 29.5
+        },
+        {
+          "kg": 38.5
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "EZ Bar",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 9.0
+        },
+        {
+          "kg": 13.5
+        }
+      ],
+      "satisfies": [
+        "e-z curl bar"
+      ]
+    },
+    {
+      "name": "Marrs Bar",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 15.9
+        },
+        {
+          "kg": 29.5
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Open Trap Bar",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 23.0
+        },
+        {
+          "kg": 27.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Safety Squat Bar (SSB)",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 25.0
+        },
+        {
+          "kg": 27.5
+        },
+        {
+          "kg": 29.5
+        },
+        {
+          "kg": 32.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Smith Machine",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 20.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Strongman Log",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 22.5
+        },
+        {
+          "kg": 32.0
+        },
+        {
+          "kg": 61.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Swiss Bar",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 17.5
+        },
+        {
+          "kg": 20.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Trap Bar",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 20.0
+        },
+        {
+          "kg": 25.0
+        },
+        {
+          "kg": 27.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Triceps Bar",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 10.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Yoke",
+      "category": "loaded_bars",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 60.0
+        },
+        {
+          "kg": 75.0
+        },
+        {
+          "kg": 84.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
+      "name": "Another Human",
+      "category": "other",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Bed",
+      "category": "other",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Bodyweight Only",
+      "category": "other",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Captain’s Chair",
+      "category": "other",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Chair",
+      "category": "other",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Couch",
+      "category": "other",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Furniture Sliders",
+      "category": "other",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Incline Sliding Core Trainer",
+      "category": "other",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Sissy Squat Machine",
+      "category": "other",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Chest Fly With Arm Pads",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Chest-Supported Pin-Loaded Row",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Horizontal Pin-Loaded Chest Press",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Kneeling Pin-Loaded Glute Kickback",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Kneeling Pin-Loaded Leg Curl",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Kneeling Torso Rotation",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Lying Pin-Loaded Leg Curl",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Multi-Forearm",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Multi-Hip Machine",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pec Deck",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded 4-Way Neck",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded 45° Back Extension",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Assisted Pull-Up/Dip",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Biceps Curl With Arms At Side",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Crunch (With Chest Pad)",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Crunch (With Front Handles)",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Crunch (With Overhead Handles)",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Donkey Calf Raise",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded High Row",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Hip Abductor/Adductor Combo Machine",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Hip Thrust",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Horizontal Biceps Curl",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Iso-Lateral High Biceps Curl",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Leg Extension",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Leg Extension/Leg Curl Combo Machine",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Leg Press",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Overhead Triceps Extension",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Preacher Curl",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Preacher Curl/Triceps Extension Combo",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Pullover",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Reverse Hyperextension",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Row (No Chest Support)",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Shoulder Press",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Shrug",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pin-Loaded Triceps Extension",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Reclined Pin-Loaded Incline Press",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Rotator Cuff Machine",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Lower Torso Rotation",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Pin-Loaded Back Extension",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Pin-Loaded Calf Extension",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Pin-Loaded Calf Raise",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Pin-Loaded Chest Press",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Pin-Loaded Decline Press",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Pin-Loaded Dip",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Pin-Loaded Hip Abductor",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Pin-Loaded Hip Adductor",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Pin-Loaded Incline Press",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Pin-Loaded Lateral Raise",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Pin-Loaded Leg Curl",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Multi Flight",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Pec Fly",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Pin-Loaded Calf Raise",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Pin-Loaded Glute Kickback",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Pin-Loaded Hip Abductor",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Pin-Loaded Lateral Raise",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Pin-Loaded Leg Curl",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Step-Up Machine",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Upper Torso Rotation With Arm Or Shoulder Pads",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Upper Torso Rotation With Chest Pad",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Wrist Curl Machine",
+      "category": "pin_loaded_machines",
+      "kind": "range",
+      "minKg": 0.0,
+      "maxKg": 250.0,
+      "incrementKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Ab Coaster Machine",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 9.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Assisted Nordic Hamstring Curl Machine",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 8.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Bent-Over Plate-Loaded Row",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 13.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Center Pendulum Reverse Hyperextension",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Chest-Supported Plate-Loaded Row",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 4.5,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Chest-Supported T-Bar Row",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 18.1,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Hack Squat",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 45.4,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Horizontal Plate-Loaded Chest Press",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 8.2,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Incline Plate-Loaded Calf Press",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 6.8,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Jammer",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 3.6,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Kneeling Plate-Loaded Glute Kickback",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 4.4,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Kneeling Plate-Loaded Leg Curl",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 3.6,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Lever-Arm Belt Squat",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 20.4,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Leverage Squat",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 50.7,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Lying Decline Press Machine",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 9.1,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Lying Plate-Loaded Leg Curl",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 1.8,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pendulum Squat",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 40.8,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded 4-Way Neck",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.9,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded 45° Back Extension",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 11.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Assisted Pull-Up/Dip",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Back Extension",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Biceps Curl With Arms At Side",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Cable Crossover",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Cable Lat Pulldown",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Crunch (With Chest Pad)",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Crunch (With Overhead Handles)",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 11.3,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Crunch/Back Extension Combo",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded D.Y. Row",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 1.4,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Donkey Calf Raise",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 22.7,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Dual Handle Cable Tower",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Fly",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Front Lat Pulldown (Chest-Supported)",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.5,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded High Pulley Cable System (Single Loading Pin)",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded High Row",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.9,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded High/Low Pulley Cable System (Single Loading Pin)",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Hip Abductor/Adductor Combo Machine",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Hip Thrust (Starting From The Bottom)",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 7.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Hip Thrust (Starting From The Top)",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 7.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Incline Bench Press",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 9.1,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Incline Fly",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 6.4,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Iso-Lateral High Biceps Curl",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Lat Pulldown (No Chest Support)",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.9,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Lat Pulldown/Low Row Rack Attachment",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Leg Extension",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 9.1,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Leverage Leg Press",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 36.3,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Linear Leg Press",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 53.5,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Low Row",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 4.5,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Overhead Triceps Extension",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 6.8,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Preacher Curl",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 3.6,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Preacher Curl/Triceps Extension Combo",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 3.6,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Pullover",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 8.2,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Shoulder Press",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 4.5,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Single Cable Machine (Dual Sleeve)",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Super Incline Press",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Plate-Loaded Triceps Extension",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 3.6,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Power Squat Pro",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 32.7,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Pulley Belt Squat",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 12.5,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Hack Squat",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 40.8,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Plate-Loaded Calf Raise",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 22.7,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Plate-Loaded Chest Press",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 3.2,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Plate-Loaded Decline Press",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 2.7,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Plate-Loaded Dip",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 3.6,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Plate-Loaded Gripper",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 12.6,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Plate-Loaded Hip Abductor",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 5.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Plate-Loaded Hip Adductor",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Plate-Loaded Incline Press",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 3.6,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Plate-Loaded Lateral Raise",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 0.5,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Plate-Loaded Leg Curl",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 2.7,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Seated Plate-Loaded Shrug",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 11.4,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Shrug/Deadlift Machine",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 11.4,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Side-Plate-Loaded Reverse Hyperextension",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 9.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Sled",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 36.3,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Chest Press",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 9.1,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Hip Thrust Machine",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 20.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Plate-Loaded Calf Raise",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 30.4,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Plate-Loaded Glute Kickback",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 23.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Plate-Loaded Gripper",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 6.3,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Plate-Loaded Hip Abductor",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 20.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Plate-Loaded Lateral Raise",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 2.5,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing Plate-Loaded Leg Curl",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 3.6,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Standing T-Bar Row (Without Chest Support)",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 18.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Tibialis Dorsiflexion Machine",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 4.5,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "V-Squat",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 24.5,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Vertical Leg Press",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 49.9,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Viking Press Machine",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 6.8,
+      "satisfies": [
+        "machine"
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "key": "everything",
+      "name": "Everything Gym",
+      "items": [
+        "Ab Wheel",
+        "Aerobic Steps",
+        "Anchor Point For Resistance Band",
+        "Anchor Point For Suspension Trainer",
+        "Bench Press Board/Block",
+        "Bosu Ball",
+        "Calf Raise Block",
+        "Cuff Cable Attachments",
+        "Deadlift Blocks",
+        "Dip Bars",
+        "Gymnastics Rings",
+        "Landmine Attachment/Wall Corner",
+        "Multi-Grip Pull-Up Bar",
+        "Nordic Hamstring Curl Strap",
+        "Parallel Handle Landmine Attachment",
+        "Plyometric Boxes",
+        "Push-Up Handles",
+        "Slant Board",
+        "Sled Pulling Belt/Harness",
+        "Slingshot",
+        "Stability Ball",
+        "Straight Handle Landmine Attachment",
+        "Straight Pull-Up Bar",
+        "Suspension Trainer",
+        "V-Bar Row Grip Attachment",
+        "Viking Press Landmine Attachment",
+        "Yoga Blocks",
+        "Battle Ropes",
+        "Long Resistance Bands",
+        "Short Resistance Band",
+        "Adjustable Bench",
+        "Decline Bench",
+        "Decline Bench Press Station",
+        "Flat Bench",
+        "Flat Bench Press Station",
+        "Glute Ham Developer",
+        "Hip Thrust Bench",
+        "Incline Bench Press Station",
+        "Nordic Hamstring Curl Bench",
+        "Power Rack",
+        "Preacher Curl Bench",
+        "Roman Chair",
+        "Seal Row Bench",
+        "Seated Bench",
+        "Seated Overhead Press Station",
+        "Split Squat Roller Stand",
+        "Squat Box",
+        "Squat Stand",
+        "Ankle Weights",
+        "Weighted Vest",
+        "Dual Cable Lat Pulldown",
+        "Motorized Dual Cable Machine",
+        "Pin-Loaded Cable Crossover",
+        "Pin-Loaded Cable Lat Pulldown",
+        "Pin-Loaded Dual Handle Cable Tower",
+        "Pin-Loaded Fixed Lat Pulldown",
+        "Pin-Loaded Front Lat Pulldown (Chest-Supported)",
+        "Pin-Loaded Single Cable Machine",
+        "Pin-Loaded Smith Machine Functional Trainer",
+        "Seated Cable Row",
+        "Seated Dual Cable Row",
+        "Total Quad/Hip Dual Cable Machine",
+        "Air Bike",
+        "Bike",
+        "Elliptical",
+        "Jacobs Ladder",
+        "Jump Rope",
+        "Pool",
+        "Rowing Machine",
+        "SkiErg",
+        "Stair Climber",
+        "Staircase",
+        "Treadmill",
+        "VersaClimber",
+        "Fixed-Weight EZ Bar",
+        "Fixed-Weight Straight Bar",
+        "Bumper Plates",
+        "Dumbbells",
+        "Hand Gripper",
+        "Kettlebells",
+        "Medicine Ball",
+        "Weight Plates",
+        "Dip/Pull-Up/Belt Squat Belt",
+        "Farmer’s Handles",
+        "Fat Grip Attachments",
+        "Neck Harness",
+        "Plate-Loaded Wrist Bar",
+        "T-Bell",
+        "Tib Bar Trainer",
+        "Wrist Roller",
+        "Axle Bar",
+        "Barbell",
+        "Buffalo Bar",
+        "Cambered Bench Press Bar",
+        "Cambered Squat Bar",
+        "EZ Bar",
+        "Marrs Bar",
+        "Open Trap Bar",
+        "Safety Squat Bar (SSB)",
+        "Smith Machine",
+        "Strongman Log",
+        "Swiss Bar",
+        "Trap Bar",
+        "Triceps Bar",
+        "Yoke",
+        "Another Human",
+        "Bed",
+        "Bodyweight Only",
+        "Captain’s Chair",
+        "Chair",
+        "Couch",
+        "Furniture Sliders",
+        "Incline Sliding Core Trainer",
+        "Sissy Squat Machine",
+        "Chest Fly With Arm Pads",
+        "Chest-Supported Pin-Loaded Row",
+        "Horizontal Pin-Loaded Chest Press",
+        "Kneeling Pin-Loaded Glute Kickback",
+        "Kneeling Pin-Loaded Leg Curl",
+        "Kneeling Torso Rotation",
+        "Lying Pin-Loaded Leg Curl",
+        "Multi-Forearm",
+        "Multi-Hip Machine",
+        "Pec Deck",
+        "Pin-Loaded 4-Way Neck",
+        "Pin-Loaded 45° Back Extension",
+        "Pin-Loaded Assisted Pull-Up/Dip",
+        "Pin-Loaded Biceps Curl With Arms At Side",
+        "Pin-Loaded Crunch (With Chest Pad)",
+        "Pin-Loaded Crunch (With Front Handles)",
+        "Pin-Loaded Crunch (With Overhead Handles)",
+        "Pin-Loaded Donkey Calf Raise",
+        "Pin-Loaded High Row",
+        "Pin-Loaded Hip Abductor/Adductor Combo Machine",
+        "Pin-Loaded Hip Thrust",
+        "Pin-Loaded Horizontal Biceps Curl",
+        "Pin-Loaded Iso-Lateral High Biceps Curl",
+        "Pin-Loaded Leg Extension",
+        "Pin-Loaded Leg Extension/Leg Curl Combo Machine",
+        "Pin-Loaded Leg Press",
+        "Pin-Loaded Overhead Triceps Extension",
+        "Pin-Loaded Preacher Curl",
+        "Pin-Loaded Preacher Curl/Triceps Extension Combo",
+        "Pin-Loaded Pullover",
+        "Pin-Loaded Reverse Hyperextension",
+        "Pin-Loaded Row (No Chest Support)",
+        "Pin-Loaded Shoulder Press",
+        "Pin-Loaded Shrug",
+        "Pin-Loaded Triceps Extension",
+        "Reclined Pin-Loaded Incline Press",
+        "Rotator Cuff Machine",
+        "Seated Lower Torso Rotation",
+        "Seated Pin-Loaded Back Extension",
+        "Seated Pin-Loaded Calf Extension",
+        "Seated Pin-Loaded Calf Raise",
+        "Seated Pin-Loaded Chest Press",
+        "Seated Pin-Loaded Decline Press",
+        "Seated Pin-Loaded Dip",
+        "Seated Pin-Loaded Hip Abductor",
+        "Seated Pin-Loaded Hip Adductor",
+        "Seated Pin-Loaded Incline Press",
+        "Seated Pin-Loaded Lateral Raise",
+        "Seated Pin-Loaded Leg Curl",
+        "Standing Multi Flight",
+        "Standing Pec Fly",
+        "Standing Pin-Loaded Calf Raise",
+        "Standing Pin-Loaded Glute Kickback",
+        "Standing Pin-Loaded Hip Abductor",
+        "Standing Pin-Loaded Lateral Raise",
+        "Standing Pin-Loaded Leg Curl",
+        "Step-Up Machine",
+        "Upper Torso Rotation With Arm Or Shoulder Pads",
+        "Upper Torso Rotation With Chest Pad",
+        "Wrist Curl Machine",
+        "Ab Coaster Machine",
+        "Assisted Nordic Hamstring Curl Machine",
+        "Bent-Over Plate-Loaded Row",
+        "Center Pendulum Reverse Hyperextension",
+        "Chest-Supported Plate-Loaded Row",
+        "Chest-Supported T-Bar Row",
+        "Hack Squat",
+        "Horizontal Plate-Loaded Chest Press",
+        "Incline Plate-Loaded Calf Press",
+        "Jammer",
+        "Kneeling Plate-Loaded Glute Kickback",
+        "Kneeling Plate-Loaded Leg Curl",
+        "Lever-Arm Belt Squat",
+        "Leverage Squat",
+        "Lying Decline Press Machine",
+        "Lying Plate-Loaded Leg Curl",
+        "Pendulum Squat",
+        "Plate-Loaded 4-Way Neck",
+        "Plate-Loaded 45° Back Extension",
+        "Plate-Loaded Assisted Pull-Up/Dip",
+        "Plate-Loaded Back Extension",
+        "Plate-Loaded Biceps Curl With Arms At Side",
+        "Plate-Loaded Cable Crossover",
+        "Plate-Loaded Cable Lat Pulldown",
+        "Plate-Loaded Crunch (With Chest Pad)",
+        "Plate-Loaded Crunch (With Overhead Handles)",
+        "Plate-Loaded Crunch/Back Extension Combo",
+        "Plate-Loaded D.Y. Row",
+        "Plate-Loaded Donkey Calf Raise",
+        "Plate-Loaded Dual Handle Cable Tower",
+        "Plate-Loaded Fly",
+        "Plate-Loaded Front Lat Pulldown (Chest-Supported)",
+        "Plate-Loaded High Pulley Cable System (Single Loading Pin)",
+        "Plate-Loaded High Row",
+        "Plate-Loaded High/Low Pulley Cable System (Single Loading Pin)",
+        "Plate-Loaded Hip Abductor/Adductor Combo Machine",
+        "Plate-Loaded Hip Thrust (Starting From The Bottom)",
+        "Plate-Loaded Hip Thrust (Starting From The Top)",
+        "Plate-Loaded Incline Bench Press",
+        "Plate-Loaded Incline Fly",
+        "Plate-Loaded Iso-Lateral High Biceps Curl",
+        "Plate-Loaded Lat Pulldown (No Chest Support)",
+        "Plate-Loaded Lat Pulldown/Low Row Rack Attachment",
+        "Plate-Loaded Leg Extension",
+        "Plate-Loaded Leverage Leg Press",
+        "Plate-Loaded Linear Leg Press",
+        "Plate-Loaded Low Row",
+        "Plate-Loaded Overhead Triceps Extension",
+        "Plate-Loaded Preacher Curl",
+        "Plate-Loaded Preacher Curl/Triceps Extension Combo",
+        "Plate-Loaded Pullover",
+        "Plate-Loaded Shoulder Press",
+        "Plate-Loaded Single Cable Machine (Dual Sleeve)",
+        "Plate-Loaded Super Incline Press",
+        "Plate-Loaded Triceps Extension",
+        "Power Squat Pro",
+        "Pulley Belt Squat",
+        "Seated Hack Squat",
+        "Seated Plate-Loaded Calf Raise",
+        "Seated Plate-Loaded Chest Press",
+        "Seated Plate-Loaded Decline Press",
+        "Seated Plate-Loaded Dip",
+        "Seated Plate-Loaded Gripper",
+        "Seated Plate-Loaded Hip Abductor",
+        "Seated Plate-Loaded Hip Adductor",
+        "Seated Plate-Loaded Incline Press",
+        "Seated Plate-Loaded Lateral Raise",
+        "Seated Plate-Loaded Leg Curl",
+        "Seated Plate-Loaded Shrug",
+        "Shrug/Deadlift Machine",
+        "Side-Plate-Loaded Reverse Hyperextension",
+        "Sled",
+        "Standing Chest Press",
+        "Standing Hip Thrust Machine",
+        "Standing Plate-Loaded Calf Raise",
+        "Standing Plate-Loaded Glute Kickback",
+        "Standing Plate-Loaded Gripper",
+        "Standing Plate-Loaded Hip Abductor",
+        "Standing Plate-Loaded Lateral Raise",
+        "Standing Plate-Loaded Leg Curl",
+        "Standing T-Bar Row (Without Chest Support)",
+        "Tibialis Dorsiflexion Machine",
+        "V-Squat",
+        "Vertical Leg Press",
+        "Viking Press Machine"
+      ]
+    },
+    {
+      "key": "commercial",
+      "name": "Commercial Gym",
+      "items": [
+        "Ab Wheel",
+        "Aerobic Steps",
+        "Anchor Point For Resistance Band",
+        "Anchor Point For Suspension Trainer",
+        "Bench Press Board/Block",
+        "Bosu Ball",
+        "Calf Raise Block",
+        "Cuff Cable Attachments",
+        "Deadlift Blocks",
+        "Dip Bars",
+        "Gymnastics Rings",
+        "Landmine Attachment/Wall Corner",
+        "Multi-Grip Pull-Up Bar",
+        "Nordic Hamstring Curl Strap",
+        "Parallel Handle Landmine Attachment",
+        "Plyometric Boxes",
+        "Push-Up Handles",
+        "Slant Board",
+        "Sled Pulling Belt/Harness",
+        "Slingshot",
+        "Stability Ball",
+        "Straight Handle Landmine Attachment",
+        "Straight Pull-Up Bar",
+        "Suspension Trainer",
+        "V-Bar Row Grip Attachment",
+        "Viking Press Landmine Attachment",
+        "Yoga Blocks",
+        "Battle Ropes",
+        "Long Resistance Bands",
+        "Short Resistance Band",
+        "Adjustable Bench",
+        "Decline Bench",
+        "Decline Bench Press Station",
+        "Flat Bench",
+        "Flat Bench Press Station",
+        "Glute Ham Developer",
+        "Hip Thrust Bench",
+        "Incline Bench Press Station",
+        "Nordic Hamstring Curl Bench",
+        "Power Rack",
+        "Preacher Curl Bench",
+        "Roman Chair",
+        "Seal Row Bench",
+        "Seated Bench",
+        "Seated Overhead Press Station",
+        "Split Squat Roller Stand",
+        "Squat Box",
+        "Squat Stand",
+        "Ankle Weights",
+        "Weighted Vest",
+        "Dual Cable Lat Pulldown",
+        "Motorized Dual Cable Machine",
+        "Pin-Loaded Cable Crossover",
+        "Pin-Loaded Cable Lat Pulldown",
+        "Pin-Loaded Dual Handle Cable Tower",
+        "Pin-Loaded Fixed Lat Pulldown",
+        "Pin-Loaded Front Lat Pulldown (Chest-Supported)",
+        "Pin-Loaded Single Cable Machine",
+        "Pin-Loaded Smith Machine Functional Trainer",
+        "Seated Cable Row",
+        "Seated Dual Cable Row",
+        "Total Quad/Hip Dual Cable Machine",
+        "Air Bike",
+        "Bike",
+        "Elliptical",
+        "Jacobs Ladder",
+        "Jump Rope",
+        "Pool",
+        "Rowing Machine",
+        "SkiErg",
+        "Stair Climber",
+        "Staircase",
+        "Treadmill",
+        "VersaClimber",
+        "Fixed-Weight EZ Bar",
+        "Fixed-Weight Straight Bar",
+        "Bumper Plates",
+        "Dumbbells",
+        "Hand Gripper",
+        "Kettlebells",
+        "Medicine Ball",
+        "Weight Plates",
+        "Barbell",
+        "EZ Bar",
+        "Open Trap Bar",
+        "Safety Squat Bar (SSB)",
+        "Smith Machine",
+        "Swiss Bar",
+        "Trap Bar",
+        "Triceps Bar",
+        "Chest Fly With Arm Pads",
+        "Chest-Supported Pin-Loaded Row",
+        "Horizontal Pin-Loaded Chest Press",
+        "Kneeling Pin-Loaded Glute Kickback",
+        "Kneeling Pin-Loaded Leg Curl",
+        "Kneeling Torso Rotation",
+        "Lying Pin-Loaded Leg Curl",
+        "Multi-Forearm",
+        "Multi-Hip Machine",
+        "Pec Deck",
+        "Pin-Loaded 4-Way Neck",
+        "Pin-Loaded 45° Back Extension",
+        "Pin-Loaded Assisted Pull-Up/Dip",
+        "Pin-Loaded Biceps Curl With Arms At Side",
+        "Pin-Loaded Crunch (With Chest Pad)",
+        "Pin-Loaded Crunch (With Front Handles)",
+        "Pin-Loaded Crunch (With Overhead Handles)",
+        "Pin-Loaded Donkey Calf Raise",
+        "Pin-Loaded High Row",
+        "Pin-Loaded Hip Abductor/Adductor Combo Machine",
+        "Pin-Loaded Hip Thrust",
+        "Pin-Loaded Horizontal Biceps Curl",
+        "Pin-Loaded Iso-Lateral High Biceps Curl",
+        "Pin-Loaded Leg Extension",
+        "Pin-Loaded Leg Extension/Leg Curl Combo Machine",
+        "Pin-Loaded Leg Press",
+        "Pin-Loaded Overhead Triceps Extension",
+        "Pin-Loaded Preacher Curl",
+        "Pin-Loaded Preacher Curl/Triceps Extension Combo",
+        "Pin-Loaded Pullover",
+        "Pin-Loaded Reverse Hyperextension",
+        "Pin-Loaded Row (No Chest Support)",
+        "Pin-Loaded Shoulder Press",
+        "Pin-Loaded Shrug",
+        "Pin-Loaded Triceps Extension",
+        "Reclined Pin-Loaded Incline Press",
+        "Rotator Cuff Machine",
+        "Seated Lower Torso Rotation",
+        "Seated Pin-Loaded Back Extension",
+        "Seated Pin-Loaded Calf Extension",
+        "Seated Pin-Loaded Calf Raise",
+        "Seated Pin-Loaded Chest Press",
+        "Seated Pin-Loaded Decline Press",
+        "Seated Pin-Loaded Dip",
+        "Seated Pin-Loaded Hip Abductor",
+        "Seated Pin-Loaded Hip Adductor",
+        "Seated Pin-Loaded Incline Press",
+        "Seated Pin-Loaded Lateral Raise",
+        "Seated Pin-Loaded Leg Curl",
+        "Standing Multi Flight",
+        "Standing Pec Fly",
+        "Standing Pin-Loaded Calf Raise",
+        "Standing Pin-Loaded Glute Kickback",
+        "Standing Pin-Loaded Hip Abductor",
+        "Standing Pin-Loaded Lateral Raise",
+        "Standing Pin-Loaded Leg Curl",
+        "Step-Up Machine",
+        "Upper Torso Rotation With Arm Or Shoulder Pads",
+        "Upper Torso Rotation With Chest Pad",
+        "Wrist Curl Machine",
+        "Ab Coaster Machine",
+        "Assisted Nordic Hamstring Curl Machine",
+        "Bent-Over Plate-Loaded Row",
+        "Center Pendulum Reverse Hyperextension",
+        "Chest-Supported Plate-Loaded Row",
+        "Chest-Supported T-Bar Row",
+        "Hack Squat",
+        "Horizontal Plate-Loaded Chest Press",
+        "Incline Plate-Loaded Calf Press",
+        "Jammer",
+        "Kneeling Plate-Loaded Glute Kickback",
+        "Kneeling Plate-Loaded Leg Curl",
+        "Lever-Arm Belt Squat",
+        "Leverage Squat",
+        "Lying Decline Press Machine",
+        "Lying Plate-Loaded Leg Curl",
+        "Pendulum Squat",
+        "Plate-Loaded 4-Way Neck",
+        "Plate-Loaded 45° Back Extension",
+        "Plate-Loaded Assisted Pull-Up/Dip",
+        "Plate-Loaded Back Extension",
+        "Plate-Loaded Biceps Curl With Arms At Side",
+        "Plate-Loaded Cable Crossover",
+        "Plate-Loaded Cable Lat Pulldown",
+        "Plate-Loaded Crunch (With Chest Pad)",
+        "Plate-Loaded Crunch (With Overhead Handles)",
+        "Plate-Loaded Crunch/Back Extension Combo",
+        "Plate-Loaded D.Y. Row",
+        "Plate-Loaded Donkey Calf Raise",
+        "Plate-Loaded Dual Handle Cable Tower",
+        "Plate-Loaded Fly",
+        "Plate-Loaded Front Lat Pulldown (Chest-Supported)",
+        "Plate-Loaded High Pulley Cable System (Single Loading Pin)",
+        "Plate-Loaded High Row",
+        "Plate-Loaded High/Low Pulley Cable System (Single Loading Pin)",
+        "Plate-Loaded Hip Abductor/Adductor Combo Machine",
+        "Plate-Loaded Hip Thrust (Starting From The Bottom)",
+        "Plate-Loaded Hip Thrust (Starting From The Top)",
+        "Plate-Loaded Incline Bench Press",
+        "Plate-Loaded Incline Fly",
+        "Plate-Loaded Iso-Lateral High Biceps Curl",
+        "Plate-Loaded Lat Pulldown (No Chest Support)",
+        "Plate-Loaded Lat Pulldown/Low Row Rack Attachment",
+        "Plate-Loaded Leg Extension",
+        "Plate-Loaded Leverage Leg Press",
+        "Plate-Loaded Linear Leg Press",
+        "Plate-Loaded Low Row",
+        "Plate-Loaded Overhead Triceps Extension",
+        "Plate-Loaded Preacher Curl",
+        "Plate-Loaded Preacher Curl/Triceps Extension Combo",
+        "Plate-Loaded Pullover",
+        "Plate-Loaded Shoulder Press",
+        "Plate-Loaded Single Cable Machine (Dual Sleeve)",
+        "Plate-Loaded Super Incline Press",
+        "Plate-Loaded Triceps Extension",
+        "Power Squat Pro",
+        "Pulley Belt Squat",
+        "Seated Hack Squat",
+        "Seated Plate-Loaded Calf Raise",
+        "Seated Plate-Loaded Chest Press",
+        "Seated Plate-Loaded Decline Press",
+        "Seated Plate-Loaded Dip",
+        "Seated Plate-Loaded Gripper",
+        "Seated Plate-Loaded Hip Abductor",
+        "Seated Plate-Loaded Hip Adductor",
+        "Seated Plate-Loaded Incline Press",
+        "Seated Plate-Loaded Lateral Raise",
+        "Seated Plate-Loaded Leg Curl",
+        "Seated Plate-Loaded Shrug",
+        "Shrug/Deadlift Machine",
+        "Side-Plate-Loaded Reverse Hyperextension",
+        "Standing Chest Press",
+        "Standing Hip Thrust Machine",
+        "Standing Plate-Loaded Calf Raise",
+        "Standing Plate-Loaded Glute Kickback",
+        "Standing Plate-Loaded Gripper",
+        "Standing Plate-Loaded Hip Abductor",
+        "Standing Plate-Loaded Lateral Raise",
+        "Standing Plate-Loaded Leg Curl",
+        "Standing T-Bar Row (Without Chest Support)",
+        "Tibialis Dorsiflexion Machine",
+        "V-Squat",
+        "Vertical Leg Press",
+        "Viking Press Machine"
+      ]
+    },
+    {
+      "key": "warehouse",
+      "name": "Warehouse Gym",
+      "items": [
+        "Ab Wheel",
+        "Aerobic Steps",
+        "Anchor Point For Resistance Band",
+        "Anchor Point For Suspension Trainer",
+        "Bench Press Board/Block",
+        "Bosu Ball",
+        "Calf Raise Block",
+        "Cuff Cable Attachments",
+        "Deadlift Blocks",
+        "Dip Bars",
+        "Gymnastics Rings",
+        "Landmine Attachment/Wall Corner",
+        "Multi-Grip Pull-Up Bar",
+        "Nordic Hamstring Curl Strap",
+        "Parallel Handle Landmine Attachment",
+        "Plyometric Boxes",
+        "Push-Up Handles",
+        "Slant Board",
+        "Sled Pulling Belt/Harness",
+        "Slingshot",
+        "Stability Ball",
+        "Straight Handle Landmine Attachment",
+        "Straight Pull-Up Bar",
+        "Suspension Trainer",
+        "V-Bar Row Grip Attachment",
+        "Viking Press Landmine Attachment",
+        "Yoga Blocks",
+        "Battle Ropes",
+        "Long Resistance Bands",
+        "Short Resistance Band",
+        "Adjustable Bench",
+        "Decline Bench",
+        "Decline Bench Press Station",
+        "Flat Bench",
+        "Flat Bench Press Station",
+        "Glute Ham Developer",
+        "Hip Thrust Bench",
+        "Incline Bench Press Station",
+        "Nordic Hamstring Curl Bench",
+        "Power Rack",
+        "Preacher Curl Bench",
+        "Roman Chair",
+        "Seal Row Bench",
+        "Seated Bench",
+        "Seated Overhead Press Station",
+        "Split Squat Roller Stand",
+        "Squat Box",
+        "Squat Stand",
+        "Ankle Weights",
+        "Weighted Vest",
+        "Fixed-Weight EZ Bar",
+        "Fixed-Weight Straight Bar",
+        "Bumper Plates",
+        "Dumbbells",
+        "Hand Gripper",
+        "Kettlebells",
+        "Medicine Ball",
+        "Weight Plates",
+        "Dip/Pull-Up/Belt Squat Belt",
+        "Farmer’s Handles",
+        "Fat Grip Attachments",
+        "Neck Harness",
+        "Plate-Loaded Wrist Bar",
+        "T-Bell",
+        "Tib Bar Trainer",
+        "Wrist Roller",
+        "Axle Bar",
+        "Barbell",
+        "Buffalo Bar",
+        "Cambered Bench Press Bar",
+        "Cambered Squat Bar",
+        "EZ Bar",
+        "Marrs Bar",
+        "Open Trap Bar",
+        "Safety Squat Bar (SSB)",
+        "Smith Machine",
+        "Strongman Log",
+        "Swiss Bar",
+        "Trap Bar",
+        "Triceps Bar",
+        "Yoke",
+        "Ab Coaster Machine",
+        "Assisted Nordic Hamstring Curl Machine",
+        "Bent-Over Plate-Loaded Row",
+        "Center Pendulum Reverse Hyperextension",
+        "Chest-Supported Plate-Loaded Row",
+        "Chest-Supported T-Bar Row",
+        "Hack Squat",
+        "Horizontal Plate-Loaded Chest Press",
+        "Incline Plate-Loaded Calf Press",
+        "Jammer",
+        "Kneeling Plate-Loaded Glute Kickback",
+        "Kneeling Plate-Loaded Leg Curl",
+        "Lever-Arm Belt Squat",
+        "Leverage Squat",
+        "Lying Decline Press Machine",
+        "Lying Plate-Loaded Leg Curl",
+        "Pendulum Squat",
+        "Plate-Loaded 4-Way Neck",
+        "Plate-Loaded 45° Back Extension",
+        "Plate-Loaded Assisted Pull-Up/Dip",
+        "Plate-Loaded Back Extension",
+        "Plate-Loaded Biceps Curl With Arms At Side",
+        "Plate-Loaded Cable Crossover",
+        "Plate-Loaded Cable Lat Pulldown",
+        "Plate-Loaded Crunch (With Chest Pad)",
+        "Plate-Loaded Crunch (With Overhead Handles)",
+        "Plate-Loaded Crunch/Back Extension Combo",
+        "Plate-Loaded D.Y. Row",
+        "Plate-Loaded Donkey Calf Raise",
+        "Plate-Loaded Dual Handle Cable Tower",
+        "Plate-Loaded Fly",
+        "Plate-Loaded Front Lat Pulldown (Chest-Supported)",
+        "Plate-Loaded High Pulley Cable System (Single Loading Pin)",
+        "Plate-Loaded High Row",
+        "Plate-Loaded High/Low Pulley Cable System (Single Loading Pin)",
+        "Plate-Loaded Hip Abductor/Adductor Combo Machine",
+        "Plate-Loaded Hip Thrust (Starting From The Bottom)",
+        "Plate-Loaded Hip Thrust (Starting From The Top)",
+        "Plate-Loaded Incline Bench Press",
+        "Plate-Loaded Incline Fly",
+        "Plate-Loaded Iso-Lateral High Biceps Curl",
+        "Plate-Loaded Lat Pulldown (No Chest Support)",
+        "Plate-Loaded Lat Pulldown/Low Row Rack Attachment",
+        "Plate-Loaded Leg Extension",
+        "Plate-Loaded Leverage Leg Press",
+        "Plate-Loaded Linear Leg Press",
+        "Plate-Loaded Low Row",
+        "Plate-Loaded Overhead Triceps Extension",
+        "Plate-Loaded Preacher Curl",
+        "Plate-Loaded Preacher Curl/Triceps Extension Combo",
+        "Plate-Loaded Pullover",
+        "Plate-Loaded Shoulder Press",
+        "Plate-Loaded Single Cable Machine (Dual Sleeve)",
+        "Plate-Loaded Super Incline Press",
+        "Plate-Loaded Triceps Extension",
+        "Power Squat Pro",
+        "Pulley Belt Squat",
+        "Seated Hack Squat",
+        "Seated Plate-Loaded Calf Raise",
+        "Seated Plate-Loaded Chest Press",
+        "Seated Plate-Loaded Decline Press",
+        "Seated Plate-Loaded Dip",
+        "Seated Plate-Loaded Gripper",
+        "Seated Plate-Loaded Hip Abductor",
+        "Seated Plate-Loaded Hip Adductor",
+        "Seated Plate-Loaded Incline Press",
+        "Seated Plate-Loaded Lateral Raise",
+        "Seated Plate-Loaded Leg Curl",
+        "Seated Plate-Loaded Shrug",
+        "Shrug/Deadlift Machine",
+        "Side-Plate-Loaded Reverse Hyperextension",
+        "Sled",
+        "Standing Chest Press",
+        "Standing Hip Thrust Machine",
+        "Standing Plate-Loaded Calf Raise",
+        "Standing Plate-Loaded Glute Kickback",
+        "Standing Plate-Loaded Gripper",
+        "Standing Plate-Loaded Hip Abductor",
+        "Standing Plate-Loaded Lateral Raise",
+        "Standing Plate-Loaded Leg Curl",
+        "Standing T-Bar Row (Without Chest Support)",
+        "Tibialis Dorsiflexion Machine",
+        "V-Squat",
+        "Vertical Leg Press",
+        "Viking Press Machine"
+      ]
+    },
+    {
+      "key": "local",
+      "name": "Local Gym",
+      "items": [
+        "Ab Wheel",
+        "Aerobic Steps",
+        "Anchor Point For Resistance Band",
+        "Anchor Point For Suspension Trainer",
+        "Bench Press Board/Block",
+        "Bosu Ball",
+        "Calf Raise Block",
+        "Cuff Cable Attachments",
+        "Deadlift Blocks",
+        "Dip Bars",
+        "Gymnastics Rings",
+        "Landmine Attachment/Wall Corner",
+        "Multi-Grip Pull-Up Bar",
+        "Nordic Hamstring Curl Strap",
+        "Parallel Handle Landmine Attachment",
+        "Plyometric Boxes",
+        "Push-Up Handles",
+        "Slant Board",
+        "Sled Pulling Belt/Harness",
+        "Slingshot",
+        "Stability Ball",
+        "Straight Handle Landmine Attachment",
+        "Straight Pull-Up Bar",
+        "Suspension Trainer",
+        "V-Bar Row Grip Attachment",
+        "Viking Press Landmine Attachment",
+        "Yoga Blocks",
+        "Battle Ropes",
+        "Long Resistance Bands",
+        "Short Resistance Band",
+        "Adjustable Bench",
+        "Decline Bench",
+        "Decline Bench Press Station",
+        "Flat Bench",
+        "Flat Bench Press Station",
+        "Glute Ham Developer",
+        "Hip Thrust Bench",
+        "Incline Bench Press Station",
+        "Nordic Hamstring Curl Bench",
+        "Power Rack",
+        "Preacher Curl Bench",
+        "Roman Chair",
+        "Seal Row Bench",
+        "Seated Bench",
+        "Seated Overhead Press Station",
+        "Split Squat Roller Stand",
+        "Squat Box",
+        "Squat Stand",
+        "Ankle Weights",
+        "Weighted Vest",
+        "Dual Cable Lat Pulldown",
+        "Motorized Dual Cable Machine",
+        "Pin-Loaded Cable Crossover",
+        "Pin-Loaded Cable Lat Pulldown",
+        "Pin-Loaded Dual Handle Cable Tower",
+        "Pin-Loaded Fixed Lat Pulldown",
+        "Pin-Loaded Front Lat Pulldown (Chest-Supported)",
+        "Pin-Loaded Single Cable Machine",
+        "Pin-Loaded Smith Machine Functional Trainer",
+        "Seated Cable Row",
+        "Seated Dual Cable Row",
+        "Total Quad/Hip Dual Cable Machine",
+        "Air Bike",
+        "Bike",
+        "Elliptical",
+        "Jacobs Ladder",
+        "Jump Rope",
+        "Pool",
+        "Rowing Machine",
+        "SkiErg",
+        "Stair Climber",
+        "Staircase",
+        "Treadmill",
+        "VersaClimber",
+        "Bumper Plates",
+        "Dumbbells",
+        "Hand Gripper",
+        "Kettlebells",
+        "Medicine Ball",
+        "Weight Plates",
+        "Barbell",
+        "Buffalo Bar",
+        "Cambered Bench Press Bar",
+        "Cambered Squat Bar",
+        "EZ Bar",
+        "Open Trap Bar",
+        "Safety Squat Bar (SSB)",
+        "Smith Machine",
+        "Swiss Bar",
+        "Trap Bar",
+        "Triceps Bar",
+        "Chest Fly With Arm Pads",
+        "Chest-Supported Pin-Loaded Row",
+        "Horizontal Pin-Loaded Chest Press",
+        "Kneeling Pin-Loaded Glute Kickback",
+        "Kneeling Pin-Loaded Leg Curl",
+        "Kneeling Torso Rotation",
+        "Lying Pin-Loaded Leg Curl",
+        "Multi-Forearm",
+        "Multi-Hip Machine",
+        "Pec Deck",
+        "Pin-Loaded 4-Way Neck",
+        "Pin-Loaded 45° Back Extension",
+        "Pin-Loaded Assisted Pull-Up/Dip",
+        "Pin-Loaded Biceps Curl With Arms At Side",
+        "Pin-Loaded Crunch (With Chest Pad)",
+        "Pin-Loaded Crunch (With Front Handles)",
+        "Pin-Loaded Crunch (With Overhead Handles)",
+        "Pin-Loaded Donkey Calf Raise",
+        "Pin-Loaded High Row",
+        "Pin-Loaded Hip Abductor/Adductor Combo Machine",
+        "Pin-Loaded Hip Thrust",
+        "Pin-Loaded Horizontal Biceps Curl",
+        "Pin-Loaded Iso-Lateral High Biceps Curl",
+        "Pin-Loaded Leg Extension",
+        "Pin-Loaded Leg Extension/Leg Curl Combo Machine",
+        "Pin-Loaded Leg Press",
+        "Pin-Loaded Overhead Triceps Extension",
+        "Pin-Loaded Preacher Curl",
+        "Pin-Loaded Preacher Curl/Triceps Extension Combo",
+        "Pin-Loaded Pullover",
+        "Pin-Loaded Reverse Hyperextension",
+        "Pin-Loaded Row (No Chest Support)",
+        "Pin-Loaded Shoulder Press",
+        "Pin-Loaded Shrug",
+        "Pin-Loaded Triceps Extension",
+        "Reclined Pin-Loaded Incline Press",
+        "Rotator Cuff Machine",
+        "Seated Lower Torso Rotation",
+        "Seated Pin-Loaded Back Extension",
+        "Seated Pin-Loaded Calf Extension",
+        "Seated Pin-Loaded Calf Raise",
+        "Seated Pin-Loaded Chest Press",
+        "Seated Pin-Loaded Decline Press",
+        "Seated Pin-Loaded Dip",
+        "Seated Pin-Loaded Hip Abductor",
+        "Seated Pin-Loaded Hip Adductor",
+        "Seated Pin-Loaded Incline Press",
+        "Seated Pin-Loaded Lateral Raise",
+        "Seated Pin-Loaded Leg Curl",
+        "Standing Multi Flight",
+        "Standing Pec Fly",
+        "Standing Pin-Loaded Calf Raise",
+        "Standing Pin-Loaded Glute Kickback",
+        "Standing Pin-Loaded Hip Abductor",
+        "Standing Pin-Loaded Lateral Raise",
+        "Standing Pin-Loaded Leg Curl",
+        "Step-Up Machine",
+        "Upper Torso Rotation With Arm Or Shoulder Pads",
+        "Upper Torso Rotation With Chest Pad",
+        "Wrist Curl Machine"
+      ]
+    },
+    {
+      "key": "garage",
+      "name": "Garage Gym",
+      "items": [
+        "Barbell",
+        "Weight Plates",
+        "Bumper Plates",
+        "Dumbbells",
+        "Kettlebells",
+        "EZ Bar",
+        "Trap Bar",
+        "Power Rack",
+        "Squat Stand",
+        "Flat Bench",
+        "Adjustable Bench",
+        "Straight Pull-Up Bar",
+        "Dip Bars",
+        "Long Resistance Bands",
+        "Short Resistance Band",
+        "Gymnastics Rings",
+        "Ab Wheel",
+        "Jump Rope",
+        "Weighted Vest",
+        "Ankle Weights",
+        "Dip/Pull-Up/Belt Squat Belt",
+        "Farmer’s Handles",
+        "Sled",
+        "Landmine Attachment/Wall Corner",
+        "Plyometric Boxes",
+        "Slant Board",
+        "Yoga Blocks"
+      ]
+    },
+    {
+      "key": "home",
+      "name": "Home Gym",
+      "items": [
+        "Dumbbells",
+        "Kettlebells",
+        "Long Resistance Bands",
+        "Short Resistance Band",
+        "Adjustable Bench",
+        "Flat Bench",
+        "Straight Pull-Up Bar",
+        "Push-Up Handles",
+        "Ab Wheel",
+        "Jump Rope",
+        "Yoga Blocks",
+        "Stability Ball",
+        "Bosu Ball",
+        "Suspension Trainer",
+        "Ankle Weights",
+        "Weighted Vest",
+        "Medicine Ball",
+        "Bodyweight Only",
+        "Chair",
+        "Bed",
+        "Couch"
+      ]
+    },
+    {
+      "key": "blank",
+      "name": "Start From Blank Slate",
+      "items": []
+    }
+  ]
+}

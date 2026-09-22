@@ -1,11 +1,15 @@
 import { formatDuration, formatWeight, type PersonalRecordType, type Unit } from '@overload/domain';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { SectionList, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { listAllPersonalRecords, type PersonalRecordSummary } from '../../data/sessionRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
-import { ListRow } from '../../ui/ListRow';
+import { Card } from '../../ui/Card';
+import { EmptyState } from '../../ui/EmptyState';
+import { Screen } from '../../ui/Screen';
+import { StatTile } from '../../ui/StatTile';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 
 const RECORD_TYPE_LABELS: Record<PersonalRecordType, string> = {
@@ -70,6 +74,36 @@ function groupByExercise(records: PersonalRecordSummary[]): Section[] {
   return sections;
 }
 
+// Which metrics render, and how many tiles a card has, follows entirely from
+// which record types exist for that exercise (METRICS_BY_TRACKING_TYPE in
+// @overload/domain): a duration exercise only ever has a max_duration
+// record, so it only ever gets a duration tile, never a weight one.
+function ExerciseRecordsCard({ section, unit }: { section: Section; unit: Unit }) {
+  return (
+    <Card>
+      <Text variant="heading">{section.title}</Text>
+      <View style={styles.tiles}>
+        {section.data.map((record) => (
+          // A bare wrapper, not a style prop on StatTile — the component takes
+          // no style override, and shouldn't need one just to sit in a grid.
+          // flexBasis + flexGrow (not a fixed `width`) is what makes
+          // this work for both shapes this screen has to render: four tiles
+          // wrap into a 2x2 grid and grow to fill each row exactly, while a
+          // lone tile (a duration-only exercise) has no sibling to share the
+          // row with and so grows to the full card width, same as before.
+          <View key={record.type} style={styles.tileWrap}>
+            <StatTile
+              label={RECORD_TYPE_LABELS[record.type]}
+              value={formatRecordValue(record, unit)}
+              caption={new Date(record.achievedAt).toLocaleDateString()}
+            />
+          </View>
+        ))}
+      </View>
+    </Card>
+  );
+}
+
 export function RecordsList() {
   // A local counter is the refresh signal: bumping it forces a re-read of
   // both the records and the weight-unit preference, since finishing a
@@ -87,36 +121,29 @@ export function RecordsList() {
   );
 
   return (
-    <View style={styles.container}>
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => `${item.exerciseName}-${item.type}`}
-        ListEmptyComponent={<Text style={styles.empty}>No personal records yet.</Text>}
-        renderSectionHeader={({ section }) => (
-          <Text style={styles.sectionHeader}>{section.title}</Text>
-        )}
-        renderItem={({ item }) => (
-          <ListRow
-            title={RECORD_TYPE_LABELS[item.type]}
-            subtitle={new Date(item.achievedAt).toLocaleDateString()}
-            right={<Text style={styles.value}>{formatRecordValue(item, unit)}</Text>}
-          />
-        )}
-      />
-    </View>
+    <Screen scroll safeTop>
+      <Text variant="display">Progress</Text>
+      {sections.length === 0 ? (
+        <EmptyState
+          title="No records yet"
+          body="Log a set and your personal records will show up here."
+        />
+      ) : (
+        <View style={styles.list}>
+          {sections.map((section) => (
+            <ExerciseRecordsCard key={section.title} section={section} unit={unit} />
+          ))}
+        </View>
+      )}
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  empty: { ...theme.text.body, color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
-  sectionHeader: {
-    ...theme.text.title,
-    color: theme.colors.text,
-    backgroundColor: theme.colors.background,
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.sm,
-  },
-  value: { ...theme.text.body, color: theme.colors.text, fontWeight: '600' },
+  list: { gap: theme.spacing.md },
+  // flexWrap turns this into a 2-per-row grid once four tiles no longer fit
+  // one line — see the comment on tileWrap for why each tile is sized with
+  // flexBasis/flexGrow rather than a fixed `width`.
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
+  tileWrap: { flexGrow: 1, flexBasis: '47%' },
 });

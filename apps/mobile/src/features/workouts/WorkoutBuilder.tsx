@@ -1,0 +1,203 @@
+import { toStorageKg, type Unit } from '@overload/domain';
+import { router, Stack, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import type { WorkoutDetailExercise } from '../../data/workoutRepo';
+import { addWorkoutSet, getWorkoutDetail, reorderWorkoutExercises } from '../../data/workoutRepo';
+import { getWeightUnit } from '../../data/settingsRepo';
+import { db } from '../../db/client';
+import { Button } from '../../ui/Button';
+import { Card } from '../../ui/Card';
+import { NumericField } from '../../ui/NumericField';
+import { Screen } from '../../ui/Screen';
+import { Text } from '../../ui/Text';
+import { theme } from '../../ui/theme';
+import { parseDecimalInput, parseIntegerInput } from '../session/setInputs';
+import { useWorkoutStarter, WorkoutStartSheet } from '../session/useWorkoutStarter';
+import {
+  formatWorkoutTarget,
+  targetInputsFor,
+  type WorkoutTargetField,
+} from './workoutTargets';
+
+type Props = { workoutId: string };
+
+type ExerciseCardProps = {
+  entry: WorkoutDetailExercise;
+  unit: Unit;
+  onSetAdded: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+};
+
+const EMPTY_DRAFT: Record<WorkoutTargetField, string> = { weightKg: '', reps: '' };
+
+function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: ExerciseCardProps) {
+  const trackingType = entry.exercise.trackingType;
+  // A duration/distance_duration exercise gets [] here — workout_sets has no
+  // column for a target duration or distance, so rendering a box for it would
+  // silently discard whatever the user typed. Keep this empty rather than
+  // inventing a weight/reps pair for every tracking type.
+  const inputs = targetInputsFor(trackingType, unit);
+  const [draft, setDraft] = useState(EMPTY_DRAFT);
+
+  return (
+    <Card>
+      <View style={styles.cardHeader}>
+        <Text variant="title" style={styles.cardTitle}>
+          {entry.exercise.name}
+        </Text>
+        <View style={styles.reorderControls}>
+          {onMoveUp ? <Button title="Move up" variant="secondary" onPress={onMoveUp} /> : null}
+          {onMoveDown ? <Button title="Move down" variant="secondary" onPress={onMoveDown} /> : null}
+        </View>
+      </View>
+      {entry.sessionSets.map((set, index) => {
+        // null is the signal to render the bare set number — a plank does not
+        // get an invented "— × 8".
+        const target = formatWorkoutTarget(trackingType, set, unit);
+        return (
+          <Text key={set.id} color="textMuted">
+            {target === null ? `Set ${index + 1}` : `Set ${index + 1}: ${target}`}
+          </Text>
+        );
+      })}
+      <View style={styles.addSetContainer}>
+        {inputs.length > 0 ? (
+          <View style={styles.inputsRow}>
+            {inputs.map((input) => (
+              <NumericField
+                key={input.field}
+                value={draft[input.field]}
+                onChangeText={(text) => setDraft((current) => ({ ...current, [input.field]: text }))}
+                placeholder={input.placeholder}
+                keyboard={input.keyboard}
+                accessibilityLabel={input.placeholder}
+              />
+            ))}
+          </View>
+        ) : null}
+        <Button
+          title="Add set"
+          variant="secondary"
+          onPress={() => {
+            const offers = (field: WorkoutTargetField) => inputs.some((i) => i.field === field);
+
+            // Only send a target for a field this tracking type actually
+            // offers. The old unconditional `?? 8` gave a plank a rep target.
+            const weightValue =
+              offers('weightKg') && draft.weightKg ? parseDecimalInput(draft.weightKg) : undefined;
+            const repsValue = offers('reps')
+              ? (draft.reps ? parseIntegerInput(draft.reps) : null) ?? 8
+              : undefined;
+
+            addWorkoutSet(db, entry.workoutExercise.id, {
+              targetReps: repsValue,
+              targetWeightKg: weightValue != null ? toStorageKg(weightValue, unit) : undefined,
+            });
+            setDraft(EMPTY_DRAFT);
+            onSetAdded();
+          }}
+        />
+      </View>
+    </Card>
+  );
+}
+
+export function WorkoutBuilder({ workoutId }: Props) {
+  // A local counter is the refresh signal: bumping it forces a re-read of
+  // getWorkoutDetail. "Add set" bumps it directly; useFocusEffect bumps it
+  // whenever this screen regains focus, since other screens (e.g.
+  // add-exercise) mutate this workout and navigate back via router.back(),
+  // leaving this screen mounted underneath rather than remounting it.
+  // Do NOT switch this to key={version} — that remounts and resets scroll
+  // (6b249e9's failure mode).
+  const [, setVersion] = useState(0);
+  const detail = getWorkoutDetail(db, workoutId);
+  const unit = getWeightUnit(db);
+
+  const starter = useWorkoutStarter();
+
+  useFocusEffect(
+    useCallback(() => {
+      setVersion((v) => v + 1);
+    }, []),
+  );
+
+  // Swaps the exercise at `index` with its neighbour in `direction` and
+  // persists the full live order in one transaction. Reads the live list
+  // fresh off `detail` each time rather than tracking local state, since
+  // `detail` is already the source of truth this screen renders from.
+  const moveExercise = useCallback(
+    (index: number, direction: -1 | 1) => {
+      if (!detail) return;
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= detail.exercises.length) return;
+
+      const ids = detail.exercises.map((entry) => entry.workoutExercise.id);
+      const moved = ids[index];
+      if (moved === undefined) return;
+      ids.splice(index, 1);
+      ids.splice(targetIndex, 0, moved);
+
+      reorderWorkoutExercises(db, workoutId, ids, Date.now());
+      setVersion((v) => v + 1);
+    },
+    [detail, workoutId],
+  );
+
+  if (!detail) {
+    return (
+      <Screen>
+        <Text color="textMuted" style={styles.empty}>
+          Workout not found.
+        </Text>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen scroll>
+      {/* The workout's own name, not a generic "Edit workout": a day's inline
+          workout is created as "<program> · Day N" and the header is the only
+          thing that says which one you are in. */}
+      <Stack.Screen options={{ title: detail.workout.name }} />
+      {detail.exercises.map((entry, index) => (
+        <ExerciseCard
+          key={entry.workoutExercise.id}
+          entry={entry}
+          unit={unit}
+          onSetAdded={() => setVersion((v) => v + 1)}
+          onMoveUp={index > 0 ? () => moveExercise(index, -1) : undefined}
+          onMoveDown={index < detail.exercises.length - 1 ? () => moveExercise(index, 1) : undefined}
+        />
+      ))}
+
+      {detail.exercises.length === 0 ? (
+        <Text color="textMuted" style={styles.empty}>
+          No exercises yet. Add one to get started.
+        </Text>
+      ) : null}
+
+      <Button title="Start workout" onPress={() => starter.start(workoutId)} />
+
+      <Button title="Add exercise" onPress={() => router.push(`/workouts/${workoutId}/add-exercise`)} />
+
+      <WorkoutStartSheet starter={starter} />
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  cardTitle: { flexShrink: 1 },
+  reorderControls: { flexDirection: 'row', gap: theme.spacing.sm },
+  addSetContainer: { gap: theme.spacing.sm, marginTop: theme.spacing.sm },
+  inputsRow: { flexDirection: 'row', gap: theme.spacing.sm },
+  empty: { textAlign: 'center' },
+});

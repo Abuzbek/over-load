@@ -1,7 +1,10 @@
 export * from './sync';
 export * from './appSettings';
 export * from './exercises';
-export * from './routines';
+export * from './gyms';
+export * from './equipment';
+export * from './programs';
 export * from './workouts';
+export * from './sessions';
 export * from './personalRecords';
 export type { Db } from './db';

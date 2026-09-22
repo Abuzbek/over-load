@@ -1,20 +1,24 @@
 import { formatTrackedSet } from '@overload/domain';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { getWorkoutDetail } from '../../data/sessionRepo';
-import { getWeightUnit } from '../../data/settingsRepo';
+import { StyleSheet } from 'react-native';
+import { getSessionDetail } from '../../data/sessionRepo';
+import { getDistanceUnit, getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
+import { Card } from '../../ui/Card';
+import { Screen } from '../../ui/Screen';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 
-type Props = { workoutId: string };
+type Props = { sessionId: string };
 
-export function WorkoutDetailView({ workoutId }: Props) {
+export function WorkoutDetailView({ sessionId }: Props) {
   // See HistoryList: this screen stays mounted underneath the stack, so a
   // unit change made on Settings needs this bump to show up on return.
   const [, setVersion] = useState(0);
-  const detail = getWorkoutDetail(db, workoutId);
+  const detail = getSessionDetail(db, sessionId);
   const unit = getWeightUnit(db);
+  const distanceUnit = getDistanceUnit(db);
 
   useFocusEffect(
     useCallback(() => {
@@ -24,35 +28,33 @@ export function WorkoutDetailView({ workoutId }: Props) {
 
   if (!detail) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.empty}>Workout not found.</Text>
-      </View>
+      <Screen>
+        <Text color="textMuted" style={styles.empty}>
+          Session not found.
+        </Text>
+      </Screen>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <Screen scroll>
+      <Text variant="display">{detail.workout.name}</Text>
       {detail.exercises.map((entry) => (
-        <View key={entry.workoutExercise.id} style={styles.card}>
-          <Text style={styles.title}>{entry.exercise.name}</Text>
-          {entry.sets
+        <Card key={entry.sessionExercise.id}>
+          <Text variant="heading">{entry.exercise.name}</Text>
+          {entry.sessionSets
             .filter((set) => set.completedAt !== null)
             .map((set, index) => (
-              <Text key={set.id} style={styles.setLine}>
-                {index + 1}. {formatTrackedSet(entry.exercise.trackingType, set, unit)}
+              <Text key={set.id} variant="numeric" color="textMuted">
+                {index + 1}. {formatTrackedSet(entry.exercise.trackingType, set, unit, distanceUnit)}
               </Text>
             ))}
-        </View>
+        </Card>
       ))}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  content: { padding: theme.spacing.lg, gap: theme.spacing.lg },
-  card: { backgroundColor: theme.colors.surface, borderRadius: theme.radius.md, padding: theme.spacing.lg, gap: theme.spacing.xs },
-  title: { ...theme.text.title, color: theme.colors.text },
-  setLine: { ...theme.text.body, color: theme.colors.textMuted },
-  empty: { ...theme.text.body, color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
+  empty: { textAlign: 'center', padding: theme.spacing.xl },
 });

@@ -19,15 +19,15 @@ function completedSet(overrides: Partial<CompletedSet> = {}): CompletedSet {
 
 describe('formatPrevious', () => {
   it('formats a weight_reps set as weight × reps', () => {
-    expect(formatPrevious([completedSet({ weightKg: 80, reps: 8 })], 0, 'kg')).toBe('80 kg × 8');
+    expect(formatPrevious([completedSet({ weightKg: 80, reps: 8 })], 0, 'kg', 'km')).toBe('80 kg × 8');
   });
 
   it('converts weight to the display unit', () => {
-    expect(formatPrevious([completedSet({ weightKg: 100, reps: 5 })], 0, 'lb')).toBe('220.5 lb × 5');
+    expect(formatPrevious([completedSet({ weightKg: 100, reps: 5 })], 0, 'lb', 'km')).toBe('220.5 lb × 5');
   });
 
   it('falls back to an em dash for missing reps on a weighted set', () => {
-    expect(formatPrevious([completedSet({ weightKg: 80, reps: null })], 0, 'kg')).toBe('80 kg × —');
+    expect(formatPrevious([completedSet({ weightKg: 80, reps: null })], 0, 'kg', 'km')).toBe('80 kg × —');
   });
 
   it('formats a reps-only set as "N reps"', () => {
@@ -36,6 +36,7 @@ describe('formatPrevious', () => {
         [completedSet({ trackingType: 'reps', weightKg: null, reps: 12 })],
         0,
         'kg',
+        'km',
       ),
     ).toBe('12 reps');
   });
@@ -46,6 +47,7 @@ describe('formatPrevious', () => {
         [completedSet({ trackingType: 'reps', weightKg: null, reps: null })],
         0,
         'kg',
+        'km',
       ),
     ).toBe('— reps');
   });
@@ -56,6 +58,7 @@ describe('formatPrevious', () => {
         [completedSet({ trackingType: 'duration', weightKg: null, reps: null, durationSeconds: 125 })],
         0,
         'kg',
+        'km',
       ),
     ).toBe('2:05');
   });
@@ -66,6 +69,7 @@ describe('formatPrevious', () => {
         [completedSet({ trackingType: 'duration', weightKg: null, reps: null, durationSeconds: null })],
         0,
         'kg',
+        'km',
       ),
     ).toBe('—');
   });
@@ -84,12 +88,13 @@ describe('formatPrevious', () => {
         ],
         0,
         'kg',
+        'km',
       ),
-    ).toBe('5000 m · 30:00');
+    ).toBe('5 km · 30:00');
   });
 
   it('returns an em dash when there is no previous set at this index', () => {
-    expect(formatPrevious([], 0, 'kg')).toBe('—');
-    expect(formatPrevious([completedSet()], 1, 'kg')).toBe('—');
+    expect(formatPrevious([], 0, 'kg', 'km')).toBe('—');
+    expect(formatPrevious([completedSet()], 1, 'kg', 'km')).toBe('—');
   });
 });

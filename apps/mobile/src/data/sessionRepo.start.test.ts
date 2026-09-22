@@ -1,14 +1,17 @@
-import { exercises, newId, now, routineSets, workouts, type Exercise } from '@overload/schema';
+import { exercises, newId, now, workoutSets, sessions, type Exercise } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { addExerciseToRoutine, addRoutineSet, createRoutine } from './routineRepo';
+import { startBareSession } from './sessionTestFixtures';
+import { activateProgram, createProgram, getProgramDays, setProgramDay } from './programRepo';
+import { addExerciseToWorkout, addWorkoutSet, createWorkout } from './workoutRepo';
 import {
-  discardWorkout,
-  getActiveWorkoutId,
-  getWorkoutDetail,
-  startEmptyWorkout,
-  startWorkoutFromRoutine,
+  discardSession,
+  finishSession,
+  getActiveSession,
+  getActiveSessionId,
+  getSessionDetail,
+  startSessionFromWorkout,
 } from './sessionRepo';
 
 const AT = 1_700_000_000_000;
@@ -34,110 +37,166 @@ beforeEach(() => {
 afterEach(() => close());
 
 function pushDay() {
-  const routine = createRoutine(db, 'Push Day');
-  const re = addExerciseToRoutine(db, routine.id, bench.id);
-  addRoutineSet(db, re.id, { targetReps: 8, targetWeightKg: 80 });
-  addRoutineSet(db, re.id, { targetReps: 6, targetWeightKg: 90 });
-  return routine;
+  const workout = createWorkout(db, 'Push Day');
+  const re = addExerciseToWorkout(db, workout.id, bench.id);
+  addWorkoutSet(db, re.id, { targetReps: 8, targetWeightKg: 80 });
+  addWorkoutSet(db, re.id, { targetReps: 6, targetWeightKg: 90 });
+  return workout;
 }
 
-describe('startWorkoutFromRoutine', () => {
-  it('names the workout after the routine and records the start time', () => {
-    const routine = pushDay();
-    const detail = getWorkoutDetail(db, startWorkoutFromRoutine(db, routine.id, AT));
+describe('startSessionFromWorkout', () => {
+  it('names the workout after the workout and records the start time', () => {
+    const workout = pushDay();
+    const detail = getSessionDetail(db, startSessionFromWorkout(db, workout.id, AT));
 
     expect(detail?.workout.name).toBe('Push Day');
     expect(detail?.workout.startedAt).toBe(AT);
     expect(detail?.workout.endedAt).toBeNull();
-    expect(detail?.workout.routineId).toBe(routine.id);
+    expect(detail?.workout.workoutId).toBe(workout.id);
   });
 
   it('copies planned sets with targets pre-filled and completedAt null', () => {
-    const routine = pushDay();
-    const detail = getWorkoutDetail(db, startWorkoutFromRoutine(db, routine.id, AT));
-    const sets = detail!.exercises[0]!.sets;
+    const workout = pushDay();
+    const detail = getSessionDetail(db, startSessionFromWorkout(db, workout.id, AT));
+    const sessionSets = detail!.exercises[0]!.sessionSets;
 
-    expect(sets.map((s) => s.reps)).toEqual([8, 6]);
-    expect(sets.map((s) => s.weightKg)).toEqual([80, 90]);
-    expect(sets.every((s) => s.completedAt === null)).toBe(true);
+    expect(sessionSets.map((s) => s.reps)).toEqual([8, 6]);
+    expect(sessionSets.map((s) => s.weightKg)).toEqual([80, 90]);
+    expect(sessionSets.every((s) => s.completedAt === null)).toBe(true);
   });
 
-  it('is a copy: editing the routine afterwards does not change the workout', () => {
-    const routine = pushDay();
-    const workoutId = startWorkoutFromRoutine(db, routine.id, AT);
+  it('is a copy: editing the workout afterwards does not change the workout', () => {
+    const workout = pushDay();
+    const sessionId = startSessionFromWorkout(db, workout.id, AT);
 
-    db.update(routineSets).set({ targetReps: 99 }).where(eq(routineSets.targetReps, 8)).run();
+    db.update(workoutSets).set({ targetReps: 99 }).where(eq(workoutSets.targetReps, 8)).run();
 
-    const sets = getWorkoutDetail(db, workoutId)!.exercises[0]!.sets;
-    expect(sets.map((s) => s.reps)).toEqual([8, 6]);
+    const sessionSets = getSessionDetail(db, sessionId)!.exercises[0]!.sessionSets;
+    expect(sessionSets.map((s) => s.reps)).toEqual([8, 6]);
   });
 
-  it('throws for an unknown routine', () => {
-    expect(() => startWorkoutFromRoutine(db, newId(), AT)).toThrow(/routine not found/i);
+  it('throws for an unknown workout', () => {
+    expect(() => startSessionFromWorkout(db, newId(), AT)).toThrow(/workout not found/i);
   });
 
   it('excludes an exercise from the detail once its definition is soft-deleted', () => {
-    const routine = pushDay();
-    const workoutId = startWorkoutFromRoutine(db, routine.id, AT);
+    const workout = pushDay();
+    const sessionId = startSessionFromWorkout(db, workout.id, AT);
 
     db.update(exercises).set({ deletedAt: now() }).where(eq(exercises.id, bench.id)).run();
 
-    const detail = getWorkoutDetail(db, workoutId);
+    const detail = getSessionDetail(db, sessionId);
     expect(detail?.exercises).toEqual([]);
   });
 });
 
-describe('startEmptyWorkout', () => {
-  it('creates a workout with no routine and no exercises', () => {
-    const detail = getWorkoutDetail(db, startEmptyWorkout(db, 'Freestyle', AT));
-    expect(detail?.workout.routineId).toBeNull();
-    expect(detail?.exercises).toEqual([]);
-  });
-});
-
-describe('getActiveWorkoutId', () => {
+describe('getActiveSessionId', () => {
   it('returns undefined when nothing is in progress', () => {
-    expect(getActiveWorkoutId(db)).toBeUndefined();
+    expect(getActiveSessionId(db)).toBeUndefined();
   });
 
   it('returns the workout that has no endedAt', () => {
-    const workoutId = startEmptyWorkout(db, 'Freestyle', AT);
-    expect(getActiveWorkoutId(db)).toBe(workoutId);
+    const sessionId = startBareSession(db, 'Freestyle', AT);
+    expect(getActiveSessionId(db)).toBe(sessionId);
   });
 
   it('returns the most recently started one if several are unfinished', () => {
-    startEmptyWorkout(db, 'Older', AT);
-    const newer = startEmptyWorkout(db, 'Newer', AT + 1000);
-    expect(getActiveWorkoutId(db)).toBe(newer);
+    startBareSession(db, 'Older', AT);
+    const newer = startBareSession(db, 'Newer', AT + 1000);
+    expect(getActiveSessionId(db)).toBe(newer);
   });
 });
 
-describe('discardWorkout', () => {
+describe('discardSession', () => {
   it('tombstones the workout so it is no longer the active one', () => {
-    const workoutId = startEmptyWorkout(db, 'Abandoned', AT);
-    expect(getActiveWorkoutId(db)).toBe(workoutId);
+    const sessionId = startBareSession(db, 'Abandoned', AT);
+    expect(getActiveSessionId(db)).toBe(sessionId);
 
-    discardWorkout(db, workoutId, AT + 5000);
+    discardSession(db, sessionId, AT + 5000);
 
-    expect(getActiveWorkoutId(db)).toBeUndefined();
-    expect(getWorkoutDetail(db, workoutId)).toBeUndefined();
+    expect(getActiveSessionId(db)).toBeUndefined();
+    expect(getSessionDetail(db, sessionId)).toBeUndefined();
   });
 
   it('records the tombstone and the update time rather than deleting the row', () => {
-    const workoutId = startEmptyWorkout(db, 'Abandoned', AT);
+    const sessionId = startBareSession(db, 'Abandoned', AT);
 
-    discardWorkout(db, workoutId, AT + 5000);
+    discardSession(db, sessionId, AT + 5000);
 
-    const row = db.select().from(workouts).where(eq(workouts.id, workoutId)).get();
+    const row = db.select().from(sessions).where(eq(sessions.id, sessionId)).get();
     expect(row).toMatchObject({ deletedAt: AT + 5000, updatedAt: AT + 5000, endedAt: null });
   });
 
   it('leaves an older unfinished workout resumable once the newer one is discarded', () => {
-    const older = startEmptyWorkout(db, 'Older', AT);
-    const newer = startEmptyWorkout(db, 'Newer', AT + 1000);
+    const older = startBareSession(db, 'Older', AT);
+    const newer = startBareSession(db, 'Newer', AT + 1000);
 
-    discardWorkout(db, newer, AT + 2000);
+    discardSession(db, newer, AT + 2000);
 
-    expect(getActiveWorkoutId(db)).toBe(older);
+    expect(getActiveSessionId(db)).toBe(older);
+  });
+});
+
+describe('getActiveSession', () => {
+  it('returns undefined when nothing is in progress', () => {
+    expect(getActiveSession(db)).toBeUndefined();
+  });
+
+  it('returns the unfinished workout with its name and start time', () => {
+    const at = now();
+    const id = startBareSession(db, 'Session', at);
+    const active = getActiveSession(db);
+    expect(active?.id).toBe(id);
+    expect(active?.name).toBe('Session');
+    expect(active?.startedAt).toBe(at);
+  });
+
+  it('returns undefined once the workout is finished', () => {
+    const id = startBareSession(db, 'Session', now());
+    finishSession(db, id, now());
+    expect(getActiveSession(db)).toBeUndefined();
+  });
+
+  it('returns undefined for a discarded workout', () => {
+    const id = startBareSession(db, 'Session', now());
+    discardSession(db, id, now());
+    expect(getActiveSession(db)).toBeUndefined();
+  });
+
+  // Matches getActiveSessionId: newest wins, which is what the resume banner
+  // and the stranded-workout guard both already assume.
+  it('returns the newest unfinished workout when several exist', () => {
+    startBareSession(db, 'Older', now() - 10_000);
+    const newer = startBareSession(db, 'Newer', now());
+    expect(getActiveSession(db)?.id).toBe(newer);
+  });
+});
+
+describe('finishSession ticks off the program day', () => {
+  it('marks the active program day whose workout was just finished', () => {
+    const workout = createWorkout(db, 'Push');
+    addExerciseToWorkout(db, workout.id, bench.id);
+    const program = createProgram(db, { name: 'P' }, AT);
+    activateProgram(db, program.id, AT);
+    setProgramDay(db, program.id, 0, workout.id, AT);
+
+    const sessionId = startSessionFromWorkout(db, workout.id, AT);
+    finishSession(db, sessionId, AT + 60_000);
+
+    expect(getProgramDays(db, program.id)[0]!.completedAt).toBe(AT + 60_000);
+  });
+
+  it('leaves the cycle alone for a workout that is not in the program', () => {
+    const workout = createWorkout(db, 'Push');
+    addExerciseToWorkout(db, workout.id, bench.id);
+    const other = createWorkout(db, 'Unrelated');
+    addExerciseToWorkout(db, other.id, bench.id);
+    const program = createProgram(db, { name: 'P' }, AT);
+    activateProgram(db, program.id, AT);
+    setProgramDay(db, program.id, 0, workout.id, AT);
+
+    finishSession(db, startSessionFromWorkout(db, other.id, AT), AT + 60_000);
+
+    expect(getProgramDays(db, program.id)[0]!.completedAt).toBeNull();
   });
 });

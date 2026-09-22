@@ -2,20 +2,21 @@ import { DEFAULT_REST_SECONDS, type CompletedSet } from '@overload/domain';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useFocusEffect, router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { getWeightUnit } from '../../data/settingsRepo';
-import { finishWorkout, getWorkoutDetail, lastPerformance } from '../../data/sessionRepo';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { getDistanceUnit, getWeightUnit } from '../../data/settingsRepo';
+import { finishSession, getSessionDetail, lastPerformance } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
+import { EmptyState } from '../../ui/EmptyState';
 import { theme } from '../../ui/theme';
 import { ExerciseCard } from './ExerciseCard';
 import { cancelRestNotification, scheduleRestNotification } from './notifications';
 import { RestTimer } from './RestTimer';
 
-type Props = { workoutId: string };
+type Props = { sessionId: string };
 
-export function ActiveSession({ workoutId }: Props) {
-  // The phone must not lock between sets.
+export function ActiveSession({ sessionId }: Props) {
+  // The phone must not lock between sessionSets.
   useKeepAwake();
 
   const [rest, setRest] = useState<{ startedAt: number; seconds: number } | null>(null);
@@ -26,13 +27,16 @@ export function ActiveSession({ workoutId }: Props) {
   // typed weight) at mount, so an already-rendered box does NOT reconvert if
   // the unit changes underneath it — a box showing "60" typed as kg would
   // still submit as toStorageKg(60, 'lb') if the unit flipped to lb without
-  // remounting the row. Unreachable today, since Settings is only linked from
-  // Home and reaching it pops this screen off the stack, so there is nothing
-  // to fix yet — but the next person who links Settings from within a session
+  // remounting the row. Not reachable today: every route into this screen —
+  // including the persistent in-progress bar (InProgressBar.tsx) — is a
+  // `router.push`, which always produces a fresh mount, so there is no live
+  // session whose SetRows could observe a unit change out from under them.
+  // The next person who adds a way to reach a session WITHOUT a fresh push
   // needs to know this trap exists before doing that.
   const [, setVersion] = useState(0);
-  const detail = getWorkoutDetail(db, workoutId);
+  const detail = getSessionDetail(db, sessionId);
   const unit = getWeightUnit(db);
+  const distanceUnit = getDistanceUnit(db);
 
   useFocusEffect(
     useCallback(() => {
@@ -44,15 +48,15 @@ export function ActiveSession({ workoutId }: Props) {
   const previousByExercise = useMemo(() => {
     const map = new Map<string, CompletedSet[]>();
     for (const entry of detail?.exercises ?? []) {
-      map.set(entry.exercise.id, lastPerformance(db, entry.exercise.id, workoutId));
+      map.set(entry.exercise.id, lastPerformance(db, entry.exercise.id, sessionId));
     }
     return map;
-  }, [workoutId, detail?.exercises.length]);
+  }, [sessionId, detail?.exercises.length]);
 
   if (!detail) {
     return (
       <View style={styles.container}>
-        <Text style={styles.empty}>Workout not found.</Text>
+        <EmptyState title="Workout not found" />
       </View>
     );
   }
@@ -83,10 +87,11 @@ export function ActiveSession({ workoutId }: Props) {
       >
         {detail.exercises.map((entry) => (
           <ExerciseCard
-            key={entry.workoutExercise.id}
+            key={entry.sessionExercise.id}
             entry={entry}
             previous={previousByExercise.get(entry.exercise.id) ?? []}
             unit={unit}
+            distanceUnit={distanceUnit}
             onChanged={() => setVersion((v) => v + 1)}
             onSetCompleted={(restSeconds) => {
               const seconds = restSeconds ?? DEFAULT_REST_SECONDS;
@@ -97,19 +102,19 @@ export function ActiveSession({ workoutId }: Props) {
         ))}
 
         {detail.exercises.length === 0 ? (
-          <Text style={styles.empty}>This workout has no exercises.</Text>
+          <EmptyState title="No exercises yet" body="Add one to start logging sets." />
         ) : null}
 
         <Button
           title="Add exercise"
           variant="secondary"
-          onPress={() => router.push(`/session/${workoutId}/add-exercise`)}
+          onPress={() => router.push(`/session/${sessionId}/add-exercise`)}
         />
 
         <Button
           title="Finish workout"
           onPress={() => {
-            finishWorkout(db, workoutId, Date.now());
+            finishSession(db, sessionId, Date.now());
             // A rest notification outlives the screen that scheduled it: it is
             // an OS-level scheduled notification, and it survives navigation
             // and even a force-quit. Without this, finishing a workout inside
@@ -118,7 +123,7 @@ export function ActiveSession({ workoutId }: Props) {
             setRest(null);
             void cancelRestNotification();
             // replace() alone swaps only the top route, leaving
-            // Home -> Routines -> Builder -> Home with a back button into the
+            // Home -> Workouts -> Builder -> Home with a back button into the
             // builder of a workout that is already over. Pop to the root first.
             router.dismissAll();
             router.replace('/');
@@ -144,5 +149,4 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   scroll: { flex: 1 },
   content: { padding: theme.spacing.lg, gap: theme.spacing.lg },
-  empty: { ...theme.text.body, color: theme.colors.textMuted, textAlign: 'center' },
 });

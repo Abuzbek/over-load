@@ -1,8 +1,18 @@
-import { formatTrackedSet, formatWeight, toStorageKg, type CompletedSet, type TrackingType, type Unit } from '@overload/domain';
-import type { WorkoutSet } from '@overload/schema';
+import {
+  formatTrackedSet,
+  formatWeight,
+  toStorageKg,
+  type CompletedSet,
+  type DistanceUnit,
+  type TrackingType,
+  type Unit,
+} from '@overload/domain';
+import type { SessionSet } from '@overload/schema';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import type { SetValues } from '../../data/sessionRepo';
+import { NumericField } from '../../ui/NumericField';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import {
   formatDurationInput,
@@ -14,11 +24,12 @@ import {
 } from './setInputs';
 
 type Props = {
-  set: WorkoutSet;
+  set: SessionSet;
   index: number;
   trackingType: TrackingType;
   previous: CompletedSet[];
   unit: Unit;
+  distanceUnit: DistanceUnit;
   onComplete: (values: SetValues) => void;
   onUncomplete: () => void;
 };
@@ -30,10 +41,15 @@ type Props = {
  * "2:05" for duration, "5000 m · 30:00" for distance_duration, or an em dash
  * when there was no matching set at this index.
  */
-export function formatPrevious(sets: CompletedSet[], index: number, unit: Unit): string {
-  const match = sets[index];
+export function formatPrevious(
+  sessionSets: CompletedSet[],
+  index: number,
+  unit: Unit,
+  distanceUnit: DistanceUnit,
+): string {
+  const match = sessionSets[index];
   if (!match) return '—';
-  return formatTrackedSet(match.trackingType, match, unit);
+  return formatTrackedSet(match.trackingType, match, unit, distanceUnit);
 }
 
 /** The weight text input holds a plain number in the display unit, never "kg"/"lb" suffixed. */
@@ -44,7 +60,16 @@ function weightInputValue(weightKg: number | null, unit: Unit): string {
   return displayKg.slice(0, displayKg.lastIndexOf(' '));
 }
 
-export function SetRow({ set, index, trackingType, previous, unit, onComplete, onUncomplete }: Props) {
+export function SetRow({
+  set,
+  index,
+  trackingType,
+  previous,
+  unit,
+  distanceUnit,
+  onComplete,
+  onUncomplete,
+}: Props) {
   const inputs = inputsFor(trackingType);
   const completed = set.completedAt !== null;
 
@@ -80,19 +105,22 @@ export function SetRow({ set, index, trackingType, previous, unit, onComplete, o
 
   return (
     <View style={[styles.row, completed && styles.rowCompleted]}>
-      <Text style={styles.index}>{index + 1}</Text>
-      <Text style={styles.previous}>{formatPrevious(previous, index, unit)}</Text>
+      <Text color="textMuted" style={styles.index}>
+        {index + 1}
+      </Text>
+      <Text variant="caption" color="textMuted" style={styles.previous}>
+        {formatPrevious(previous, index, unit, distanceUnit)}
+      </Text>
 
       {inputs.map((input) => (
-        <TextInput
+        <NumericField
           key={input.field}
           value={values[input.field]}
           onChangeText={(text) => setValues((v) => ({ ...v, [input.field]: text }))}
           editable={!completed}
-          keyboardType={input.keyboard}
+          keyboard={input.keyboard}
           placeholder={input.field === 'weightKg' ? unit : input.placeholder}
-          placeholderTextColor={theme.colors.textMuted}
-          style={[styles.input, completed && styles.inputLocked]}
+          accessibilityLabel={input.placeholder}
         />
       ))}
 
@@ -107,7 +135,7 @@ export function SetRow({ set, index, trackingType, previous, unit, onComplete, o
         onPress={() => (completed ? onUncomplete() : onComplete(collect()))}
         style={[styles.check, completed && styles.checkOn]}
       >
-        <Text style={styles.checkMark}>{completed ? '✓' : ''}</Text>
+        <RNText style={styles.checkMark}>{completed ? '✓' : ''}</RNText>
       </Pressable>
     </View>
   );
@@ -116,19 +144,8 @@ export function SetRow({ set, index, trackingType, previous, unit, onComplete, o
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, paddingVertical: theme.spacing.sm },
   rowCompleted: { opacity: 0.6 },
-  index: { ...theme.text.body, color: theme.colors.textMuted, width: 20 },
-  previous: { ...theme.text.caption, color: theme.colors.textMuted, width: 86 },
-  input: {
-    flex: 1,
-    ...theme.text.body,
-    color: theme.colors.text,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radius.sm,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    textAlign: 'center',
-  },
-  inputLocked: { color: theme.colors.textMuted },
+  index: { width: 20 },
+  previous: { width: 86 },
   check: {
     width: 34,
     height: 34,
@@ -139,5 +156,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkOn: { backgroundColor: theme.colors.success, borderColor: theme.colors.success },
-  checkMark: { color: '#0B0B0F', fontWeight: '700' },
+  checkMark: { color: theme.colors.onAccent, fontWeight: '700' },
 });

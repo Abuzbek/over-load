@@ -1,218 +1,265 @@
-# Device Verification Checklist — Release 1 Logger
+# Device Verification Checklist — Release 1 Logger + App Shell
 
-**Branch:** `worktree-logger-foundation` (27+ commits, 253e916..HEAD)
-**Status:** 133 tests passing, `pnpm typecheck` clean, `npx expo export --platform ios` succeeds.
+**Branch:** `app-shell` (25 commits ahead of `main`, `d819896..8459228`).
+**Status:** 254 tests passing, `pnpm typecheck` clean, `pnpm bundle` succeeds.
 
-## Status — updated 2026-09-21 (branch `scope-closure`, 216 tests)
+## Status — updated 2026-09-22 (branch `app-shell`, tabbed app)
 
-The **logging loop now runs end to end on an iOS simulator**, driven with `idb`
-against a booted iPhone 17 Pro and Metro on 8081.
+The app shell changed completely: four tabs (Train, History, Progress, Profile)
+replace the old stack-of-buttons home, the session screen moved outside the
+tab group, and every screen was restyled against the "Editorial" design
+tokens. **Every previously-verified claim in this file predates that rewrite
+and must be treated as unverified until re-driven.** This update records what
+has actually been re-verified since, iOS and Android **separately** — they are
+not at the same point.
 
-**Verified this pass (iOS):**
+### iOS
 
-- Log a real set — type weight + reps, tap the checkmark. Inputs lock after
-  completion (R22). Decimal weight (`62.5`) accepted.
-- **Tracking types drive the session inputs.** A `duration` exercise renders a
-  single `mm:ss` field and no kg box; `weight_reps` renders kg + reps.
-- **Rest timer** appears pinned at the bottom, visible without scrolling, and
-  counts down (1:58 → 1:33). Restarts on each completed set.
-- **Rest notification fires** on iOS ("Rest complete / Time for your next set").
-- **Crash recovery.** Force-quit from the app switcher mid-workout → resume
-  banner on relaunch → both sets intact with exact values. *This was the
-  architectural promise the whole data layer exists for; it holds.*
-- **Previous performance** pre-fills (`60 kg × 8`) from the prior workout.
-- **Volume gating.** History summary read `2 sets · 980 kg` = 60×8 + 62.5×8,
-  with the duration exercise correctly contributing zero.
-- **History summary matches detail** (`1. 60 kg × 8`, `2. 62.5 kg × 8`).
-- **Navigation after finishing** lands on Home with no back button (`dismissAll`
-  + `replace`).
-- **Records screen** — max weight 62.5 kg, Est. 1RM 79.2 kg (Epley), max volume
-  500 kg, max reps 8 dated to the *earlier* workout (earliest-wins tie-break).
-- **Settings kg/lb** — switching to lb renders 137.8 lb / 174.5 lb / 1102.3 lb
-  and leaves reps unitless; the preference persists across screens.
-- **Stranded-workout guard** — starting a second routine offers Resume /
-  Discard and start / Cancel. Discard works.
-- **Routine builder** reorder (Move up/Move down) and target weight controls.
+**Verified this pass:**
 
-**Defects found this pass:** see "Found on device" below — three fixed, one open.
+- Set logging inputs lock after completion (checkmark, greyed row).
+- Rest timer pinned at the bottom: visible without scrolling, does not cover
+  the last set row, counts down correctly (observed `1:57` live).
+- Duration-tracked exercises (e.g. Plank) render a single `mm:ss` box, no kg
+  box.
+- No notification fires after a workout is finished mid-rest: a set was
+  completed at 10:54:16 (rest due ~10:56:16), the workout was finished at
+  10:55:02, and the screen/Notification Center were sampled every 10s from
+  10:56:06–10:57:16 with nothing delivered. Confirms the earlier fix
+  (`33ed6a4`, "finishing a workout does not cancel the pending rest
+  notification") survived the restyle.
+- Force-quit survival: killing the app mid-workout and relaunching brings back
+  the in-progress bar as "Resume", with elapsed time correctly derived from
+  `startedAt` across the process kill (not reset to `0:00`).
+- Finishing a workout lands on Train with the in-progress bar cleared and no
+  way to navigate back into the finished session.
+- The "No exercises yet" `EmptyState` renders (previously reviewed in code
+  only, never seen on a device).
+- All four tab titles clear the status bar at matching vertical offsets (the
+  cross-tab inconsistency recorded below is fixed).
 
-**Still not started:** Android in its entirety (SDK, `adb` and AVD
-`Medium_Phone_API_36.0` are installed, but the app has never been built for it),
-the restore path (§7), and notification *sound* (delivery confirmed, audio not).
+**Not verified — one gap remains open:**
 
-## Found on device — 1–3 fixed and re-verified on device, 4 open
+- **Keyboard scroll-into-view.** Whether tapping a lower set row scrolls it
+  above the software keyboard could not be re-confirmed this pass: the
+  simulator's software keyboard would not appear despite repeated
+  Cmd+Shift+K toggles. The relevant code
+  (`automaticallyAdjustKeyboardInsets` iOS-only, no `behavior` prop on the
+  `KeyboardAvoidingView`) was audited byte-for-byte against the configuration
+  verified working on this same day, before the restyle, and is unchanged.
+  Treat this as **not verified**, not as broken — but it has not actually been
+  watched happen since the session screen was rebuilt.
 
-**1, 2 and 3 are fixed.** Each was re-tested on the simulator after the fix, not
-just re-read: the builder now renders `Set 1`…`Set 5` with no target box for a
-plank; completing a set at 11:23:12 and finishing the workout at 11:23:31
-produced **no** notification at the 11:25:12 fire time (Notification Center
-empty for today); and tapping the lowest set row now scrolls it to sit directly
-above the keyboard. The pure descriptors behind the builder fix are covered by
-`routineTargets.test.ts` (12 tests). Fixes 2 and 3 are a handler line and a
-ScrollView prop — there is no unit-test seam for either (see R21), so the device
-run is their evidence.
+Two items from the previous device pass were not re-touched this round
+because nothing in scope changed their code path, and are carried forward as
+still-good rather than re-claimed: the restore path (§7 below) and
+notification *sound* delivery (still unconfirmed as audio, only as delivery).
 
-1. **The routine builder is not tracking-type aware.** `RoutineBuilder.tsx` has
-   no reference to `trackingType` at all — it renders `Weight (kg)` + `Reps` and
-   displays `— × 8` for every exercise, including `duration` and
-   `distance_duration` ones. Task 5 of the scope-closure plan fixed this in the
-   *session* screen (`SetRow`/`setInputs.ts`) but left the *planning* tree
-   hardcoded. A plank was planned as "8 reps at a kg target".
-   **Fixed:** `routineTargets.ts` now supplies the target inputs and the set
-   line per tracking type, mirroring `setInputs.ts` on the session side.
-   `routine_sets` has no duration or distance column, so those types get no
-   target box rather than one whose value would be discarded — adding the
-   columns is a schema change, deliberately not done here.
+### Android
 
-2. **Finishing a workout does not cancel the pending rest notification.**
-   `cancelRestNotification()` is called only from the rest timer's `onDismiss`
-   (the Skip button). The "Finish workout" handler in `ActiveSession.tsx` calls
-   `finishWorkout` and navigates away without cancelling. Observed live: set
-   completed 11:05, workout finished 11:06, "Time for your next set" notification
-   delivered 11:07 — after the workout was over.
-   **Fixed:** the Finish handler now clears the rest state and calls
-   `cancelRestNotification()`. Note the sibling case left open: discarding a
-   workout from the routine builder while a rest is pending does not cancel it
-   either, since `scheduledId` is module-global.
+**Verified this pass:** cold launch, migrations, 743-exercise seed, dark
+theme (background, header, status bar) — unchanged from the first Android
+build (see the "Android — first build" section below, task 5 of this plan).
+The four restyled tabs (Train, History, Progress, Profile) were confirmed
+navigable in the earlier per-task device work for those screens.
 
-3. **The focused set input is not scrolled into view when the keyboard opens.**
-   `KeyboardAvoidingView` does resize correctly and the lower rows *are*
-   reachable by scrolling with the keyboard up — so this is narrower than the
-   original worry. But the ScrollView has `keyboardDismissMode="interactive"`
-   and no `automaticallyAdjustKeyboardInsets`, so tapping a lower set row puts
-   the cursor in a field hidden behind the keyboard and the user must scroll
-   manually to see what they are typing.
-   **Fixed:** the ScrollView takes `automaticallyAdjustKeyboardInsets` on iOS,
-   and the `KeyboardAvoidingView` no longer also uses `behavior="padding"` —
-   the two together would apply the keyboard height twice. The view still
-   pins the rest timer, which was its other job.
+**Not verified at all: the session screen has never been exercised on
+Android.** No Android device or emulator has logged a set, seen the rest
+timer, received a rest notification, force-quit mid-workout, or hit the
+in-progress bar's "Resume" path. Every session-screen claim above is iOS-only.
+This is the single largest gap in this document. Before trusting the logging
+loop on Android, drive it the same way it was driven on iOS: create a
+routine, start it, log sets with the keyboard up, background through a full
+rest period, force-quit and relaunch.
 
-4. **Minor:** entering Routines via deep link (`overload://routines`) renders a
-   light-filled back button instead of the themed dark one used on the normal
-   push path.
+## Found and fixed during the app-shell build
 
-### Driving the simulator hands-free
-
-`idb` works for taps, swipes and text (`idb ui tap|swipe|text|key --udid <id>`),
-using **logical points** — divide screenshot pixels by 3 on this device.
-Screenshots via `xcrun simctl io <id> screenshot`. Two gotchas: `idb ui text`
-stops reaching the field once the *software* keyboard is enabled (toggle it with
-Cmd+Shift+K via `osascript`), and the session route ignores the iOS edge-swipe
-back gesture — use `xcrun simctl openurl <id> "overload://routines"` to leave a
-workout without finishing it.
+- **Every tab rendered its title twice** — its own serif `display` title plus
+  React Navigation's native header, both saying e.g. "Train". Invisible to
+  tests and `pnpm bundle`. Fixed with `headerShown: false` on the `(tabs)`
+  Stack.Screen entry (`apps/mobile/app/_layout.tsx`).
+- **Fixing that removed the only thing reserving the status-bar area**, so
+  titles collided with the clock. Fixed with an opt-in `Screen` `safeTop`
+  prop (pushed screens keep native headers and would inset twice if it were
+  automatic) plus matching `FlatList` padding in `HistoryList`.
+- **Cross-tab inconsistency, fixed:** `safeTop`'s `paddingTop: insets.top`
+  was overriding the base `padding: lg` in the style merge instead of adding
+  to it, so the three `Screen`-based tabs sat their titles hard against the
+  status bar while History (which pads its own `FlatList`) sat lower. Fixed
+  by adding `insets.top + theme.spacing.lg` (`8459228`). All four tabs now
+  render at the same vertical offset — confirmed on iOS this pass.
+- **The in-progress bar rendered below the native tab bar**, contradicting
+  both the spec and the approved mockup. Fixed by composing it into the
+  `Tabs` `tabBar` prop above `BottomTabBar`, rather than mounting it as a
+  sibling after `<Tabs>`.
+- Full Android-specific defect list (Kotlin/Compose mismatch, silent
+  `userInterfaceStyle` no-op, white status bar) is unchanged from the first
+  Android build and is recorded below, in its original section.
 
 ## Why this file exists
 
-Most of this app's UI was written without access to a simulator. Every UI-level
-claim not listed as done above is backed by exactly three things: TypeScript
-compilation, a successful Metro/Hermes bundle, and code review.
-
-The domain logic and the repository layer are well covered — 133 tests against
-real SQLite, running the real migrations, with recorded failing-before evidence
-for the load-bearing predicates. The risk is concentrated entirely in the layer
-the tooling could not reach.
+Most of this app's UI was written without access to a simulator or emulator
+for long stretches at a time. Every UI-level claim not listed as verified
+above is backed by exactly three things: TypeScript compilation, a successful
+Metro/Hermes bundle, and code review — and this project's own history is that
+those three have together missed defects that only showed up when someone
+actually ran the app, on multiple occasions, on both the original build and
+this one.
 
 Work through this before trusting the app.
 
 ## Run first, in this order
 
-### 1. Cold launch, both platforms — ✅ iOS done, Android pending
+### 1. Cold launch, both platforms — ✅ iOS done, ✅ Android done
 
-Migrations run, 743 exercises seed, the library screen lists and filters them.
-
-**Highest-risk item in this list:** `PRAGMA foreign_keys = ON` was added to
-`client.ts` in the final fix wave. Nothing in this app has ever run under
-foreign-key enforcement. First launch now seeds 743 exercises and builds
-routine/workout trees under it. A review scanned every insert path and found
-nothing that should throw, but this is the first time it runs for real.
+Migrations run, 743 exercises seed, the four tabs render.
 
 ### 2. Second launch — ✅ iOS done
 
-No re-seed, no duplicate rows, startup not sluggish. (The seed JSON is ~1 MB and
-is parsed at module scope on every launch, not just the first — a known deferred
-minor.)
+No re-seed, no duplicate rows, startup not sluggish.
 
 ### 3. Full loop, on iOS and Android separately
 
-Create routine → add exercise → start → log three sets → dismiss the keyboard →
-see the rest timer → background the phone for the full rest and confirm the
-notification **fires with sound** → finish → check where the back button goes →
+Create routine → add exercise → start → log three sets → dismiss the
+keyboard → see the rest timer → background the phone for the full rest and
+confirm the notification **fires with sound** → finish → confirm the
+in-progress bar clears and Train has no way back into the finished session →
 open History and confirm the summary matches the detail.
 
-Three items here were fixed without ever being seen running, and are the most
-likely to still be wrong:
-
-- **Keyboard on the session screen.** `decimal-pad` has no return key on iOS. A
-  `KeyboardAvoidingView` plus `keyboardDismissMode="interactive"` was added; the
-  question is whether the lower set rows are actually reachable with the keyboard up.
-- **Rest timer placement.** It was rendering inline below the "Finish workout"
-  button; it is now a pinned flex sibling of the ScrollView. Confirm it is visible
-  mid-workout without scrolling, and that it does not cover the last set row.
-- **Navigation after finishing.** `router.dismissAll()` then `replace('/')`.
-  Confirm Home has no back button leading into the routine builder.
+**iOS:** verified except the keyboard scroll-into-view item (see above).
+**Android:** not started. This is the checklist to work through before any
+Android session-screen claim can be made.
 
 ### 4. The crash-safety claim
 
-This is the architectural promise the whole data layer is built around.
+Log two sets, force-quit from the app switcher, reopen. The resume banner
+(now the in-progress bar) should appear, and both sets should be present with
+their values intact.
 
-Log two sets, force-quit from the app switcher, reopen. The resume banner should
-appear, and both sets should be present with their values intact.
+**iOS:** ✅ verified this pass. **Android:** not verified.
 
 ### 5. The stranded-workout guard
 
-Start a routine, back out with the Android hardware back button, then start a
-different routine. You should be offered Resume / Discard and start / Cancel —
-not silently given a second workout. Before the final fix wave, the first
-workout became permanently invisible to every screen.
+Start a routine, back out, then start a different routine. You should be
+offered Resume / Discard and start / Cancel — not silently given a second
+workout.
+
+**Not re-verified against the new tab shell on either platform** this pass;
+last confirmed working before the app-shell rewrite (`docs` history, R1 in
+the prior device pass).
 
 ### 6. Previous performance
 
 Finish a workout, start the same routine again. Set rows should read
 `80 kg × 8` rather than `—`.
 
+**Not re-verified this pass** on either platform; the underlying repository
+code did not change in this project.
+
 ### 7. The restore path
 
-Ship a deliberately broken migration to a device holding real data and confirm
-the restore actually restores.
-
-This is the hardest thing here to test and the most important: it is the only
-defence against a bad migration destroying training history. It has never been
-executed. The connection is now closed before the restore copy (iOS `copyAsync`
-unlinks the destination first; Android overwrites in place — two different
-failure modes under an open handle).
+Ship a deliberately broken migration to a device holding real data and
+confirm the restore actually restores. **Still never executed**, on either
+platform. This remains the single highest-value gap in this whole document —
+it is the only defence against a bad migration destroying training history.
 
 ## Known-wrong, not fixed — decisions for you
 
-### ~~Tracking types are ignored by the session screen~~ — closed 2026-09-21
-
-Closed by task 5 of the scope-closure plan and confirmed running on a simulator:
-`SetRow` renders from `inputsFor(trackingType)`, so a plank shows one `mm:ss`
-box and no kg box. `sets.durationSeconds` and `distanceM` are no longer
-write-dead.
-
-The measurement that motivated it, for reference: `weight_reps: 542,
-duration: 95, reps: 96, distance_duration: 10` — **201 of 743 exercises (27%)**
-were rendering a nonsensical input.
-
-The same defect survived one layer up, in the routine *builder*, until
-2026-09-21 — see finding 1 above. `routine_sets` still has no target duration
-or distance column, so a plank can be planned but not given a target.
-
 ### Deleting an exercise rewrites past workouts
 
-Both history reads now agree — and they agree on reporting a past workout as
-"0 sets · 0 kg" if its exercise is later deleted. Latent today, because no UI
-soft-deletes an exercise. It should be a chosen answer rather than a side effect
-of a consistency fix.
-
-The alternative: left-join `exercises` in history reads without the tombstone
-filter and render the name with a "(removed)" marker, treating history as
-immutable and the join as a name lookup rather than a membership test.
+Unchanged from the previous device pass: both history reads report a past
+workout as "0 sets · 0 kg" if its exercise is later deleted. Latent, because
+no UI soft-deletes an exercise. Recorded again in the 2026-09-22 handoff as a
+decision Project B (accounts and sync) inherits.
 
 ### No CI
 
-There is no CI anywhere in this repo. `pnpm typecheck` is the only enforcement
-for the type-safety story — including a `@ts-expect-error` guard that is
-meaningless unless typecheck runs — and it fires only when someone remembers.
-A ten-line workflow running `pnpm test && pnpm typecheck` makes the existing
-gates real.
+Unchanged. `.github/workflows/ci.yml` runs typecheck/test/bundle on push to
+`main` and on PRs, but this branch has not been pushed or merged yet, so no
+CI run has ever seen this work.
+
+## Driving the simulator hands-free
+
+`idb` works for taps, swipes and text (`idb ui tap|swipe|text|key --udid
+<id>`), using **logical points** — divide screenshot pixels by 3 on this
+device. Screenshots via `xcrun simctl io <id> screenshot`. Two gotchas: `idb
+ui text` stops reaching the field once the *software* keyboard is enabled
+(toggle it with Cmd+Shift+K via `osascript`), and the session route ignores
+the iOS edge-swipe back gesture — use `xcrun simctl openurl <id>
+"overload://routines"` to leave a workout without finishing it. On this
+pass, the software keyboard could not be coaxed to appear at all despite
+repeated toggling — the reason the keyboard scroll-into-view check above is
+unverified rather than verified-and-failing.
+
+## Android — first build, 2026-09-21 (branch `app-shell`, task 5 of the
+app-shell-design-system plan)
+
+Android had **never been built once** in this project's history before this
+task. This section records what that first build took, because both defects
+found here are expensive to rediscover.
+
+**Environment:** macOS, Android SDK at `~/Library/Android/sdk`, AVD
+`Medium_Phone_API_36.0` (Android 16 / API 36, arm64-v8a), OpenJDK 17.0.16
+(Homebrew). Gradle 8.10.2 and NDK 26.1.10909125 were downloaded and installed
+automatically by the first `pnpm android` run — nothing had to be installed by
+hand. `compileSdkVersion`/`buildToolsVersion` 35, `targetSdkVersion` 34,
+`minSdkVersion` 24 (all Expo SDK 52 / RN 0.76 defaults, untouched).
+`apps/mobile/android/` is gitignored, generated fresh by `expo prebuild` on
+every `pnpm android`.
+
+### Defect 1 — Kotlin/Compose compiler version mismatch (build-breaking)
+
+First build failed at `expo-modules-core:compileDebugKotlin`: the generated
+`apps/mobile/android/build.gradle` defaults `kotlinVersion` to `1.9.25`
+while `expo-modules-core@2.2.3`'s Compose Compiler plugin selection reads
+that value, but the actual Kotlin Gradle plugin resolved from RN 0.76.0's
+`libs.versions.toml` is `1.9.24`.
+
+**Fix:** added `expo-build-properties` (`~0.13.3`) and pinned Kotlin
+explicitly in `apps/mobile/app.json`:
+
+```json
+["expo-build-properties", { "android": { "kotlinVersion": "1.9.24" } }]
+```
+
+### Defect 2 — `userInterfaceStyle: "dark"` was a no-op on Android
+
+Prebuild logged a warning that `expo-system-ui` was needed to enable this
+feature; without it the root view background never switched off the Android
+light default, even though the config key was present and correct.
+
+**Fix:** added `expo-system-ui` (`~4.0.9`) as a plain dependency.
+
+### Defect 3 — status bar stayed white even after Defect 2's fix
+
+The prebuilt `AppTheme` extends `Theme.AppCompat.Light.NoActionBar` and
+hardcodes `android:statusBarColor` to `#ffffff`. Neither `userInterfaceStyle`
+nor `expo-system-ui` touches this — it is build-time native resource
+controlled by Expo's `androidStatusBar` config key.
+
+**Fix:** added to `apps/mobile/app.json`:
+
+```json
+"androidStatusBar": { "backgroundColor": "#1E1B17", "barStyle": "light-content" }
+```
+
+### Verification checklist — confirmed on `Medium_Phone_API_36.0`
+
+- Launch, migrations, seed: 743 rows, all `deleted_at IS NULL`, all ten
+  tables present, `PRAGMA foreign_keys = ON` did not break first launch.
+- The bundled Newsreader serif renders identically to iOS (confirmed with a
+  temporary `<Text variant="display">`, screenshotted on both platforms, then
+  reverted — no variant currently ships in the real UI).
+- Warm dark palette end to end, including the status bar after Defect 3's
+  fix.
+- Gates: `pnpm typecheck` exit 0, `pnpm test` all green, `pnpm install
+  --frozen-lockfile` succeeds, `pnpm bundle` succeeds.
+
+### Not exercised on Android, then or since
+
+The full logging loop — start a workout, log sets, rest timer,
+notifications, crash recovery, restore path — has still never been driven on
+Android. Task 5 scoped that first pass to first-build health, not parity, and
+no later task in this plan closed that gap. **This is the same gap called out
+at the top of this document and is the single most important thing to do
+next.**

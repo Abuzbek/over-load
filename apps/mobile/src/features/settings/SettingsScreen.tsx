@@ -1,79 +1,44 @@
-import type { Unit } from '@overload/domain';
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { getWeightUnit, setWeightUnit } from '../../data/settingsRepo';
-import { db } from '../../db/client';
+import { Lucide } from '@react-native-vector-icons/lucide';
+import { router } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
+import { Card } from '../../ui/Card';
+import { ListRow } from '../../ui/ListRow';
+import { Screen } from '../../ui/Screen';
+import { SectionLabel } from '../../ui/SectionLabel';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 
-const UNITS: Unit[] = ['kg', 'lb'];
+const GENERAL = [
+  { title: 'Account', icon: 'user', href: '/settings/account' },
+  { title: 'Gym profiles', icon: 'dumbbell', href: '/settings/gym' },
+  { title: 'Units', icon: 'ruler', href: '/settings/units' },
+  { title: 'Language', icon: 'languages', href: '/settings/language' },
+] as const;
 
 export function SettingsScreen() {
-  // Same pattern as every other screen in this app: a version bump forces a
-  // re-read of the preference from SQLite rather than caching a local copy
-  // of it, per the rule that only settingsRepo owns this value.
-  const [, setVersion] = useState(0);
-  const unit = getWeightUnit(db);
-
-  useFocusEffect(
-    useCallback(() => {
-      setVersion((v) => v + 1);
-    }, []),
-  );
-
-  function selectUnit(next: Unit) {
-    if (next === unit) return;
-    setWeightUnit(db, next, Date.now());
-    setVersion((v) => v + 1);
-  }
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Weight unit</Text>
-      <View style={styles.segmented}>
-        {UNITS.map((option) => {
-          const active = option === unit;
-          return (
-            <Pressable
-              key={option}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={option === 'kg' ? 'Kilograms' : 'Pounds'}
-              onPress={() => selectUnit(option)}
-              style={[styles.segment, active && styles.segmentActive]}
-            >
-              <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
-                {option}
-              </Text>
-            </Pressable>
-          );
-        })}
+    <Screen scroll safeTop>
+      <Text variant="display">More</Text>
+
+      <View style={styles.section}>
+        <SectionLabel>General</SectionLabel>
+        <Card style={styles.rows}>
+          {GENERAL.map((item) => (
+            <ListRow
+              key={item.title}
+              title={item.title}
+              leading={<Lucide name={item.icon} size={18} color={theme.colors.textMuted} />}
+              right={<Lucide name="chevron-right" size={18} color={theme.colors.textMuted} />}
+              onPress={() => router.push(item.href)}
+            />
+          ))}
+        </Card>
       </View>
-      <Text style={styles.hint}>
-        Weight is always stored in kilograms. This only changes how it is displayed.
-      </Text>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background, padding: theme.spacing.lg, gap: theme.spacing.md },
-  label: { ...theme.text.body, color: theme.colors.text },
-  segmented: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.xs,
-    gap: theme.spacing.xs,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radius.sm,
-    alignItems: 'center',
-  },
-  segmentActive: { backgroundColor: theme.colors.accent },
-  segmentLabel: { ...theme.text.body, color: theme.colors.textMuted, fontWeight: '600' },
-  segmentLabelActive: { color: '#FFFFFF' },
-  hint: { ...theme.text.caption, color: theme.colors.textMuted },
+  section: { gap: theme.spacing.sm },
+  rows: { paddingVertical: 0, paddingHorizontal: 0, gap: 0 },
 });

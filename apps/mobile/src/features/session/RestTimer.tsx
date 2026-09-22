@@ -1,7 +1,8 @@
 import { formatDuration, restRemainingSeconds } from '@overload/domain';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 
 type Props = {
@@ -31,10 +32,20 @@ export function RestTimer({ startedAt, restSeconds, onDismiss }: Props) {
         { paddingBottom: theme.spacing.md + insets.bottom },
       ]}
     >
-      <Text style={styles.label}>{remaining === 0 ? 'Rest complete' : 'Rest'}</Text>
-      <Text style={styles.time}>{formatDuration(remaining)}</Text>
-      <Pressable onPress={onDismiss} accessibilityLabel="Skip rest">
-        <Text style={styles.skip}>Skip</Text>
+      <Text>{remaining === 0 ? 'Rest complete' : 'Rest'}</Text>
+      <Text variant="numeric" style={styles.time}>
+        {formatDuration(remaining)}
+      </Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onDismiss}
+        accessibilityLabel="Skip rest"
+        // Literal, NOT theme.spacing: this is a touch target, not decoration.
+        // "Skip" is ~20pt tall, so 14 either side clears the 48pt floor — and
+        // shrinking the spacing scale must never quietly shrink a tap target.
+        hitSlop={14}
+      >
+        <Text variant="heading" color="accent">Skip</Text>
       </Pressable>
     </View>
   );
@@ -52,7 +63,9 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.md,
   },
   barDone: { backgroundColor: theme.colors.success },
-  label: { ...theme.text.body, color: theme.colors.text },
-  time: { ...theme.text.title, color: theme.colors.text, fontVariant: ['tabular-nums'] },
-  skip: { ...theme.text.body, color: theme.colors.accent },
+  // Countdown is the one glanceable element on this bar — read at arm's length,
+  // mid-set. `numeric` is deliberately body-sized (15/20) for set-input boxes,
+  // so bump it back up here locally rather than resizing the shared variant,
+  // which would also enlarge every set-row input on the session screen.
+  time: { fontSize: 20, lineHeight: 26 },
 });

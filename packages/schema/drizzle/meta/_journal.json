@@ -22,6 +22,83 @@
       "when": 1789940309489,
       "tag": "0002_ancient_human_robot",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790062282814,
+      "tag": "0003_fair_lady_ursula",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790064709861,
+      "tag": "0004_purple_whizzer",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790067856991,
+      "tag": "0005_far_vance_astro",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790068938331,
+      "tag": "0006_day_cycle",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1790073453991,
+      "tag": "0007_day_completion",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1790074805797,
+      "tag": "0008_workout_vocabulary",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1790075801115,
+      "tag": "0009_height_unit",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1790076715742,
+      "tag": "0010_gyms",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1790077897329,
+      "tag": "0011_equipment_catalogue",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1790079960562,
+      "tag": "0012_gym_icon",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1790083576064,
+      "tag": "0013_cycle_number",
+      "breakpoints": true
     }
   ]
 }

@@ -6,7 +6,7 @@ export default function WorkoutHistoryScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Workout' }} />
-      <WorkoutDetailView workoutId={id} />
+      <WorkoutDetailView sessionId={id} />
     </>
   );
 }

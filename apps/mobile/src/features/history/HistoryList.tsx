@@ -1,12 +1,35 @@
-import { formatWeight } from '@overload/domain';
+import { formatWeight, type Unit } from '@overload/domain';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { listFinishedWorkouts } from '../../data/historyRepo';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { listFinishedWorkouts, type WorkoutSummary } from '../../data/historyRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
-import { ListRow } from '../../ui/ListRow';
+import { Card } from '../../ui/Card';
+import { EmptyState } from '../../ui/EmptyState';
+import { Text } from '../../ui/Text';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../../ui/theme';
+
+function WorkoutCard({ summary, unit }: { summary: WorkoutSummary; unit: Unit }) {
+  const { workout, setCount, volumeKg } = summary;
+  const sessionSets = `${setCount} ${setCount === 1 ? 'set' : 'sets'}`;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={workout.name}
+      onPress={() => router.push(`/history/${workout.id}`)}
+      style={({ pressed }) => pressed && styles.pressed}
+    >
+      <Card>
+        <Text variant="heading">{workout.name}</Text>
+        <Text variant="caption" color="textMuted">
+          {new Date(workout.startedAt).toLocaleDateString()} · {sessionSets} · {formatWeight(volumeKg, unit)}
+        </Text>
+      </Card>
+    </Pressable>
+  );
+}
 
 export function HistoryList() {
   // A local counter is the refresh signal: bumping it forces a re-read of
@@ -23,19 +46,23 @@ export function HistoryList() {
     }, []),
   );
 
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.container}>
       <FlatList
         data={summaries}
         keyExtractor={(item) => item.workout.id}
-        ListEmptyComponent={<Text style={styles.empty}>No finished workouts yet.</Text>}
-        renderItem={({ item }) => (
-          <ListRow
-            title={item.workout.name}
-            subtitle={`${new Date(item.workout.startedAt).toLocaleDateString()} · ${item.setCount} sets · ${formatWeight(item.volumeKg, unit)}`}
-            onPress={() => router.push(`/history/${item.workout.id}`)}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + theme.spacing.lg }]}
+        ListHeaderComponent={<Text variant="display">History</Text>}
+        ListEmptyComponent={
+          <EmptyState
+            title="No workouts yet"
+            body="Finish a workout and it will appear here."
           />
-        )}
+        }
+        renderItem={({ item }) => <WorkoutCard summary={item} unit={unit} />}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
     </View>
   );
@@ -43,5 +70,7 @@ export function HistoryList() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
-  empty: { ...theme.text.body, color: theme.colors.textMuted, textAlign: 'center', padding: theme.spacing.xl },
+  content: { flexGrow: 1, padding: theme.spacing.lg, gap: theme.spacing.lg },
+  separator: { height: theme.spacing.md },
+  pressed: { opacity: 0.7 },
 });

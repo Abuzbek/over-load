@@ -2,6 +2,7 @@ import { exercises, newId, personalRecords } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { startBareSession } from '../data/sessionTestFixtures';
 
 // bootstrap.ts pulls in a live expo-sqlite connection (via ./client) and the
 // real migrations artifact. Mock every collaborator so this test exercises
@@ -15,12 +16,16 @@ vi.mock('./backup', () => ({
 }));
 vi.mock('@overload/schema/migrations', () => ({ default: {} }));
 vi.mock('drizzle-orm/expo-sqlite/migrator', () => ({ migrate: vi.fn() }));
-vi.mock('../data/seedRepo', () => ({ seedExercisesIfEmpty: vi.fn() }));
+vi.mock('../data/seedRepo', () => ({ seedExercisesIfEmpty: vi.fn(), syncEquipmentCatalogue: vi.fn() }));
+vi.mock('../data/programRepo', () => ({ ensureDefaultProgram: vi.fn() }));
+vi.mock('../data/gymRepo', () => ({ ensureDefaultGym: vi.fn() }));
 vi.mock('../data/sessionRepo', () => ({ rebuildAllPersonalRecords: vi.fn() }));
 
 const { backupDatabase, discardBackup, restoreDatabase } = await import('./backup');
 const { migrate } = await import('drizzle-orm/expo-sqlite/migrator');
-const { seedExercisesIfEmpty } = await import('../data/seedRepo');
+const { seedExercisesIfEmpty, syncEquipmentCatalogue } = await import('../data/seedRepo');
+const { ensureDefaultProgram } = await import('../data/programRepo');
+const { ensureDefaultGym } = await import('../data/gymRepo');
 const { rebuildAllPersonalRecords } = await import('../data/sessionRepo');
 const { initializeDatabase } = await import('./bootstrap');
 
@@ -29,10 +34,9 @@ const { initializeDatabase } = await import('./bootstrap');
 // initializeDatabase's control flow.
 const {
   rebuildAllPersonalRecords: rebuildAllPersonalRecordsForReal,
-  addExerciseToWorkout,
+  addExerciseToSession,
   addSet,
   completeSet,
-  startEmptyWorkout,
 } = await vi.importActual<typeof import('../data/sessionRepo')>('../data/sessionRepo');
 
 /** The global order this mock was invoked in, across every mock in the file. */
@@ -82,13 +86,19 @@ describe('initializeDatabase', () => {
     expect(restoreDatabase).not.toHaveBeenCalled();
     expect(discardBackup).toHaveBeenCalledTimes(1);
     expect(seedExercisesIfEmpty).toHaveBeenCalledTimes(1);
+    expect(ensureDefaultProgram).toHaveBeenCalledTimes(1);
+    expect(syncEquipmentCatalogue).toHaveBeenCalledTimes(1);
+    expect(ensureDefaultGym).toHaveBeenCalledTimes(1);
     expect(rebuildAllPersonalRecords).toHaveBeenCalledTimes(1);
 
-    // Ordering: backup, then migrate, then discard, then seed, then rebuild.
+    // Ordering: backup, then migrate, then discard, then seed, then default program, then rebuild.
     expect(callOrder(backupDatabase)).toBeLessThan(callOrder(migrate));
     expect(callOrder(migrate)).toBeLessThan(callOrder(discardBackup));
     expect(callOrder(discardBackup)).toBeLessThan(callOrder(seedExercisesIfEmpty));
-    expect(callOrder(seedExercisesIfEmpty)).toBeLessThan(callOrder(rebuildAllPersonalRecords));
+    expect(callOrder(seedExercisesIfEmpty)).toBeLessThan(callOrder(ensureDefaultProgram));
+    // The first gym owns every catalogue item, so the catalogue has to exist first.
+    expect(callOrder(syncEquipmentCatalogue)).toBeLessThan(callOrder(ensureDefaultGym));
+    expect(callOrder(ensureDefaultProgram)).toBeLessThan(callOrder(rebuildAllPersonalRecords));
   });
 
   it('does not let a failed personal-record rebuild reject initializeDatabase', async () => {
@@ -133,8 +143,8 @@ describe('rebuildAllPersonalRecords', () => {
     // something to prove. weightKg/reps are the junk a duration exercise's row
     // carried before gating existed — deliberately included, and deliberately
     // ignored by max_duration.
-    const workoutId = startEmptyWorkout(db, 'Session', 1);
-    const we = addExerciseToWorkout(db, workoutId, plankId, 1);
+    const sessionId = startBareSession(db, 'Session', 1);
+    const we = addExerciseToSession(db, sessionId, plankId, 1);
     const set = addSet(db, we.id, 1);
     completeSet(db, set.id, { weightKg: 17, reps: 8, durationSeconds: 60 }, 1);
   });

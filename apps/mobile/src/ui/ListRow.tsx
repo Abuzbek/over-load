@@ -1,15 +1,17 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { theme } from './theme';
 
 type Props = {
   title: string;
   subtitle?: string;
+  leading?: ReactNode;
   right?: ReactNode;
   onPress?: () => void;
 };
 
-export function ListRow({ title, subtitle, right, onPress }: Props) {
+export function ListRow({ title, subtitle, leading, right, onPress }: Props) {
   return (
     <Pressable
       // A row with no onPress is presentational, so it should not be announced
@@ -19,9 +21,10 @@ export function ListRow({ title, subtitle, right, onPress }: Props) {
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
+      {leading}
       <View style={styles.main}>
-        <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        <Text variant="heading">{title}</Text>
+        {subtitle ? <Text variant="caption" color="textMuted">{subtitle}</Text> : null}
       </View>
       {right}
     </Pressable>
@@ -40,6 +43,4 @@ const styles = StyleSheet.create({
   },
   pressed: { backgroundColor: theme.colors.surface },
   main: { flex: 1, gap: 2 },
-  title: { ...theme.text.body, color: theme.colors.text },
-  subtitle: { ...theme.text.caption, color: theme.colors.textMuted },
 });

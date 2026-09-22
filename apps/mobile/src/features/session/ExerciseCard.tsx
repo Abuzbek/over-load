@@ -1,25 +1,26 @@
-import type { CompletedSet, Unit } from '@overload/domain';
-import { StyleSheet, Text, View } from 'react-native';
+import type { CompletedSet, DistanceUnit, Unit } from '@overload/domain';
 import { addSet, completeSet, uncompleteSet, type WorkoutDetailExercise } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
-import { theme } from '../../ui/theme';
+import { Card } from '../../ui/Card';
+import { Text } from '../../ui/Text';
 import { SetRow } from './SetRow';
 
 type Props = {
   entry: WorkoutDetailExercise;
   previous: CompletedSet[];
   unit: Unit;
+  distanceUnit: DistanceUnit;
   onChanged: () => void;
   onSetCompleted: (restSeconds: number | null) => void;
 };
 
-export function ExerciseCard({ entry, previous, unit, onChanged, onSetCompleted }: Props) {
+export function ExerciseCard({ entry, previous, unit, distanceUnit, onChanged, onSetCompleted }: Props) {
   return (
-    <View style={styles.card}>
-      <Text style={styles.title}>{entry.exercise.name}</Text>
+    <Card>
+      <Text variant="title">{entry.exercise.name}</Text>
 
-      {entry.sets.map((set, index) => (
+      {entry.sessionSets.map((set, index) => (
         <SetRow
           key={set.id}
           set={set}
@@ -27,10 +28,11 @@ export function ExerciseCard({ entry, previous, unit, onChanged, onSetCompleted 
           trackingType={entry.exercise.trackingType}
           previous={previous}
           unit={unit}
+          distanceUnit={distanceUnit}
           onComplete={(values) => {
             completeSet(db, set.id, values, Date.now());
             onChanged();
-            onSetCompleted(entry.workoutExercise.restSeconds);
+            onSetCompleted(entry.sessionExercise.restSeconds);
           }}
           onUncomplete={() => {
             uncompleteSet(db, set.id);
@@ -43,20 +45,10 @@ export function ExerciseCard({ entry, previous, unit, onChanged, onSetCompleted 
         title="Add set"
         variant="secondary"
         onPress={() => {
-          addSet(db, entry.workoutExercise.id, Date.now());
+          addSet(db, entry.sessionExercise.id, Date.now());
           onChanged();
         }}
       />
-    </View>
+    </Card>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.lg,
-    gap: theme.spacing.sm,
-  },
-  title: { ...theme.text.title, color: theme.colors.text },
-});
