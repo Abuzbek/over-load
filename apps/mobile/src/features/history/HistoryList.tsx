@@ -8,6 +8,7 @@ import { db } from '../../db/client';
 import { Card } from '../../ui/Card';
 import { EmptyState } from '../../ui/EmptyState';
 import { Text } from '../../ui/Text';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../../ui/theme';
 
 function WorkoutCard({ summary, unit }: { summary: WorkoutSummary; unit: Unit }) {
@@ -45,12 +46,14 @@ export function HistoryList() {
     }, []),
   );
 
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.container}>
       <FlatList
         data={summaries}
         keyExtractor={(item) => item.workout.id}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + theme.spacing.lg }]}
         ListHeaderComponent={<Text variant="display">History</Text>}
         ListEmptyComponent={
           <EmptyState

@@ -121,7 +121,7 @@ export function RecordsList() {
   );
 
   return (
-    <Screen scroll>
+    <Screen scroll safeTop>
       <Text variant="display">Progress</Text>
       {sections.length === 0 ? (
         <EmptyState

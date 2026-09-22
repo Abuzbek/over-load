@@ -36,7 +36,7 @@ export function SettingsScreen() {
   const appVersion = Constants.expoConfig?.version;
 
   return (
-    <Screen scroll>
+    <Screen scroll safeTop>
       <Text variant="display">Profile</Text>
 
       <View style={styles.section}>

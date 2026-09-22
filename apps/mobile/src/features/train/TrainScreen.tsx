@@ -65,7 +65,7 @@ export function TrainScreen() {
   }, [startEmpty]);
 
   return (
-    <Screen scroll>
+    <Screen scroll safeTop>
       <Text variant="display">Train</Text>
 
       <SectionLabel>Your routines</SectionLabel>

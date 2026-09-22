@@ -21,8 +21,10 @@ export default function TabsLayout() {
         </>
       )}
       screenOptions={{
-        headerStyle: { backgroundColor: theme.colors.surface },
-        headerTintColor: theme.colors.text,
+        // Every tab screen renders its own serif `display` title, so a native
+        // header would draw the same word twice — "Train" in the header and
+        // "Train" again below it. `title` stays because it also names the tab.
+        headerShown: false,
         tabBarStyle: { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border },
         tabBarActiveTintColor: theme.colors.accent,
         tabBarInactiveTintColor: theme.colors.textMuted,
