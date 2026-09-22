@@ -16,11 +16,13 @@ vi.mock('./backup', () => ({
 vi.mock('@overload/schema/migrations', () => ({ default: {} }));
 vi.mock('drizzle-orm/expo-sqlite/migrator', () => ({ migrate: vi.fn() }));
 vi.mock('../data/seedRepo', () => ({ seedExercisesIfEmpty: vi.fn() }));
+vi.mock('../data/programRepo', () => ({ ensureDefaultProgram: vi.fn() }));
 vi.mock('../data/sessionRepo', () => ({ rebuildAllPersonalRecords: vi.fn() }));
 
 const { backupDatabase, discardBackup, restoreDatabase } = await import('./backup');
 const { migrate } = await import('drizzle-orm/expo-sqlite/migrator');
 const { seedExercisesIfEmpty } = await import('../data/seedRepo');
+const { ensureDefaultProgram } = await import('../data/programRepo');
 const { rebuildAllPersonalRecords } = await import('../data/sessionRepo');
 const { initializeDatabase } = await import('./bootstrap');
 
@@ -82,13 +84,15 @@ describe('initializeDatabase', () => {
     expect(restoreDatabase).not.toHaveBeenCalled();
     expect(discardBackup).toHaveBeenCalledTimes(1);
     expect(seedExercisesIfEmpty).toHaveBeenCalledTimes(1);
+    expect(ensureDefaultProgram).toHaveBeenCalledTimes(1);
     expect(rebuildAllPersonalRecords).toHaveBeenCalledTimes(1);
 
-    // Ordering: backup, then migrate, then discard, then seed, then rebuild.
+    // Ordering: backup, then migrate, then discard, then seed, then default program, then rebuild.
     expect(callOrder(backupDatabase)).toBeLessThan(callOrder(migrate));
     expect(callOrder(migrate)).toBeLessThan(callOrder(discardBackup));
     expect(callOrder(discardBackup)).toBeLessThan(callOrder(seedExercisesIfEmpty));
-    expect(callOrder(seedExercisesIfEmpty)).toBeLessThan(callOrder(rebuildAllPersonalRecords));
+    expect(callOrder(seedExercisesIfEmpty)).toBeLessThan(callOrder(ensureDefaultProgram));
+    expect(callOrder(ensureDefaultProgram)).toBeLessThan(callOrder(rebuildAllPersonalRecords));
   });
 
   it('does not let a failed personal-record rebuild reject initializeDatabase', async () => {

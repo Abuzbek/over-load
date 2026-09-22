@@ -1,4 +1,5 @@
 import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { programs } from './programs';
 import { syncColumns } from './sync';
 
 export const WEIGHT_UNITS = ['kg', 'lb'] as const;
@@ -16,6 +17,7 @@ export const appSettings = sqliteTable('app_settings', {
   ...syncColumns,
   weightUnit: text('weight_unit', { enum: WEIGHT_UNITS }).notNull().default('kg'),
   distanceUnit: text('distance_unit', { enum: DISTANCE_UNITS }).notNull().default('km'),
+  activeProgramId: text('active_program_id').references(() => programs.id),
 });
 
 export type AppSettings = typeof appSettings.$inferSelect;

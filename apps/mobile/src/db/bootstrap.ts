@@ -1,6 +1,8 @@
+import { now } from '@overload/schema';
 import migrations from '@overload/schema/migrations';
 import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
 import curated from '../../../../tools/seed-exercises/curated.json';
+import { ensureDefaultProgram } from '../data/programRepo';
 import { rebuildAllPersonalRecords } from '../data/sessionRepo';
 import { seedExercisesIfEmpty, type SeedExercise } from '../data/seedRepo';
 import { backupDatabase, discardBackup, restoreDatabase } from './backup';
@@ -25,6 +27,7 @@ export async function initializeDatabase(): Promise<void> {
 
   await discardBackup();
   seedExercisesIfEmpty(db, curated as SeedExercise[]);
+  ensureDefaultProgram(db, now());
 
   // Rebuilds the derived personal-record cache once migrations and seeding have
   // landed, so installs written before metrics were gated by tracking type drop

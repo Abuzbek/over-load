@@ -46,6 +46,7 @@ export function createRoutine(db: Db, name: string): Routine {
     name,
     notes: null,
     orderIndex: (highest?.maxIndex ?? -1) + 1,
+    programId: null,
   };
   db.insert(routines).values(row).run();
   return row;

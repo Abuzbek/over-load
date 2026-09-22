@@ -1,5 +1,6 @@
 import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { exercises } from './exercises';
+import { programs } from './programs';
 import { syncColumns } from './sync';
 
 export const SET_TYPES = ['normal', 'warmup', 'drop', 'failure'] as const;
@@ -10,6 +11,7 @@ export const routines = sqliteTable('routines', {
   name: text('name').notNull(),
   notes: text('notes'),
   orderIndex: integer('order_index').notNull().default(0),
+  programId: text('program_id').references(() => programs.id),
 });
 
 export const routineExercises = sqliteTable(
