@@ -172,6 +172,22 @@ describe('migrations', () => {
     close();
   });
 
+  it('gives an existing settings row the height default rather than dropping it', () => {
+    // 8 == through 0008, i.e. app_settings before height_unit existed.
+    const { db, close } = createDbAtMigration(8);
+    const id = newId();
+    db.run(sql`insert into app_settings (id, created_at, updated_at, weight_unit, distance_unit) values (${id}, 1, 1, 'lb', 'mi')`);
+
+    applyFullMigrations(db);
+
+    const row = db.select().from(appSettings).where(eq(appSettings.id, id)).get();
+    expect(row).toBeDefined();
+    expect(row!.weightUnit).toBe('lb');
+    expect(row!.distanceUnit).toBe('mi');
+    expect(row!.heightUnit).toBe('cm');
+    close();
+  });
+
   it('preserves an existing settings row across the distance_unit migration', () => {
     // 2 == through 0002_ancient_human_robot, i.e. app_settings with only
     // weight_unit, before distance_unit existed. Inserted via raw SQL

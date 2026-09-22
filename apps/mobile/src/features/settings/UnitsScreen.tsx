@@ -1,11 +1,14 @@
 import type { DistanceUnit, Unit } from '@overload/domain';
+import type { HeightUnit } from '@overload/schema';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
   getDistanceUnit,
+  getHeightUnit,
   getWeightUnit,
   setDistanceUnit,
+  setHeightUnit,
   setWeightUnit,
 } from '../../data/settingsRepo';
 import { db } from '../../db/client';
@@ -22,6 +25,7 @@ export function UnitsScreen() {
   const [, setVersion] = useState(0);
   const unit = getWeightUnit(db);
   const distanceUnit = getDistanceUnit(db);
+  const heightUnit = getHeightUnit(db);
 
   useFocusEffect(
     useCallback(() => {
@@ -32,6 +36,12 @@ export function UnitsScreen() {
   function selectWeight(next: Unit) {
     if (next === unit) return;
     setWeightUnit(db, next, Date.now());
+    setVersion((v) => v + 1);
+  }
+
+  function selectHeight(next: HeightUnit) {
+    if (next === heightUnit) return;
+    setHeightUnit(db, next, Date.now());
     setVersion((v) => v + 1);
   }
 
@@ -73,19 +83,24 @@ export function UnitsScreen() {
               />
             }
           />
-          {/* Static: nothing in this app stores a height to convert. */}
           <ListRow
             title="Height"
             right={
-              <Text variant="body" color="textMuted">
-                cm
-              </Text>
+              <Segmented
+                accessibilityLabel="Height unit"
+                value={heightUnit}
+                onChange={selectHeight}
+                options={[
+                  { value: 'cm', label: 'cm' },
+                  { value: 'ft', label: 'ft/in' },
+                ]}
+              />
             }
           />
         </Card>
         <Text variant="caption" color="textMuted">
-          Weight is always stored in kilograms and distance in metres. These only
-          change how they are displayed.
+          Weight is always stored in kilograms, distance in metres and height in
+          centimetres. These only change how they are displayed.
         </Text>
       </View>
     </Screen>

@@ -64,6 +64,13 @@
       "when": 1790074805797,
       "tag": "0008_workout_vocabulary",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1790075801115,
+      "tag": "0009_height_unit",
+      "breakpoints": true
     }
   ]
 }

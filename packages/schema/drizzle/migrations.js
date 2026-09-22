@@ -10,6 +10,7 @@ import m0005 from './0005_far_vance_astro.sql';
 import m0006 from './0006_day_cycle.sql';
 import m0007 from './0007_day_completion.sql';
 import m0008 from './0008_workout_vocabulary.sql';
+import m0009 from './0009_height_unit.sql';
 
   export default {
     journal,
@@ -22,7 +23,8 @@ m0004,
 m0005,
 m0006,
 m0007,
-m0008
+m0008,
+m0009
     }
   }
   

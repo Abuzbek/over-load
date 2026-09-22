@@ -2,7 +2,14 @@ import { appSettings, newId } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
 import { eq, isNull } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { getDistanceUnit, getWeightUnit, setDistanceUnit, setWeightUnit } from './settingsRepo';
+import {
+  getDistanceUnit,
+  getHeightUnit,
+  getWeightUnit,
+  setDistanceUnit,
+  setHeightUnit,
+  setWeightUnit,
+} from './settingsRepo';
 
 let db: ReturnType<typeof createTestDb>['db'];
 let close: () => void;
@@ -128,5 +135,35 @@ describe('setDistanceUnit', () => {
     setDistanceUnit(db, 'mi', 5000);
     const row = db.select().from(appSettings).where(eq(appSettings.distanceUnit, 'mi')).get();
     expect(row!.updatedAt).toBe(5000);
+  });
+});
+
+describe('height unit', () => {
+  it('defaults to cm when no row exists yet', () => {
+    expect(getHeightUnit(db)).toBe('cm');
+  });
+
+  it('reads back a previously stored preference', () => {
+    setHeightUnit(db, 'ft', 1000);
+    expect(getHeightUnit(db)).toBe('ft');
+  });
+
+  it('creates the row when none exists rather than silently doing nothing', () => {
+    setHeightUnit(db, 'ft', 1000);
+    expect(db.select().from(appSettings).all()).toHaveLength(1);
+    expect(getHeightUnit(db)).toBe('ft');
+  });
+
+  // The three settings share one row, so a write to any of them must not reset
+  // the others — the failure mode of a per-setting insert that omits the rest.
+  it('leaves the weight and distance preferences untouched', () => {
+    setWeightUnit(db, 'lb', 1000);
+    setDistanceUnit(db, 'mi', 1000);
+
+    setHeightUnit(db, 'ft', 2000);
+
+    expect(getWeightUnit(db)).toBe('lb');
+    expect(getDistanceUnit(db)).toBe('mi');
+    expect(db.select().from(appSettings).all()).toHaveLength(1);
   });
 });
