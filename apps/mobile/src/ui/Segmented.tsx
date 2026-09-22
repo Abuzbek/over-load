@@ -34,6 +34,11 @@ export function Segmented<T extends string>({
             accessibilityLabel={`${accessibilityLabel}: ${option.label}`}
             accessibilityState={{ selected }}
             onPress={() => onChange(option.value)}
+            // Height comes from the text, so a two-character label like "kg"
+            // gets a short pill instead of a circle. hitSlop puts the tappable
+            // area back to ~44pt without the visual bulk — the same trick the
+            // set checkmark uses.
+            hitSlop={8}
             style={({ pressed }) => [
               styles.item,
               selected && styles.itemSelected,
@@ -60,9 +65,8 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   item: {
-    // Matches Button's 40.
-    minHeight: 40,
     justifyContent: 'center',
+    paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.pill,
   },
