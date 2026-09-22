@@ -10,6 +10,7 @@ import {
 import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { startBareWorkout } from './sessionTestFixtures';
 import {
   addExerciseToWorkout,
   addSet,
@@ -20,7 +21,6 @@ import {
   lastPerformance,
   listAllPersonalRecords,
   listPersonalRecords,
-  startEmptyWorkout,
   uncompleteSet,
 } from './sessionRepo';
 
@@ -72,7 +72,7 @@ afterEach(() => close());
 
 /** Logs one finished workout of `weightKg` x `reps` and returns its id. */
 function loggedWorkout(weightKg: number, reps: number, at: number): string {
-  const workoutId = startEmptyWorkout(db, 'Session', at);
+  const workoutId = startBareWorkout(db, 'Session', at);
   const we = addExerciseToWorkout(db, workoutId, bench.id, at);
   const set = addSet(db, we.id, at);
   completeSet(db, set.id, { weightKg, reps }, at);
@@ -82,7 +82,7 @@ function loggedWorkout(weightKg: number, reps: number, at: number): string {
 
 describe('completeSet', () => {
   it('stamps completedAt and stores the logged values', () => {
-    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const workoutId = startBareWorkout(db, 'Session', AT);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
     const set = addSet(db, we.id, AT);
 
@@ -95,7 +95,7 @@ describe('completeSet', () => {
   });
 
   it('leaves values untouched when they are omitted', () => {
-    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const workoutId = startBareWorkout(db, 'Session', AT);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
     const set = addSet(db, we.id, AT);
 
@@ -110,7 +110,7 @@ describe('completeSet', () => {
 
 describe('uncompleteSet', () => {
   it('clears completedAt but keeps the entered values', () => {
-    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const workoutId = startBareWorkout(db, 'Session', AT);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
     const set = addSet(db, we.id, AT);
     completeSet(db, set.id, { weightKg: 100, reps: 5 }, AT);
@@ -125,7 +125,7 @@ describe('uncompleteSet', () => {
 
 describe('addSet', () => {
   it('appends with the next order index', () => {
-    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const workoutId = startBareWorkout(db, 'Session', AT);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
     addSet(db, we.id, AT);
     addSet(db, we.id, AT);
@@ -135,7 +135,7 @@ describe('addSet', () => {
   });
 
   it('starts the first set with no load', () => {
-    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const workoutId = startBareWorkout(db, 'Session', AT);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
 
     const first = addSet(db, we.id, AT);
@@ -147,7 +147,7 @@ describe('addSet', () => {
   // again is friction. Untested until now, which meant a refactor could have
   // dropped it silently — it is only visible by adding a second set in the app.
   it("carries the previous set's load forward", () => {
-    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const workoutId = startBareWorkout(db, 'Session', AT);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
     const first = addSet(db, we.id, AT);
     completeSet(db, first.id, { weightKg: 100, reps: 5 }, AT);
@@ -160,7 +160,7 @@ describe('addSet', () => {
   // Duration and distance are NOT carried: a plank's hold time is the thing you
   // are trying to beat, not repeat.
   it('does not carry duration or distance forward', () => {
-    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const workoutId = startBareWorkout(db, 'Session', AT);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
     const first = addSet(db, we.id, AT);
     completeSet(db, first.id, { durationSeconds: 130, distanceM: 400 }, AT);
@@ -173,14 +173,14 @@ describe('addSet', () => {
 
 describe('lastPerformance', () => {
   it('returns nothing when the exercise has never been logged', () => {
-    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const workoutId = startBareWorkout(db, 'Session', AT);
     expect(lastPerformance(db, bench.id, workoutId)).toEqual([]);
   });
 
   it('returns completed sets from the most recent other workout', () => {
     loggedWorkout(90, 5, AT - 200_000);
     loggedWorkout(100, 5, AT - 100_000);
-    const current = startEmptyWorkout(db, 'Today', AT);
+    const current = startBareWorkout(db, 'Today', AT);
 
     const previous = lastPerformance(db, bench.id, current);
     expect(previous).toHaveLength(1);
@@ -188,7 +188,7 @@ describe('lastPerformance', () => {
   });
 
   it('never returns sets from the current workout', () => {
-    const workoutId = startEmptyWorkout(db, 'Today', AT);
+    const workoutId = startBareWorkout(db, 'Today', AT);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
     const set = addSet(db, we.id, AT);
     completeSet(db, set.id, { weightKg: 120, reps: 3 }, AT);
@@ -197,17 +197,17 @@ describe('lastPerformance', () => {
   });
 
   it('ignores sets that were never completed', () => {
-    const workoutId = startEmptyWorkout(db, 'Older', AT - 100_000);
+    const workoutId = startBareWorkout(db, 'Older', AT - 100_000);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT - 100_000);
     addSet(db, we.id, AT - 100_000);
     finishWorkout(db, workoutId, AT - 90_000);
 
-    const current = startEmptyWorkout(db, 'Today', AT);
+    const current = startBareWorkout(db, 'Today', AT);
     expect(lastPerformance(db, bench.id, current)).toEqual([]);
   });
 
   it('ignores sets whose workout_exercises row is tombstoned', () => {
-    const workoutId = startEmptyWorkout(db, 'Older', AT - 100_000);
+    const workoutId = startBareWorkout(db, 'Older', AT - 100_000);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT - 100_000);
     const set = addSet(db, we.id, AT - 100_000);
     completeSet(db, set.id, { weightKg: 100, reps: 5 }, AT - 100_000);
@@ -222,18 +222,18 @@ describe('lastPerformance', () => {
       .where(eq(workoutExercises.id, we.id))
       .run();
 
-    const current = startEmptyWorkout(db, 'Today', AT);
+    const current = startBareWorkout(db, 'Today', AT);
     expect(lastPerformance(db, bench.id, current)).toEqual([]);
   });
 
   it('ignores sets whose exercise is tombstoned', () => {
-    const workoutId = startEmptyWorkout(db, 'Older', AT - 100_000);
+    const workoutId = startBareWorkout(db, 'Older', AT - 100_000);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT - 100_000);
     const set = addSet(db, we.id, AT - 100_000);
     completeSet(db, set.id, { weightKg: 100, reps: 5 }, AT - 100_000);
     finishWorkout(db, workoutId, AT - 90_000);
 
-    const current = startEmptyWorkout(db, 'Today', AT);
+    const current = startBareWorkout(db, 'Today', AT);
     expect(lastPerformance(db, bench.id, current)).toHaveLength(1);
 
     db.update(exercises).set({ deletedAt: now() }).where(eq(exercises.id, bench.id)).run();
@@ -244,7 +244,7 @@ describe('lastPerformance', () => {
 
 describe('finishWorkout', () => {
   it('stamps endedAt', () => {
-    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const workoutId = startBareWorkout(db, 'Session', AT);
     finishWorkout(db, workoutId, AT + 3_600_000);
 
     const stored = db.select().from(workouts).where(eq(workouts.id, workoutId)).get();
@@ -287,14 +287,14 @@ describe('listAllPersonalRecords', () => {
 
 describe('getWorkoutDetail tombstone filtering (write-path coverage)', () => {
   it('excludes a soft-deleted workout', () => {
-    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const workoutId = startBareWorkout(db, 'Session', AT);
     db.update(workouts).set({ deletedAt: AT + 1 }).where(eq(workouts.id, workoutId)).run();
 
     expect(getWorkoutDetail(db, workoutId)).toBeUndefined();
   });
 
   it('excludes a soft-deleted set from the returned exercise', () => {
-    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const workoutId = startBareWorkout(db, 'Session', AT);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
     const keep = addSet(db, we.id, AT);
     const removed = addSet(db, we.id, AT);
@@ -309,7 +309,7 @@ describe('getWorkoutDetail tombstone filtering (write-path coverage)', () => {
 describe('tracking type on completed sets', () => {
   it('carries the exercise tracking type onto completed sets', () => {
     // plankId is a 'duration' exercise seeded in beforeEach
-    const workoutId = startEmptyWorkout(db, 'Test', now());
+    const workoutId = startBareWorkout(db, 'Test', now());
     const we = addExerciseToWorkout(db, workoutId, plankId, now());
     const row = addSet(db, we.id, now());
     completeSet(db, row.id, { durationSeconds: 60 }, now());
@@ -320,7 +320,7 @@ describe('tracking type on completed sets', () => {
   });
 
   it('writes distanceM through completeSet', () => {
-    const workoutId = startEmptyWorkout(db, 'Test', now());
+    const workoutId = startBareWorkout(db, 'Test', now());
     const we = addExerciseToWorkout(db, workoutId, runId, now());
     const row = addSet(db, we.id, now());
     completeSet(db, row.id, { distanceM: 5000, durationSeconds: 1500 }, now());
@@ -330,7 +330,7 @@ describe('tracking type on completed sets', () => {
   });
 
   it('excludes sets whose exercise is tombstoned', () => {
-    const workoutId = startEmptyWorkout(db, 'Test', now());
+    const workoutId = startBareWorkout(db, 'Test', now());
     const we = addExerciseToWorkout(db, workoutId, plankId, now());
     const row = addSet(db, we.id, now());
     completeSet(db, row.id, { durationSeconds: 60 }, now());

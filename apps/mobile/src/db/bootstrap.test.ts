@@ -2,6 +2,7 @@ import { exercises, newId, personalRecords } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { startBareWorkout } from '../data/sessionTestFixtures';
 
 // bootstrap.ts pulls in a live expo-sqlite connection (via ./client) and the
 // real migrations artifact. Mock every collaborator so this test exercises
@@ -34,7 +35,6 @@ const {
   addExerciseToWorkout,
   addSet,
   completeSet,
-  startEmptyWorkout,
 } = await vi.importActual<typeof import('../data/sessionRepo')>('../data/sessionRepo');
 
 /** The global order this mock was invoked in, across every mock in the file. */
@@ -137,7 +137,7 @@ describe('rebuildAllPersonalRecords', () => {
     // something to prove. weightKg/reps are the junk a duration exercise's row
     // carried before gating existed — deliberately included, and deliberately
     // ignored by max_duration.
-    const workoutId = startEmptyWorkout(db, 'Session', 1);
+    const workoutId = startBareWorkout(db, 'Session', 1);
     const we = addExerciseToWorkout(db, workoutId, plankId, 1);
     const set = addSet(db, we.id, 1);
     completeSet(db, set.id, { weightKg: 17, reps: 8, durationSeconds: 60 }, 1);

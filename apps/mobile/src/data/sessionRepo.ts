@@ -90,20 +90,6 @@ export function startWorkoutFromRoutine(db: Db, routineId: string, at: number): 
   return workoutId;
 }
 
-export function startEmptyWorkout(db: Db, name: string, at: number): string {
-  const workoutId = newId();
-  db.insert(workouts).values({
-    id: workoutId,
-    ...timestamps(at),
-    routineId: null,
-    name,
-    startedAt: at,
-    endedAt: null,
-    notes: null,
-  }).run();
-  return workoutId;
-}
-
 /** A workout with no endedAt is in progress. This is what powers crash recovery. */
 export function getActiveWorkoutId(db: Db): string | undefined {
   return db

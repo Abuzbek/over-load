@@ -2,8 +2,9 @@ import { exercises, newId, now, sets, workoutExercises, workouts, type Exercise 
 import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { startBareWorkout } from './sessionTestFixtures';
 import { listFinishedWorkouts, periodTotals } from './historyRepo';
-import { addExerciseToWorkout, addSet, completeSet, finishWorkout, startEmptyWorkout } from './sessionRepo';
+import { addExerciseToWorkout, addSet, completeSet, finishWorkout } from './sessionRepo';
 
 const AT = 1_700_000_000_000;
 
@@ -43,7 +44,7 @@ beforeEach(() => {
 afterEach(() => close());
 
 function logWorkout(name: string, at: number, sets: Array<[number, number]>, finish = true) {
-  const workoutId = startEmptyWorkout(db, name, at);
+  const workoutId = startBareWorkout(db, name, at);
   const we = addExerciseToWorkout(db, workoutId, bench.id, at);
   for (const [weightKg, reps] of sets) {
     const set = addSet(db, we.id, at);
@@ -77,7 +78,7 @@ describe('listFinishedWorkouts', () => {
   });
 
   it('counts a set on a non-weight exercise toward setCount but not volumeKg, even with a stray weightKg/reps', () => {
-    const workoutId = startEmptyWorkout(db, 'Core', AT);
+    const workoutId = startBareWorkout(db, 'Core', AT);
     const we = addExerciseToWorkout(db, workoutId, plank.id, AT);
     const set = addSet(db, we.id, AT);
     // The stray weightKg/reps are the kind of junk a duration set can carry
@@ -121,7 +122,7 @@ describe('periodTotals', () => {
   });
 
   it('counts completed sets, distinct exercises and distinct primary muscles', () => {
-    const workoutId = startEmptyWorkout(db, 'Push', AT);
+    const workoutId = startBareWorkout(db, 'Push', AT);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
     for (const [weightKg, reps] of [[100, 5], [100, 5], [100, 3]] as Array<[number, number]>) {
       const set = addSet(db, we.id, AT);
@@ -132,7 +133,7 @@ describe('periodTotals', () => {
   });
 
   it('excludes a planned-but-not-performed set (completedAt IS NULL)', () => {
-    const workoutId = startEmptyWorkout(db, 'Push', AT);
+    const workoutId = startBareWorkout(db, 'Push', AT);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
     addSet(db, we.id, AT); // never completed
 
@@ -140,12 +141,12 @@ describe('periodTotals', () => {
   });
 
   it('counts the same exercise across two workouts once, distinctly', () => {
-    const w1 = startEmptyWorkout(db, 'A', AT);
+    const w1 = startBareWorkout(db, 'A', AT);
     const we1 = addExerciseToWorkout(db, w1, bench.id, AT);
     const s1 = addSet(db, we1.id, AT);
     completeSet(db, s1.id, { weightKg: 100, reps: 5 }, AT);
 
-    const w2 = startEmptyWorkout(db, 'B', AT + 500);
+    const w2 = startBareWorkout(db, 'B', AT + 500);
     const we2 = addExerciseToWorkout(db, w2, bench.id, AT + 500);
     const s2 = addSet(db, we2.id, AT + 500);
     completeSet(db, s2.id, { weightKg: 100, reps: 5 }, AT + 500);
@@ -154,7 +155,7 @@ describe('periodTotals', () => {
   });
 
   it('includes a set exactly at sinceMs and one exactly at untilMs; excludes one a millisecond outside either edge', () => {
-    const workoutId = startEmptyWorkout(db, 'Push', AT);
+    const workoutId = startBareWorkout(db, 'Push', AT);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
 
     const atSince = addSet(db, we.id, AT);
@@ -175,7 +176,7 @@ describe('periodTotals', () => {
 
 describe('periodTotals tombstone filtering', () => {
   function loggedSet() {
-    const workoutId = startEmptyWorkout(db, 'Push', AT);
+    const workoutId = startBareWorkout(db, 'Push', AT);
     const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
     const set = addSet(db, we.id, AT);
     completeSet(db, set.id, { weightKg: 100, reps: 5 }, AT);

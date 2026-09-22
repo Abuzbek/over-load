@@ -2,6 +2,7 @@ import { exercises, newId, now, routineSets, workouts, type Exercise } from '@ov
 import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { startBareWorkout } from './sessionTestFixtures';
 import { addExerciseToRoutine, addRoutineSet, createRoutine } from './routineRepo';
 import {
   discardWorkout,
@@ -9,7 +10,6 @@ import {
   getActiveWorkout,
   getActiveWorkoutId,
   getWorkoutDetail,
-  startEmptyWorkout,
   startWorkoutFromRoutine,
 } from './sessionRepo';
 
@@ -89,34 +89,26 @@ describe('startWorkoutFromRoutine', () => {
   });
 });
 
-describe('startEmptyWorkout', () => {
-  it('creates a workout with no routine and no exercises', () => {
-    const detail = getWorkoutDetail(db, startEmptyWorkout(db, 'Freestyle', AT));
-    expect(detail?.workout.routineId).toBeNull();
-    expect(detail?.exercises).toEqual([]);
-  });
-});
-
 describe('getActiveWorkoutId', () => {
   it('returns undefined when nothing is in progress', () => {
     expect(getActiveWorkoutId(db)).toBeUndefined();
   });
 
   it('returns the workout that has no endedAt', () => {
-    const workoutId = startEmptyWorkout(db, 'Freestyle', AT);
+    const workoutId = startBareWorkout(db, 'Freestyle', AT);
     expect(getActiveWorkoutId(db)).toBe(workoutId);
   });
 
   it('returns the most recently started one if several are unfinished', () => {
-    startEmptyWorkout(db, 'Older', AT);
-    const newer = startEmptyWorkout(db, 'Newer', AT + 1000);
+    startBareWorkout(db, 'Older', AT);
+    const newer = startBareWorkout(db, 'Newer', AT + 1000);
     expect(getActiveWorkoutId(db)).toBe(newer);
   });
 });
 
 describe('discardWorkout', () => {
   it('tombstones the workout so it is no longer the active one', () => {
-    const workoutId = startEmptyWorkout(db, 'Abandoned', AT);
+    const workoutId = startBareWorkout(db, 'Abandoned', AT);
     expect(getActiveWorkoutId(db)).toBe(workoutId);
 
     discardWorkout(db, workoutId, AT + 5000);
@@ -126,7 +118,7 @@ describe('discardWorkout', () => {
   });
 
   it('records the tombstone and the update time rather than deleting the row', () => {
-    const workoutId = startEmptyWorkout(db, 'Abandoned', AT);
+    const workoutId = startBareWorkout(db, 'Abandoned', AT);
 
     discardWorkout(db, workoutId, AT + 5000);
 
@@ -135,8 +127,8 @@ describe('discardWorkout', () => {
   });
 
   it('leaves an older unfinished workout resumable once the newer one is discarded', () => {
-    const older = startEmptyWorkout(db, 'Older', AT);
-    const newer = startEmptyWorkout(db, 'Newer', AT + 1000);
+    const older = startBareWorkout(db, 'Older', AT);
+    const newer = startBareWorkout(db, 'Newer', AT + 1000);
 
     discardWorkout(db, newer, AT + 2000);
 
@@ -151,21 +143,21 @@ describe('getActiveWorkout', () => {
 
   it('returns the unfinished workout with its name and start time', () => {
     const at = now();
-    const id = startEmptyWorkout(db, 'Empty workout', at);
+    const id = startBareWorkout(db, 'Session', at);
     const active = getActiveWorkout(db);
     expect(active?.id).toBe(id);
-    expect(active?.name).toBe('Empty workout');
+    expect(active?.name).toBe('Session');
     expect(active?.startedAt).toBe(at);
   });
 
   it('returns undefined once the workout is finished', () => {
-    const id = startEmptyWorkout(db, 'Empty workout', now());
+    const id = startBareWorkout(db, 'Session', now());
     finishWorkout(db, id, now());
     expect(getActiveWorkout(db)).toBeUndefined();
   });
 
   it('returns undefined for a discarded workout', () => {
-    const id = startEmptyWorkout(db, 'Empty workout', now());
+    const id = startBareWorkout(db, 'Session', now());
     discardWorkout(db, id, now());
     expect(getActiveWorkout(db)).toBeUndefined();
   });
@@ -173,8 +165,8 @@ describe('getActiveWorkout', () => {
   // Matches getActiveWorkoutId: newest wins, which is what the resume banner
   // and the stranded-workout guard both already assume.
   it('returns the newest unfinished workout when several exist', () => {
-    startEmptyWorkout(db, 'Older', now() - 10_000);
-    const newer = startEmptyWorkout(db, 'Newer', now());
+    startBareWorkout(db, 'Older', now() - 10_000);
+    const newer = startBareWorkout(db, 'Newer', now());
     expect(getActiveWorkout(db)?.id).toBe(newer);
   });
 });

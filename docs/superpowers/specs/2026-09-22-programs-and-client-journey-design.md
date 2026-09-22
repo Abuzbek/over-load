@@ -92,6 +92,12 @@ Three consequences:
    the stored order; the label is the row's position, so a gap (a day tombstoned
    later) still reads Day 1, Day 2, Day 3.
 
+**There is no empty workout.** Starting a session with no plan is gone from the
+product: every workout comes from the library or from a program day. The repository
+function behind it (`startEmptyWorkout`) is deleted; the bare insert survives only as
+a test fixture, `startBareWorkout`, because the session and history tests need a
+workout to log sets into.
+
 **The two libraries:**
 
 | Library | What it holds |
