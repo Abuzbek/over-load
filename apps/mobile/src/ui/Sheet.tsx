@@ -11,12 +11,18 @@ type Props = {
   body?: string;
   /** 'bottom' slides the card to the bottom edge, for a shortcuts-style menu. */
   anchor?: 'center' | 'bottom';
+  /**
+   * Fired once the modal has finished animating in. autoFocus on a TextInput
+   * inside a Modal is unreliable on Android, so a sheet with an input focuses
+   * it explicitly from here.
+   */
+  onShow?: () => void;
   children: ReactNode; // the action buttons
 };
 
 // A Modal, never Alert: Alert.prompt is iOS-only and Alert's button semantics
 // are iOS-shaped. This app ships Android too (R19).
-export function Sheet({ visible, onRequestClose, title, body, anchor = 'center', children }: Props) {
+export function Sheet({ visible, onRequestClose, title, body, anchor = 'center', onShow, children }: Props) {
   const insets = useSafeAreaInsets();
 
   // A bottom-anchored card sits on the screen edge, so it owns the home
@@ -27,7 +33,7 @@ export function Sheet({ visible, onRequestClose, title, body, anchor = 'center',
     anchor === 'bottom' ? { paddingBottom: insets.bottom + theme.spacing.lg } : undefined;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onRequestClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onRequestClose} onShow={onShow}>
       <View style={[styles.backdrop, anchor === 'bottom' && styles.backdropBottom]}>
         <View style={[styles.card, anchor === 'bottom' && styles.cardBottom, bottomInset]}>
           <Text variant="title">{title}</Text>

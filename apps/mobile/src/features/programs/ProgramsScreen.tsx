@@ -1,6 +1,6 @@
 import { Lucide } from '@react-native-vector-icons/lucide';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { activateProgram, createProgram, listPrograms } from '../../data/programRepo';
 import { db } from '../../db/client';
@@ -21,6 +21,7 @@ export function ProgramsScreen() {
   const { new: newParam } = useLocalSearchParams<{ new?: string }>();
   const [naming, setNaming] = useState(newParam === '1');
   const [name, setName] = useState('');
+  const inputRef = useRef<TextInput>(null);
 
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
@@ -95,13 +96,16 @@ export function ProgramsScreen() {
         onRequestClose={() => setNaming(false)}
         title="New program"
         body="Name it now; add workouts to it afterwards."
+        // autoFocus is unreliable on a TextInput inside a Modal on Android.
+        onShow={() => inputRef.current?.focus()}
       >
         <TextInput
+          ref={inputRef}
           value={name}
           onChangeText={setName}
           placeholder="Program name"
           placeholderTextColor={theme.colors.textMuted}
-          autoFocus
+          onSubmitEditing={create}
           style={styles.input}
         />
         <Button title="Create" onPress={create} />
