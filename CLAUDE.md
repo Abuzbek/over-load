@@ -145,15 +145,17 @@ consumed by the in-progress bar.
 
 ## Verification reality
 
-The tabbed app-shell rewrite (`app-shell` branch) has been run on both platforms, but
-not to the same depth. **iOS:** the full logging loop, rest timer, notification
-suppression on finish, and crash/force-quit recovery are verified against the new
-tab shell; the one remaining gap is the keyboard scroll-into-view behaviour on the
-session screen, unverified because the simulator's software keyboard would not
-appear. **Android:** cold launch, migrations, seeding and the four restyled tabs are
-verified; **the session screen — logging a set, the rest timer, notifications, crash
-recovery — has never been exercised on Android at all.** Treat any Android
-session-screen claim as unverified until someone actually drives it.
+**iOS:** the logging loop, rest timer, notification suppression on finish and
+crash/force-quit recovery are verified against the tab shell, as are programs,
+gyms and the equipment catalogue. The one remaining gap is keyboard
+scroll-into-view on the session screen, unverified because the simulator's
+software keyboard will not appear.
+
+**Android:** the owner confirmed on 2026-09-22 that the app works there, after
+the rename and the equipment catalogue landed. That is a report, not a driven
+checklist — no specific Android screen has been exercised by anyone writing
+this file, so treat a *specific* Android claim (this control, this migration)
+as unverified while treating "it runs" as settled.
 
 Work through `docs/superpowers/2026-09-20-device-verification.md` before trusting
 the rest.

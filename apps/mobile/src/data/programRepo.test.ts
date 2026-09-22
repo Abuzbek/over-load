@@ -1,10 +1,11 @@
 import { appSettings, newId, now, programDays, programs, workouts } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createWorkout } from './workoutRepo';
 import {
   activateProgram,
+  advanceCycleIfComplete,
   createProgram,
   ensureDefaultProgram,
   getActiveProgram,
@@ -391,5 +392,88 @@ describe('removeProgramDay', () => {
     const program = createProgram(db, { name: 'A' }, now());
     removeProgramDay(db, program.id, 6, now());
     expect(addProgramDay(db, program.id, now())).toBe(7);
+  });
+});
+
+describe('cycle rollover', () => {
+  function programWithTwoDays() {
+    const program = createProgram(db, { name: 'A' }, now());
+    // createProgram makes seven; trim to two so the test is readable.
+    db.update(programDays)
+      .set({ deletedAt: now() })
+      .where(and(eq(programDays.programId, program.id), gt(programDays.dayIndex, 1)))
+      .run();
+    return program;
+  }
+
+  function cycleOf(programId: string) {
+    return db.select().from(programs).where(eq(programs.id, programId)).get()!.cycleNumber;
+  }
+
+  it('starts at cycle 1', () => {
+    expect(cycleOf(createProgram(db, { name: 'A' }, now()).id)).toBe(1);
+  });
+
+  it('does not roll while a day is still outstanding', () => {
+    const program = programWithTwoDays();
+    setProgramDayCompleted(db, program.id, 0, true, now());
+
+    expect(cycleOf(program.id)).toBe(1);
+    expect(getProgramDays(db, program.id)[0]!.completedAt).not.toBeNull();
+  });
+
+  // The whole point: ticking the last day clears the board and moves you on.
+  it('rolls when the last day is ticked, clearing every tick', () => {
+    const program = programWithTwoDays();
+    setProgramDayCompleted(db, program.id, 0, true, now());
+    setProgramDayCompleted(db, program.id, 1, true, now());
+
+    expect(cycleOf(program.id)).toBe(2);
+    expect(getProgramDays(db, program.id).every((d) => d.completedAt === null)).toBe(true);
+  });
+
+  it('rolls again on the next time through', () => {
+    const program = programWithTwoDays();
+    for (const pass of [1, 2, 3]) {
+      setProgramDayCompleted(db, program.id, 0, true, now());
+      setProgramDayCompleted(db, program.id, 1, true, now());
+      expect(cycleOf(program.id)).toBe(pass + 1);
+    }
+  });
+
+  // `every` on an empty list is true, so a program with no days would advance
+  // its cycle on every call, forever.
+  it('never rolls a program with no days', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    db.update(programDays).set({ deletedAt: now() }).where(eq(programDays.programId, program.id)).run();
+
+    expect(advanceCycleIfComplete(db, program.id, now())).toBe(false);
+    expect(cycleOf(program.id)).toBe(1);
+  });
+
+  it('finishing the last workout of the cycle rolls it too', () => {
+    const program = programWithTwoDays();
+    activateProgram(db, program.id, now());
+    const workout = createWorkout(db, 'Push');
+    setProgramDay(db, program.id, 0, workout.id, now());
+    setProgramDay(db, program.id, 1, workout.id, now());
+
+    markDayDoneForWorkout(db, workout.id, now());
+    expect(cycleOf(program.id)).toBe(1);
+
+    markDayDoneForWorkout(db, workout.id, now());
+    expect(cycleOf(program.id)).toBe(2);
+  });
+
+  // Documents the deliberate edge: a mis-tap after a roll leaves you in the new
+  // cycle with a day outstanding rather than undoing a cycle of history.
+  it('unticking after a roll does not roll back', () => {
+    const program = programWithTwoDays();
+    setProgramDayCompleted(db, program.id, 0, true, now());
+    setProgramDayCompleted(db, program.id, 1, true, now());
+
+    setProgramDayCompleted(db, program.id, 1, false, now());
+
+    expect(cycleOf(program.id)).toBe(2);
   });
 });

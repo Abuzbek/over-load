@@ -1,0 +1,1 @@
+ALTER TABLE `programs` ADD `cycle_number` integer DEFAULT 1 NOT NULL;

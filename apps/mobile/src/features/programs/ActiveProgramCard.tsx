@@ -13,6 +13,7 @@ import type { useWorkoutStarter } from '../session/useWorkoutStarter';
 type Props = {
   programId: string;
   programName: string;
+  cycleNumber: number;
   days: ProgramDay[];
   summaryByWorkoutId: Map<string, WorkoutSummary>;
   starter: ReturnType<typeof useWorkoutStarter>;
@@ -87,6 +88,7 @@ function DayRow({
 export function ActiveProgramCard({
   programId,
   programName,
+  cycleNumber,
   days,
   summaryByWorkoutId,
   starter,
@@ -110,6 +112,7 @@ export function ActiveProgramCard({
             {workoutDays} {workoutDays === 1 ? 'workout' : 'workouts'}
           </Text>
         </View>
+        <Text variant="caption" color="accent">{`Cycle ${cycleNumber}`}</Text>
         <Lucide
           name={open ? 'chevron-up' : 'chevron-down'}
           size={18}

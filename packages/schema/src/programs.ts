@@ -8,6 +8,11 @@ export const programs = sqliteTable('programs', {
   icon: text('icon'),
   iconColor: text('icon_color'),
   orderIndex: integer('order_index').notNull().default(0),
+  /**
+   * Which time through the cycle you are on. Starts at 1 and advances when
+   * every day has been ticked off — see advanceCycleIfComplete in programRepo.
+   */
+  cycleNumber: integer('cycle_number').notNull().default(1),
 });
 
 /**

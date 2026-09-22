@@ -1,5 +1,5 @@
 import { appSettings, newId, programDays, programs, workouts, type Db, type Program, type Workout } from '@overload/schema';
-import { and, eq, inArray, isNull, max } from 'drizzle-orm';
+import { and, eq, inArray, isNull, max, sql } from 'drizzle-orm';
 
 export type ProgramSummary = { program: Program; trainingDays: number; isActive: boolean };
 
@@ -56,6 +56,7 @@ export function createProgram(
     icon: values.icon ?? null,
     iconColor: values.iconColor ?? null,
     orderIndex: (highest?.maxIndex ?? -1) + 1,
+    cycleNumber: 1,
   };
 
   db.transaction((tx) => {
@@ -148,6 +149,44 @@ export function getProgramDays(db: Db, programId: string): ProgramDay[] {
 }
 
 /**
+ * Rolls the cycle over once every day has been ticked off: clears the ticks and
+ * advances the cycle number, so day one is outstanding again.
+ *
+ * Called after anything that completes a day. Returns whether it rolled.
+ *
+ * Two deliberate edges:
+ *
+ * - A program with no days never rolls. `every` on an empty list is true, which
+ *   would advance the cycle on every call, forever.
+ * - Unticking a day after a roll does NOT roll back. You land in the new cycle
+ *   with a day outstanding, which is what "I marked that by mistake" should
+ *   mean. Rolling backwards would have to guess which cycle the untick belonged
+ *   to, and it would undo a real cycle's worth of history to fix a mis-tap.
+ */
+export function advanceCycleIfComplete(db: Db, programId: string, at: number): boolean {
+  const days = db
+    .select({ completedAt: programDays.completedAt })
+    .from(programDays)
+    .where(and(eq(programDays.programId, programId), isNull(programDays.deletedAt)))
+    .all();
+
+  if (days.length === 0) return false;
+  if (!days.every((d) => d.completedAt !== null)) return false;
+
+  db.transaction((tx) => {
+    tx.update(programDays)
+      .set({ completedAt: null, updatedAt: at })
+      .where(and(eq(programDays.programId, programId), isNull(programDays.deletedAt)))
+      .run();
+    tx.update(programs)
+      .set({ cycleNumber: sql`${programs.cycleNumber} + 1`, updatedAt: at })
+      .where(eq(programs.id, programId))
+      .run();
+  });
+  return true;
+}
+
+/**
  * Ticks a day off, or clears it.
  *
  * Nothing resets these when the cycle comes round again — there is no concept
@@ -171,6 +210,8 @@ export function setProgramDayCompleted(
       ),
     )
     .run();
+
+  if (completed) advanceCycleIfComplete(db, programId, at);
 }
 
 /**
@@ -200,6 +241,7 @@ export function markDayDoneForWorkout(db: Db, workoutId: string, at: number): vo
   if (!day) return;
 
   db.update(programDays).set({ completedAt: at, updatedAt: at }).where(eq(programDays.id, day.id)).run();
+  advanceCycleIfComplete(db, program.id, at);
 }
 
 /**

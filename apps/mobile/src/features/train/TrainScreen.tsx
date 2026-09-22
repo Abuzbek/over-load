@@ -63,6 +63,7 @@ export function TrainScreen() {
         <ActiveProgramCard
           programId={activeProgram.id}
           programName={activeProgram.name}
+          cycleNumber={activeProgram.cycleNumber}
           days={days}
           summaryByWorkoutId={summaryByWorkoutId}
           starter={starter}
