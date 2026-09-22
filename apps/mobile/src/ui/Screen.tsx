@@ -23,7 +23,11 @@ type Props = {
 
 export function Screen({ children, scroll = false, padded = true, safeTop = false }: Props) {
   const insets = useSafeAreaInsets();
-  const top = safeTop ? { paddingTop: insets.top } : undefined;
+  // Added to the base padding, not substituted for it. A bare `insets.top`
+  // would win the style merge and leave the title hugging the status bar, and
+  // it would also disagree with HistoryList, which pads its FlatList the same
+  // way but is not built on Screen.
+  const top = safeTop ? { paddingTop: insets.top + theme.spacing.lg } : undefined;
   const inner = padded ? styles.padded : undefined;
 
   if (scroll) {
