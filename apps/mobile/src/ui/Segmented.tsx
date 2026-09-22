@@ -60,10 +60,10 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   item: {
-    // 48pt floor, same as Button — these are the primary control on the card.
-    minHeight: 48,
+    // Matches Button's 40.
+    minHeight: 40,
     justifyContent: 'center',
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.pill,
   },
   itemSelected: { backgroundColor: theme.colors.accent },

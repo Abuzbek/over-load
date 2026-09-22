@@ -37,12 +37,18 @@ export const Button = forwardRef<View, Props>(function Button(
 
 const styles = StyleSheet.create({
   base: {
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    // 40, down from 48. Every button in this app is either full width or a
+    // labelled chip in a row, so the tappable AREA stays large even as the
+    // height drops; 40 is the shortest that still reads as a button rather
+    // than a link. The small square targets keep their own floors: the set
+    // checkmark is 34 + hitSlop 7 = 48, and NumericField stays 48 because it
+    // is a narrow box in a crowded row.
+    minHeight: 40,
   },
   primary: { backgroundColor: theme.colors.accent },
   secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.colors.border },

@@ -206,7 +206,7 @@ export function DashboardScreen() {
 const styles = StyleSheet.create({
   carousel: { flexGrow: 0 },
   rings: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.sm, marginVertical: theme.spacing.md },
-  ringLabels: { flexDirection: 'row', justifyContent: 'space-between', gap: theme.spacing.sm, marginBottom: theme.spacing.md },
+  ringLabels: { flexDirection: 'row', justifyContent: 'space-between', gap: theme.spacing.md, marginBottom: theme.spacing.md },
   ringLabel: { alignItems: 'center', flex: 1, gap: theme.spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
   rowName: { width: 96 },
