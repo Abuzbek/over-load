@@ -133,6 +133,42 @@ describe('addSet', () => {
     const stored = getWorkoutDetail(db, workoutId)!.exercises[0]!.sets;
     expect(stored.map((s) => s.orderIndex)).toEqual([0, 1]);
   });
+
+  it('starts the first set with no load', () => {
+    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
+
+    const first = addSet(db, we.id, AT);
+    expect(first.weightKg).toBeNull();
+    expect(first.reps).toBeNull();
+  });
+
+  // Deliberate: the next set almost always uses the same load, so typing it
+  // again is friction. Untested until now, which meant a refactor could have
+  // dropped it silently — it is only visible by adding a second set in the app.
+  it("carries the previous set's load forward", () => {
+    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
+    const first = addSet(db, we.id, AT);
+    completeSet(db, first.id, { weightKg: 100, reps: 5 }, AT);
+
+    const second = addSet(db, we.id, AT);
+    expect(second.weightKg).toBe(100);
+    expect(second.reps).toBe(5);
+  });
+
+  // Duration and distance are NOT carried: a plank's hold time is the thing you
+  // are trying to beat, not repeat.
+  it('does not carry duration or distance forward', () => {
+    const workoutId = startEmptyWorkout(db, 'Session', AT);
+    const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
+    const first = addSet(db, we.id, AT);
+    completeSet(db, first.id, { durationSeconds: 130, distanceM: 400 }, AT);
+
+    const second = addSet(db, we.id, AT);
+    expect(second.durationSeconds).toBeNull();
+    expect(second.distanceM).toBeNull();
+  });
 });
 
 describe('lastPerformance', () => {
