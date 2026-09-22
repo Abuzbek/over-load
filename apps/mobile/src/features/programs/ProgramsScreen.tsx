@@ -1,11 +1,12 @@
 import { Lucide } from '@react-native-vector-icons/lucide';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { activateProgram, createProgram, listPrograms } from '../../data/programRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
+import { Collapsible } from '../../ui/Collapsible';
 import { ListRow } from '../../ui/ListRow';
 import { Screen } from '../../ui/Screen';
 import { SectionLabel } from '../../ui/SectionLabel';
@@ -15,7 +16,10 @@ import { theme } from '../../ui/theme';
 
 export function ProgramsScreen() {
   const [, setVersion] = useState(0);
-  const [naming, setNaming] = useState(false);
+  // The tab bar's + sheet routes here with ?new=1 rather than duplicating the
+  // create flow: this screen already owns naming and creation.
+  const { new: newParam } = useLocalSearchParams<{ new?: string }>();
+  const [naming, setNaming] = useState(newParam === '1');
   const [name, setName] = useState('');
 
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
@@ -65,8 +69,7 @@ export function ProgramsScreen() {
         )}
       </View>
 
-      <View style={styles.section}>
-        <SectionLabel>Archived</SectionLabel>
+      <Collapsible title="Archived">
         {archived.length === 0 ? (
           <Text variant="caption" color="textMuted">
             Programs you are not training show up here. Activating one archives the
@@ -85,9 +88,7 @@ export function ProgramsScreen() {
             ))}
           </Card>
         )}
-      </View>
-
-      <Button title="New program" variant="secondary" onPress={() => setNaming(true)} />
+      </Collapsible>
 
       <Sheet
         visible={naming}

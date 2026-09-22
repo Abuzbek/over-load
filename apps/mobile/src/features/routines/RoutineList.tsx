@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
   FlatList,
@@ -25,7 +25,10 @@ export function RoutineList() {
   const [, setVersion] = useState(0);
   const routines = listRoutines(db);
 
-  const [isModalVisible, setModalVisible] = useState(false);
+  // The tab bar's + sheet routes here with ?new=1 rather than duplicating the
+  // create flow: this screen already owns naming and creation.
+  const { new: newParam } = useLocalSearchParams<{ new?: string }>();
+  const [isModalVisible, setModalVisible] = useState(newParam === '1');
   const [name, setName] = useState('');
   const inputRef = useRef<TextInput>(null);
 
