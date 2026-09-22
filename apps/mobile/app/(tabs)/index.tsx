@@ -1,5 +1,5 @@
-import { TrainScreen } from '../../src/features/train/TrainScreen';
+import { DashboardScreen } from '../../src/features/dashboard/DashboardScreen';
 
-export default function TrainTab() {
-  return <TrainScreen />;
+export default function DashboardTab() {
+  return <DashboardScreen />;
 }

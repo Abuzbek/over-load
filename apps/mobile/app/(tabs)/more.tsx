@@ -1,5 +1,5 @@
 import { SettingsScreen } from '../../src/features/settings/SettingsScreen';
 
-export default function ProfileScreen() {
+export default function MoreTab() {
   return <SettingsScreen />;
 }
