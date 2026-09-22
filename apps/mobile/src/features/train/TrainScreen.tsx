@@ -2,11 +2,13 @@ import { formatLastTrained } from '@overload/domain';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { getActiveProgram } from '../../data/programRepo';
 import { listRoutineSummaries, type RoutineSummary } from '../../data/routineRepo';
 import { discardWorkout, getActiveWorkoutId, startEmptyWorkout } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
+import { ListRow } from '../../ui/ListRow';
 import { EmptyState } from '../../ui/EmptyState';
 import { Screen } from '../../ui/Screen';
 import { SectionLabel } from '../../ui/SectionLabel';
@@ -48,6 +50,7 @@ export function TrainScreen() {
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const summaries = listRoutineSummaries(db);
+  const activeProgram = getActiveProgram(db);
 
   const startEmpty = useCallback(() => {
     setBlockingWorkoutId(null);
@@ -67,6 +70,15 @@ export function TrainScreen() {
   return (
     <Screen scroll safeTop>
       <Text variant="display">Workout</Text>
+
+      <SectionLabel>Program</SectionLabel>
+      <Card style={styles.programRows}>
+        <ListRow
+          title={activeProgram?.name ?? 'No active program'}
+          subtitle="Only one program is active at a time"
+          onPress={() => router.push('/programs')}
+        />
+      </Card>
 
       <SectionLabel>Your routines</SectionLabel>
       {summaries.length === 0 ? (
@@ -117,6 +129,7 @@ export function TrainScreen() {
 }
 
 const styles = StyleSheet.create({
+  programRows: { paddingVertical: 0, paddingHorizontal: 0, gap: 0 },
   list: { gap: theme.spacing.md },
   pressed: { opacity: 0.7 },
 });
