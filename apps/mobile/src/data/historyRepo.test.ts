@@ -1,8 +1,8 @@
-import { exercises, newId, now, type Exercise } from '@overload/schema';
+import { exercises, newId, now, sets, workoutExercises, workouts, type Exercise } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { listFinishedWorkouts } from './historyRepo';
+import { listFinishedWorkouts, periodTotals } from './historyRepo';
 import { addExerciseToWorkout, addSet, completeSet, finishWorkout, startEmptyWorkout } from './sessionRepo';
 
 const AT = 1_700_000_000_000;
@@ -112,5 +112,101 @@ describe('listFinishedWorkouts', () => {
     expect(summary?.workout.id).toBe(workoutId);
     expect(summary?.setCount).toBe(0);
     expect(summary?.volumeKg).toBe(0);
+  });
+});
+
+describe('periodTotals', () => {
+  it('returns zeros for an empty window, never null', () => {
+    expect(periodTotals(db, 0, AT)).toEqual({ sets: 0, exercises: 0, muscles: 0 });
+  });
+
+  it('counts completed sets, distinct exercises and distinct primary muscles', () => {
+    const workoutId = startEmptyWorkout(db, 'Push', AT);
+    const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
+    for (const [weightKg, reps] of [[100, 5], [100, 5], [100, 3]] as Array<[number, number]>) {
+      const set = addSet(db, we.id, AT);
+      completeSet(db, set.id, { weightKg, reps }, AT);
+    }
+
+    expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 3, exercises: 1, muscles: 1 });
+  });
+
+  it('excludes a planned-but-not-performed set (completedAt IS NULL)', () => {
+    const workoutId = startEmptyWorkout(db, 'Push', AT);
+    const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
+    addSet(db, we.id, AT); // never completed
+
+    expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 0, exercises: 0, muscles: 0 });
+  });
+
+  it('counts the same exercise across two workouts once, distinctly', () => {
+    const w1 = startEmptyWorkout(db, 'A', AT);
+    const we1 = addExerciseToWorkout(db, w1, bench.id, AT);
+    const s1 = addSet(db, we1.id, AT);
+    completeSet(db, s1.id, { weightKg: 100, reps: 5 }, AT);
+
+    const w2 = startEmptyWorkout(db, 'B', AT + 500);
+    const we2 = addExerciseToWorkout(db, w2, bench.id, AT + 500);
+    const s2 = addSet(db, we2.id, AT + 500);
+    completeSet(db, s2.id, { weightKg: 100, reps: 5 }, AT + 500);
+
+    expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 2, exercises: 1, muscles: 1 });
+  });
+
+  it('includes a set exactly at sinceMs and one exactly at untilMs; excludes one a millisecond outside either edge', () => {
+    const workoutId = startEmptyWorkout(db, 'Push', AT);
+    const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
+
+    const atSince = addSet(db, we.id, AT);
+    completeSet(db, atSince.id, { weightKg: 100, reps: 5 }, AT);
+
+    const atUntil = addSet(db, we.id, AT);
+    completeSet(db, atUntil.id, { weightKg: 100, reps: 5 }, AT + 1000);
+
+    const beforeSince = addSet(db, we.id, AT);
+    completeSet(db, beforeSince.id, { weightKg: 100, reps: 5 }, AT - 1);
+
+    const afterUntil = addSet(db, we.id, AT);
+    completeSet(db, afterUntil.id, { weightKg: 100, reps: 5 }, AT + 1001);
+
+    expect(periodTotals(db, AT, AT + 1000)).toEqual({ sets: 2, exercises: 1, muscles: 1 });
+  });
+});
+
+describe('periodTotals tombstone filtering', () => {
+  function loggedSet() {
+    const workoutId = startEmptyWorkout(db, 'Push', AT);
+    const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
+    const set = addSet(db, we.id, AT);
+    completeSet(db, set.id, { weightKg: 100, reps: 5 }, AT);
+    return { workoutId, workoutExerciseId: we.id, setId: set.id };
+  }
+
+  it('excludes a soft-deleted set', () => {
+    const { setId } = loggedSet();
+    db.update(sets).set({ deletedAt: now() }).where(eq(sets.id, setId)).run();
+
+    expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 0, exercises: 0, muscles: 0 });
+  });
+
+  it('excludes a set whose workout_exercise is soft-deleted', () => {
+    const { workoutExerciseId } = loggedSet();
+    db.update(workoutExercises).set({ deletedAt: now() }).where(eq(workoutExercises.id, workoutExerciseId)).run();
+
+    expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 0, exercises: 0, muscles: 0 });
+  });
+
+  it('excludes a set whose exercise definition is soft-deleted', () => {
+    loggedSet();
+    db.update(exercises).set({ deletedAt: now() }).where(eq(exercises.id, bench.id)).run();
+
+    expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 0, exercises: 0, muscles: 0 });
+  });
+
+  it('excludes a set whose workout is soft-deleted', () => {
+    const { workoutId } = loggedSet();
+    db.update(workouts).set({ deletedAt: now() }).where(eq(workouts.id, workoutId)).run();
+
+    expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 0, exercises: 0, muscles: 0 });
   });
 });
