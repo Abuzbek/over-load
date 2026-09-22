@@ -15,6 +15,21 @@ function mix(from: string, to: string, t: number): string {
   return `#${channel(r1!, r2!)}${channel(g1!, g2!)}${channel(b1!, b2!)}`;
 }
 
+/**
+ * An untrained muscle has to be clearly visible against the card, or the body
+ * reads as an empty silhouette and you cannot tell the shapes apart. Derived
+ * from the theme rather than hard-coded so it follows a palette change.
+ */
+const UNTRAINED = mix(theme.colors.surface, theme.colors.textMuted, 0.22);
+const OUTLINE = mix(theme.colors.surface, theme.colors.textMuted, 0.5);
+
+/**
+ * The faintest a worked muscle may be. Without a floor, one set out of a
+ * twelve-set target is an 8% tint that is indistinguishable from untrained —
+ * "I trained this a bit" and "I never touched this" must not look the same.
+ */
+const MIN_WORKED = 0.28;
+
 type Props = {
   /** Sets per muscle, already windowed. */
   load: Map<string, number>;
@@ -31,10 +46,12 @@ type Props = {
  */
 export function MuscleHeatmap({ load, target }: Props) {
   const fillFor = (muscle: string | null) => {
+    // Regions with no muscle — head, hands, feet, joints — stay flat.
     if (!muscle) return theme.colors.surfaceRaised;
     const sets = load.get(muscle) ?? 0;
-    if (sets === 0) return theme.colors.surfaceRaised;
-    return mix(theme.colors.surfaceRaised, theme.colors.accent, Math.min(sets / target, 1));
+    if (sets === 0) return UNTRAINED;
+    const ratio = Math.min(sets / target, 1);
+    return mix(UNTRAINED, theme.colors.accent, Math.max(ratio, MIN_WORKED));
   };
 
   return (
@@ -47,8 +64,8 @@ export function MuscleHeatmap({ load, target }: Props) {
                 key={region.id}
                 d={region.path}
                 fill={fillFor(region.muscle)}
-                stroke={theme.colors.border}
-                strokeWidth={0.15}
+                stroke={OUTLINE}
+                strokeWidth={0.25}
               />
             ))}
           </Svg>
@@ -64,5 +81,5 @@ const styles = StyleSheet.create({
   column: { alignItems: 'center', gap: theme.spacing.xs },
   // Height drives the size and the 35x93 path box gives the width. Sizing by
   // width instead made each body two and a half screens tall.
-  body: { height: 260, aspectRatio: 35 / 93 },
+  body: { height: 300, aspectRatio: 35 / 93 },
 });
