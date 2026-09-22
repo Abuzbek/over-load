@@ -66,7 +66,7 @@ export function TrainScreen() {
 
   return (
     <Screen scroll safeTop>
-      <Text variant="display">Train</Text>
+      <Text variant="display">Workout</Text>
 
       <SectionLabel>Your routines</SectionLabel>
       {summaries.length === 0 ? (

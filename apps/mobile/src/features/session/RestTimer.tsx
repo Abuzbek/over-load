@@ -40,7 +40,10 @@ export function RestTimer({ startedAt, restSeconds, onDismiss }: Props) {
         accessibilityRole="button"
         onPress={onDismiss}
         accessibilityLabel="Skip rest"
-        hitSlop={theme.spacing.md}
+        // Literal, NOT theme.spacing: this is a touch target, not decoration.
+        // "Skip" is ~20pt tall, so 14 either side clears the 48pt floor — and
+        // shrinking the spacing scale must never quietly shrink a tap target.
+        hitSlop={14}
       >
         <Text variant="heading" color="accent">Skip</Text>
       </Pressable>

@@ -11,6 +11,6 @@ export const theme = {
     success: '#3DD68C',
     danger: '#E5484D',
   },
-  spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
-  radius: { sm: 8, md: 14, lg: 20, pill: 999 },
+  spacing: { xs: 4, sm: 6, md: 9, lg: 12, xl: 18, xxl: 24 },
+  radius: { sm: 6, md: 10, lg: 14, pill: 999 },
 };

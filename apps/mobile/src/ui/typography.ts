@@ -28,13 +28,13 @@ export type TextStyleObject = {
 };
 
 const BASE: Record<TextVariant, TextStyleObject> = {
-  display: { fontSize: 30, lineHeight: 34, fontWeight: '600', letterSpacing: -0.5 },
-  title: { fontSize: 20, lineHeight: 26, fontWeight: '600', letterSpacing: -0.2 },
-  heading: { fontSize: 17, lineHeight: 22, fontWeight: '600' },
-  body: { fontSize: 15, lineHeight: 20, fontWeight: '400' },
-  label: { fontSize: 12, lineHeight: 16, fontWeight: '600', letterSpacing: 1.4, textTransform: 'uppercase' },
-  caption: { fontSize: 12, lineHeight: 16, fontWeight: '400' },
-  numeric: { fontSize: 15, lineHeight: 20, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  display: { fontSize: 25, lineHeight: 29, fontWeight: '600', letterSpacing: -0.5 },
+  title: { fontSize: 18, lineHeight: 23, fontWeight: '600', letterSpacing: -0.2 },
+  heading: { fontSize: 15, lineHeight: 20, fontWeight: '600' },
+  body: { fontSize: 14, lineHeight: 19, fontWeight: '400' },
+  label: { fontSize: 11, lineHeight: 15, fontWeight: '600', letterSpacing: 1.4, textTransform: 'uppercase' },
+  caption: { fontSize: 11, lineHeight: 15, fontWeight: '400' },
+  numeric: { fontSize: 14, lineHeight: 19, fontWeight: '600', fontVariant: ['tabular-nums'] },
 };
 
 /**

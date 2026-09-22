@@ -20,5 +20,5 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     gap: theme.spacing.xs,
   },
-  value: { fontSize: 22, lineHeight: 28 },
+  value: { fontSize: 19, lineHeight: 24 },
 });
