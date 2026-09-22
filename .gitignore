@@ -12,3 +12,6 @@ apps/mobile/android/
 
 # Superpowers brainstorming companion (local mockups)
 .superpowers/
+
+# Third-party anatomy art dropped in for evaluation — not ours to ship.
+muscles_*-body.svg
