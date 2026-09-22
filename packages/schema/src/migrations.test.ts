@@ -58,6 +58,40 @@ describe('migrations', () => {
     close();
   });
 
+  // The test that was missing. An earlier attempt at 0005 dropped
+  // routines.program_id, which SQLite can only do by rebuilding the table.
+  // Drizzle wraps that in PRAGMA foreign_keys=OFF, but the pragma is a NO-OP
+  // inside a transaction and the migrator runs in one — so DROP TABLE
+  // `routines` failed on any database with rows pointing at it. Every existing
+  // migration test inserted into ONE table, so nothing ever referenced the
+  // table being rebuilt and they all passed while the app died on launch.
+  //
+  // This one inserts a referencing row on purpose.
+  it('preserves routines that other tables point at, across the program_days migration', () => {
+    // 4 == through 0004, i.e. programs exist but program_days does not.
+    const { db, close } = createDbAtMigration(4);
+
+    const routineId = newId();
+    const workoutId = newId();
+    db.run(sql`insert into routines (id, created_at, updated_at, name, order_index) values (${routineId}, 1, 1, 'Full body', 0)`);
+    // A logged workout pointing at that routine. This is the reference that
+    // makes a table rebuild fail under foreign keys.
+    db.run(sql`insert into workouts (id, created_at, updated_at, routine_id, name, started_at) values (${workoutId}, 1, 1, ${routineId}, 'Full body', 1)`);
+
+    applyFullMigrations(db);
+
+    const kept = db.run(sql`select count(*) from routines where id = ${routineId}`);
+    expect(kept).toBeDefined();
+    const rows = db.all<{ id: string; name: string }>(sql`select id, name from routines where id = ${routineId}`);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.name).toBe('Full body');
+
+    const linked = db.all<{ routine_id: string }>(sql`select routine_id from workouts where id = ${workoutId}`);
+    expect(linked[0]!.routine_id).toBe(routineId);
+
+    close();
+  });
+
   it('preserves an existing settings row across the distance_unit migration', () => {
     // 2 == through 0002_ancient_human_robot, i.e. app_settings with only
     // weight_unit, before distance_unit existed. Inserted via raw SQL

@@ -6,7 +6,7 @@ import m0001 from './0001_sturdy_demogoblin.sql';
 import m0002 from './0002_ancient_human_robot.sql';
 import m0003 from './0003_fair_lady_ursula.sql';
 import m0004 from './0004_purple_whizzer.sql';
-import m0005 from './0005_harsh_reaper.sql';
+import m0005 from './0005_far_vance_astro.sql';
 
   export default {
     journal,

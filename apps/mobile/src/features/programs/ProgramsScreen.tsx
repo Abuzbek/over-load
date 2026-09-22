@@ -1,5 +1,5 @@
 import { Lucide } from '@react-native-vector-icons/lucide';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { activateProgram, createProgram, listPrograms } from '../../data/programRepo';
@@ -50,6 +50,12 @@ export function ProgramsScreen() {
               title={active.program.name}
               subtitle={`${active.trainingDays} ${active.trainingDays === 1 ? 'training day' : 'training days'}`}
               right={<Lucide name="check" size={18} color={theme.colors.accent} />}
+              onPress={() =>
+                router.push({
+                  pathname: '/programs/[id]',
+                  params: { id: active.program.id, name: active.program.name },
+                })
+              }
             />
           </Card>
         ) : (

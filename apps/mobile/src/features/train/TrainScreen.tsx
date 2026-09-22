@@ -75,12 +75,24 @@ export function TrainScreen() {
       <Card style={styles.programRows}>
         <ListRow
           title={activeProgram?.name ?? 'No active program'}
-          subtitle="Only one program is active at a time"
+          subtitle="This week's schedule"
+          onPress={() =>
+            activeProgram
+              ? router.push({
+                  pathname: '/programs/[id]',
+                  params: { id: activeProgram.id, name: activeProgram.name },
+                })
+              : router.push('/programs')
+          }
+        />
+        <ListRow
+          title="Program library"
+          subtitle="Archived programs"
           onPress={() => router.push('/programs')}
         />
       </Card>
 
-      <SectionLabel>Your routines</SectionLabel>
+      <SectionLabel>Workout library</SectionLabel>
       {summaries.length === 0 ? (
         <EmptyState
           title="No routines yet"

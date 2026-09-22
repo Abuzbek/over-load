@@ -46,6 +46,10 @@ export function createRoutine(db: Db, name: string): Routine {
     name,
     notes: null,
     orderIndex: (highest?.maxIndex ?? -1) + 1,
+    // Always null: a workout belongs to the library, not to a program. The
+    // column survives only because dropping it needs a table rebuild that
+    // fails under foreign keys — see the comment on the schema.
+    programId: null,
   };
   db.insert(routines).values(row).run();
   return row;

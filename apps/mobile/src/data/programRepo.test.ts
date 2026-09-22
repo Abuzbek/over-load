@@ -2,6 +2,7 @@ import { appSettings, newId, now, programDays, programs, routines } from '@overl
 import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createRoutine } from './routineRepo';
 import {
   activateProgram,
   createProgram,
@@ -248,5 +249,26 @@ describe('appSettings has no row yet', () => {
   it('does not insert a settings row on a plain read', () => {
     getActiveProgram(db);
     expect(db.select().from(appSettings).all()).toHaveLength(0);
+  });
+
+});
+
+describe('setProgramDay on a program with no day rows', () => {
+  // Regression. createProgram writes all seven days, but a program created
+  // before program_days existed has none, and a bare UPDATE against a missing
+  // row silently does nothing. On a device this looked like tapping a day
+  // having no effect at all, with no error anywhere.
+  it('inserts the day rather than silently doing nothing', () => {
+    const program = createProgram(db, { name: 'Legacy' }, now());
+    // Simulate the pre-migration shape.
+    db.delete(programDays).where(eq(programDays.programId, program.id)).run();
+    expect(db.select().from(programDays).where(eq(programDays.programId, program.id)).all()).toHaveLength(0);
+
+    const workout = createRoutine(db, 'Full body');
+    setProgramDay(db, program.id, 0, workout.id, now());
+
+    const week = getProgramWeek(db, program.id);
+    expect(week[0]!.routine?.id).toBe(workout.id);
+    expect(week.filter((d) => d.routine !== null)).toHaveLength(1);
   });
 });

@@ -81,9 +81,30 @@ export function createProgram(
  * created in createProgram are never deleted.
  */
 export function setProgramDay(db: Db, programId: string, weekday: number, routineId: string | null, at: number): void {
-  db.update(programDays)
-    .set({ routineId, updatedAt: at })
-    .where(and(eq(programDays.programId, programId), eq(programDays.weekday, weekday)))
+  // Upsert, not update. createProgram writes all seven days, but programs
+  // created before program_days existed have none — and a bare UPDATE against
+  // a missing row silently does nothing, so the day would never change and
+  // nothing would report an error. Found exactly that way: on a device, tapping
+  // a day did nothing at all.
+  const existing = db
+    .select({ id: programDays.id })
+    .from(programDays)
+    .where(
+      and(
+        eq(programDays.programId, programId),
+        eq(programDays.weekday, weekday),
+        isNull(programDays.deletedAt),
+      ),
+    )
+    .get();
+
+  if (existing) {
+    db.update(programDays).set({ routineId, updatedAt: at }).where(eq(programDays.id, existing.id)).run();
+    return;
+  }
+
+  db.insert(programDays)
+    .values({ id: newId(), createdAt: at, updatedAt: at, deletedAt: null, programId, weekday, routineId })
     .run();
 }
 

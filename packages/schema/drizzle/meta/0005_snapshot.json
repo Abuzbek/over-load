@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "f1e39c6e-236f-49d7-aad2-d49289c30de9",
+  "id": "47874b49-baf9-4f2b-9f85-47f362a842a3",
   "prevId": "3e2c697f-c958-4760-9ad7-097135542742",
   "tables": {
     "app_settings": {
@@ -606,10 +606,31 @@
           "notNull": true,
           "autoincrement": false,
           "default": 0
+        },
+        "program_id": {
+          "name": "program_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "routines_program_id_programs_id_fk": {
+          "name": "routines_program_id_programs_id_fk",
+          "tableFrom": "routines",
+          "tableTo": "programs",
+          "columnsFrom": [
+            "program_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}

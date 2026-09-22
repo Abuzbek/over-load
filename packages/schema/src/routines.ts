@@ -1,5 +1,6 @@
 import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { exercises } from './exercises';
+import { programs } from './programs';
 import { syncColumns } from './sync';
 
 export const SET_TYPES = ['normal', 'warmup', 'drop', 'failure'] as const;
@@ -10,6 +11,24 @@ export const routines = sqliteTable('routines', {
   name: text('name').notNull(),
   notes: text('notes'),
   orderIndex: integer('order_index').notNull().default(0),
+  /**
+   * Unused, and deliberately NOT dropped.
+   *
+   * A program does not own its workouts: the same workout is assigned to
+   * several weekdays through `program_days`, which is what makes
+   * "Mon/Wed/Fri = Full body" one workout rather than three.
+   *
+   * Dropping a column in SQLite means rebuilding the table, and `routines` is
+   * referenced by `workouts`, `routine_exercises` and `program_days`. Drizzle
+   * wraps the rebuild in `PRAGMA foreign_keys=OFF`, but that pragma is a NO-OP
+   * inside a transaction and the migrator runs in one — so the DROP fails
+   * against any database that actually holds data. It did, on a device; only
+   * the backup-and-restore path saved it. Tests missed it because their
+   * databases are empty at that migration, so nothing referenced the table.
+   *
+   * A dead nullable column costs nothing. Leave it.
+   */
+  programId: text('program_id').references(() => programs.id),
 });
 
 export const routineExercises = sqliteTable(

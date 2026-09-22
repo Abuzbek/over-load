@@ -56,19 +56,52 @@ profile and security fields as inert placeholders for exactly these.
 Note the profile questions are the same fields already stubbed in `AccountScreen`,
 plus **daily activity level**, which is new.
 
-## Programs
+## Programs — corrected model
 
-A **program** is a named, ordered collection of workouts. It maps onto today's
-`routines` table: what this document calls a *workout* is what the code currently
-calls a **routine**, and a *program* is a new parent above it.
+**There is no "routine".** The owner was explicit: the concept does not exist in the
+product. Two things exist.
 
-### The rule being built now
+**A workout** is a named set of exercises — "Full body", "Upper", "Push". It stands on
+its own and lives in the **workout library**.
 
-**Exactly one program is active at a time.** Any number may be archived. Activating
-an archived program deactivates the current one — there is never a moment with two
-active or zero active once a program exists.
+**A program is a week.** It assigns a workout to each of the seven weekdays, or marks
+the day as rest:
 
-This is the slice approved for immediate build. See "Scope of the current build".
+```
+"Beginner full body"      Mon Full body · Tue rest · Wed Full body · Thu rest ·
+                          Fri Full body · Sat rest · Sun rest
+"Intermediate upper/lower" 4 days a week, 3, 5 — whatever the week needs
+```
+
+Two consequences that the previous version of this document got wrong:
+
+1. **A workout is reused across days, not owned by one.** Mon/Wed/Fri all point at the
+   same "Full body" workout. Editing it changes all three, which is the point. A
+   program→workout link is therefore a **many-to-many through the weekday**, not a
+   parent column on the workout.
+2. **The week is the program.** A program with no days assigned is just a name.
+
+**The two libraries:**
+
+| Library | What it holds |
+|---|---|
+| **Program library** | Archived programs — every program that is not the active one. |
+| **Workout library** | Standalone workouts. **Starts empty.** "Create workout" adds a one-day workout to it. |
+
+### Naming, decided
+
+The table called `routines` **is** the workout template; `routine_exercises` and
+`routine_sets` are its contents. The table called `workouts` is a **logged session**.
+
+The product vocabulary is now "workout" for both the template and the session, which
+is how lifters talk and is fine in the UI — "Push Day" the plan and "Push Day" you did
+on Monday.
+
+**The database keeps the `routines` name for now.** Renaming it to
+`workout_templates` is a migration plus a rename across every repository, screen and
+test, for no behavioural gain, and the risk of a half-done rename is worse than the
+confusion. Recorded here so the next person reads `routines` as "workout template"
+rather than as a second concept. Revisit if the codebase grows a second reason to.
 
 ### Creation paths (future)
 
@@ -81,7 +114,7 @@ Choosing to create a program offers three routes:
 | Primary goal | muscle hypertrophy · muscle strength · both |
 | Extra focus | **5 focus points total**, spent across muscles, **max 2 per muscle** |
 | Deprioritise | up to **5** muscles |
-| Times per week | a count |
+| Times per week | a count — this sets how many of the seven days get a workout |
 | Session length | ≤20min · 20–40 · 40–60 · 60–90 · 90–120 · >120 |
 | Structure | full body · upper/lower · split |
 | Deload week | on/off |
@@ -90,18 +123,17 @@ Choosing to create a program offers three routes:
 Then the generated result is reviewed and adjusted: exercises, sets, preferred
 weight, and RIR per set.
 
-**2. From scratch.** Just the program details and settings; the user adds workouts
-and exercises themselves.
+**2. From scratch.** Just the program details; the user fills the week themselves from
+the workout library.
 
-**3. Import from file.** Upload a spreadsheet (typically `.xlsx`) and generate the
-program from it.
+**3. Import from file.** Upload a spreadsheet (typically `.xlsx`) and generate from it.
 
-**On smart generation's real cost:** it is a programming engine, not a form. Turning
-a goal, a weekly frequency, a session-length band and a focus budget into a sensible
-split — choosing exercises per muscle, distributing sets, sequencing days — is the
-substantive product here, and it needs the muscle taxonomy work too (this app has
-17 primary muscles, coarser than the reference designs assume). The questionnaire is
-a day; the generator is not.
+**On smart generation's real cost:** it is a programming engine, not a form. Turning a
+goal, a weekly frequency, a session-length band and a focus budget into a sensible
+week — choosing exercises per muscle, distributing sets, sequencing days — is the
+substantive product here, and it needs the muscle taxonomy work too (this app has 17
+primary muscles, coarser than the reference designs assume). The questionnaire is a
+day; the generator is not.
 
 **On import:** parsing arbitrary user spreadsheets is open-ended. It needs a defined
 template before it is buildable as anything other than a guess.
@@ -110,8 +142,8 @@ template before it is buildable as anything other than a guess.
 
 **In scope — the single active program rule, and nothing else:**
 
-- A `programs` table: name, icon, icon colour, archived/active state, ordering.
-- Workouts (today's `routines`) belong to a program.
+- A `programs` table: name, icon, icon colour, ordering. **Built.**
+- A `program_days` table: program × weekday → workout, or rest. **Next.**
 - Exactly one active program, enforced in the repository, not by UI convention.
 - Activating an archived program deactivates the previously active one, in one
   transaction — a failure must not leave zero or two active.
@@ -140,11 +172,11 @@ Confirm that holds before shipping.
 
 ## Open questions
 
-1. **Naming.** The code says "routine"; this document says "workout" for the same
-   thing, and "workout" is *also* the word for a logged session (`workouts` table).
-   That collision needs resolving before the UI adopts the new vocabulary, or the
-   codebase ends up with two meanings for one word.
-2. **Does a program own its workouts exclusively**, or can a workout be shared
-   between programs? Exclusive is simpler and assumed here.
-3. **Daily activity level** is a new profile field with no consumer yet; it presumably
+1. ~~Naming~~ and ~~does a program own its workouts~~ — both resolved above. A workout
+   is shared, and the `routines` table keeps its name while meaning "workout template".
+2. **What happens to a week when a workout in it is deleted?** The day should fall back
+   to rest rather than dangle. Needs deciding when deletion exists in the UI.
+3. **Does the week start on Monday?** Assumed yes, per the owner's example. It is a
+   display concern, not a storage one — days are stored by index.
+4. **Daily activity level** is a new profile field with no consumer yet; it presumably
    feeds smart generation.
