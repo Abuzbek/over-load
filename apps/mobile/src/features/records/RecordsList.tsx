@@ -86,7 +86,7 @@ function ExerciseRecordsCard({ section, unit }: { section: Section; unit: Unit }
         {section.data.map((record) => (
           // A bare wrapper, not a style prop on StatTile — the component takes
           // no style override, and shouldn't need one just to sit in a grid.
-          // flexBasis + flexGrow (not a fixed percentage width) is what makes
+          // flexBasis + flexGrow (not a fixed `width`) is what makes
           // this work for both shapes this screen has to render: four tiles
           // wrap into a 2x2 grid and grow to fill each row exactly, while a
           // lone tile (a duration-only exercise) has no sibling to share the
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   list: { gap: theme.spacing.md },
   // flexWrap turns this into a 2-per-row grid once four tiles no longer fit
   // one line — see the comment on tileWrap for why each tile is sized with
-  // flexBasis/flexGrow rather than a fixed percentage width.
+  // flexBasis/flexGrow rather than a fixed `width`.
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
   tileWrap: { flexGrow: 1, flexBasis: '47%' },
 });

@@ -58,6 +58,7 @@ export function ExerciseList({ onSelect }: Props) {
         data={exercises}
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.emptyContent}
         ListEmptyComponent={
           <EmptyState title="No exercises match" body="Try a different name or equipment." />
         }
@@ -194,6 +195,10 @@ function NewExerciseModal({ visible, onClose, onCreated }: NewExerciseModalProps
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   newExerciseContainer: { paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.md },
+  // Matches HistoryList/Screen: without flexGrow the EmptyState (itself
+  // flex: 1) top-aligns instead of centering, since a FlatList's content
+  // container only grows to fill the list when told to.
+  emptyContent: { flexGrow: 1 },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -223,5 +228,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
   },
   chipSelected: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  chipLabelSelected: { color: '#FFFFFF', fontWeight: '600' },
+  chipLabelSelected: { color: theme.colors.onAccent, fontWeight: '600' },
 });

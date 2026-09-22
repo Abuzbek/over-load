@@ -114,11 +114,13 @@ consumed by the in-progress bar.
 - **CI runs install → typecheck → test → bundle** on every push to `main` and every PR.
   The bundle step is not decoration: two defects during the build made the app fail to
   bundle while the suite stayed green.
-- **`headerShown: false` on the `(tabs)` Stack.Screen is load-bearing, not cosmetic.**
-  Every tab renders its own serif `display` title; without that flag React Navigation's
-  native header draws the same title again underneath it. It has already been removed
-  once by accident during a later task — see the guard comment at the line in
-  `apps/mobile/app/_layout.tsx` before touching it again.
+- **Two separate `headerShown: false` flags are both load-bearing, not cosmetic.**
+  `apps/mobile/app/_layout.tsx`'s root `Stack.Screen` for `(tabs)` hides the outer
+  stack's native header so it doesn't draw over the tab navigator. `apps/mobile/app/
+  (tabs)/_layout.tsx`'s `screenOptions` hides the *tabs'* native header so it doesn't
+  draw the same serif `display` title a second time underneath each screen's own —
+  the missing one of these was the Task 16 defect (`ef2ba53`). Both have guard
+  comments at their line; read them before touching either.
 - **`Screen`'s `safeTop` prop is opt-in, not automatic.** Only the four tab screens need
   it — `headerShown: false` means nothing else reserves the status-bar area for them.
   Screens pushed on the stack (routine builder, workout detail) keep a real native header,

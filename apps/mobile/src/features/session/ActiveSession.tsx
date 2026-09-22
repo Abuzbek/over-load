@@ -27,9 +27,11 @@ export function ActiveSession({ workoutId }: Props) {
   // typed weight) at mount, so an already-rendered box does NOT reconvert if
   // the unit changes underneath it — a box showing "60" typed as kg would
   // still submit as toStorageKg(60, 'lb') if the unit flipped to lb without
-  // remounting the row. Unreachable today, since Settings is only linked from
-  // Home and reaching it pops this screen off the stack, so there is nothing
-  // to fix yet — but the next person who links Settings from within a session
+  // remounting the row. Not reachable today: every route into this screen —
+  // including the persistent in-progress bar (InProgressBar.tsx) — is a
+  // `router.push`, which always produces a fresh mount, so there is no live
+  // session whose SetRows could observe a unit change out from under them.
+  // The next person who adds a way to reach a session WITHOUT a fresh push
   // needs to know this trap exists before doing that.
   const [, setVersion] = useState(0);
   const detail = getWorkoutDetail(db, workoutId);

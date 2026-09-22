@@ -54,6 +54,7 @@ export function RoutineList() {
       <FlatList
         data={routines}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.emptyContent}
         ListEmptyComponent={
           <EmptyState title="No routines yet" body="Create one and it will show up here." />
         }
@@ -106,6 +107,10 @@ export function RoutineList() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
+  // Matches HistoryList/Screen: without flexGrow the EmptyState (itself
+  // flex: 1) top-aligns instead of centering, since a FlatList's content
+  // container only grows to fill the list when told to.
+  emptyContent: { flexGrow: 1 },
   footer: { padding: theme.spacing.lg },
   backdrop: {
     flex: 1,
