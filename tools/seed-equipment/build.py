@@ -188,6 +188,58 @@ def satisfies(item: dict) -> list:
     return []
 
 
+# Pre-fill presets offered when you add a gym. Membership is by group, with a
+# few explicit names for the small ones. These are starting points the user
+# edits afterwards, not claims about any real gym.
+PRESETS = [
+    ('everything', 'Everything Gym', {'all': True}),
+    ('commercial', 'Commercial Gym', {'categories': [
+        'free_weights', 'loaded_bars', 'fixed_weight_bars', 'bands_ropes', 'body_weights',
+        'benches_racks', 'accessories_functional', 'cable_machines',
+        'pin_loaded_machines', 'plate_loaded_machines', 'cardio',
+    ], 'exclude': [
+        'Strongman Log', 'Yoke', 'Sled', 'Axle Bar', 'Marrs Bar', 'Buffalo Bar',
+        'Cambered Squat Bar', 'Cambered Bench Press Bar',
+    ]}),
+    ('warehouse', 'Warehouse Gym', {'categories': [
+        'free_weights', 'loaded_bars', 'fixed_weight_bars', 'bands_ropes', 'body_weights',
+        'benches_racks', 'accessories_functional', 'loaded_accessories',
+        'plate_loaded_machines',
+    ]}),
+    ('local', 'Local Gym', {'categories': [
+        'free_weights', 'loaded_bars', 'bands_ropes', 'body_weights', 'benches_racks',
+        'accessories_functional', 'cable_machines', 'pin_loaded_machines', 'cardio',
+    ], 'exclude': ['Strongman Log', 'Yoke', 'Sled', 'Axle Bar', 'Marrs Bar']}),
+    ('garage', 'Garage Gym', {'names': [
+        'Barbell', 'Weight Plates', 'Bumper Plates', 'Dumbbells', 'Kettlebells', 'EZ Bar',
+        'Trap Bar', 'Power Rack', 'Squat Stand', 'Flat Bench', 'Adjustable Bench',
+        'Straight Pull-Up Bar', 'Dip Bars', 'Long Resistance Bands', 'Short Resistance Band',
+        'Gymnastics Rings', 'Ab Wheel', 'Jump Rope', 'Weighted Vest', 'Ankle Weights',
+        'Dip/Pull-Up/Belt Squat Belt', 'Farmer\u2019s Handles', 'Sled', 'Landmine Attachment/Wall Corner',
+        'Plyometric Boxes', 'Slant Board', 'Yoga Blocks',
+    ]}),
+    ('home', 'Home Gym', {'names': [
+        'Dumbbells', 'Kettlebells', 'Long Resistance Bands', 'Short Resistance Band',
+        'Adjustable Bench', 'Flat Bench', 'Straight Pull-Up Bar', 'Push-Up Handles',
+        'Ab Wheel', 'Jump Rope', 'Yoga Blocks', 'Stability Ball', 'Bosu Ball',
+        'Suspension Trainer', 'Ankle Weights', 'Weighted Vest', 'Medicine Ball',
+        'Bodyweight Only', 'Chair', 'Bed', 'Couch',
+    ]}),
+    ('blank', 'Start From Blank Slate', {'names': []}),
+]
+
+
+def preset_members(rule, items):
+    if rule.get('all'):
+        return [i['name'] for i in items]
+    if 'names' in rule:
+        known = {i['name'] for i in items}
+        return [n for n in rule['names'] if n in known]
+    exclude = set(rule.get('exclude', []))
+    cats = set(rule['categories'])
+    return [i['name'] for i in items if i['category'] in cats and i['name'] not in exclude]
+
+
 def main():
     rows = []
     with open('equipments.csv', encoding='utf-8-sig') as f:
@@ -203,8 +255,13 @@ def main():
         items.append({k: v for k, v in item.items() if v is not None})
 
     items.sort(key=lambda i: (i['category'], i['name']))
+    presets = [
+        {'key': key, 'name': name, 'items': preset_members(rule, items)}
+        for key, name, rule in PRESETS
+    ]
+
     with open('tools/seed-equipment/equipment.json', 'w', encoding='utf-8') as f:
-        json.dump({'items': items}, f, ensure_ascii=False, indent=2)
+        json.dump({'items': items, 'presets': presets}, f, ensure_ascii=False, indent=2)
         f.write('\n')
     for i in items:
         assert i['kind'] == KIND_BY_CATEGORY[i['category']], i

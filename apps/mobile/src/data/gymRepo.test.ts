@@ -5,6 +5,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { listExercises } from './exerciseRepo';
 import {
   activateGym,
+  countOwnedEquipment,
+  createGymFromPreset,
+  duplicateGym,
   availableExerciseEquipment,
   canDoWithEquipment,
   createGym,
@@ -311,5 +314,66 @@ describe('setGymEquipmentOwnedBulk', () => {
     const gym = createGym(db, 'Home', now());
     setGymEquipmentOwnedBulk(db, gym.id, [], true, now());
     expect(listGymEquipment(db, gym.id).filter((r) => r.owned)).toHaveLength(0);
+  });
+});
+
+describe('createGymFromPreset', () => {
+  it('stocks the gym from the named list', () => {
+    const gym = createGymFromPreset(db, 'Home', 'house', ['Dumbbells', 'Flat Bench'], now());
+    expect(listGymEquipment(db, gym.id).filter((r) => r.owned).map((r) => r.equipment.name).sort())
+      .toEqual(['Dumbbells', 'Flat Bench']);
+    expect(gym.icon).toBe('house');
+  });
+
+  it('a blank preset leaves it empty', () => {
+    const gym = createGymFromPreset(db, 'Blank', 'house', [], now());
+    expect(listGymEquipment(db, gym.id).filter((r) => r.owned)).toHaveLength(0);
+  });
+
+  // Presets name equipment; a name the catalogue does not have must be skipped
+  // rather than taking the whole creation down with it.
+  it('ignores names that are not in the catalogue', () => {
+    const gym = createGymFromPreset(db, 'Home', 'house', ['Dumbbells', 'Trampoline'], now());
+    expect(listGymEquipment(db, gym.id).filter((r) => r.owned)).toHaveLength(1);
+  });
+});
+
+describe('duplicateGym', () => {
+  it('copies the icon and everything owned, with THIS gym’s weights', () => {
+    const source = createGymFromPreset(db, 'Home', 'house', ['Dumbbells'], now());
+    setGymEquipmentConfig(db, source.id, equipmentId('Dumbbells'), { kind: 'list', values: [{ kg: 42 }] }, now());
+
+    const copy = duplicateGym(db, source.id, 'Home copy', now())!;
+
+    expect(copy.icon).toBe('house');
+    const row = listGymEquipment(db, copy.id).find((r) => r.equipment.name === 'Dumbbells')!;
+    expect(row.owned).toBe(true);
+    // The source's weights, not the catalogue defaults.
+    expect(row.config).toEqual({ kind: 'list', values: [{ kg: 42 }] });
+  });
+
+  it('leaves the original alone', () => {
+    const source = createGymFromPreset(db, 'Home', 'house', ['Dumbbells'], now());
+    const copy = duplicateGym(db, source.id, 'Home copy', now())!;
+
+    setGymEquipmentOwned(db, copy.id, equipmentId('Dumbbells'), false, now());
+
+    expect(listGymEquipment(db, source.id).find((r) => r.equipment.name === 'Dumbbells')!.owned).toBe(true);
+  });
+
+  it('returns undefined for a gym that is not there', () => {
+    expect(duplicateGym(db, 'nope', 'x', now())).toBeUndefined();
+  });
+});
+
+describe('countOwnedEquipment', () => {
+  it('counts per gym, ignoring unticked items', () => {
+    const a = createGymFromPreset(db, 'A', 'house', ['Dumbbells', 'Barbell'], now());
+    const b = createGymFromPreset(db, 'B', 'house', ['Flat Bench'], now());
+    setGymEquipmentOwned(db, a.id, equipmentId('Barbell'), false, now());
+
+    const counts = countOwnedEquipment(db);
+    expect(counts.get(a.id)).toBe(1);
+    expect(counts.get(b.id)).toBe(1);
   });
 });

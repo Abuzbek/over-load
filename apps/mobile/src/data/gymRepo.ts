@@ -54,7 +54,7 @@ export function activateGym(db: Db, gymId: string, at: number): void {
   db.insert(appSettings).values({ id: newId(), activeGymId: gymId, createdAt: at, updatedAt: at }).run();
 }
 
-export function createGym(db: Db, name: string, at: number): Gym {
+export function createGym(db: Db, name: string, at: number, icon = 'dumbbell'): Gym {
   const highest = db.select({ maxIndex: max(gyms.orderIndex) }).from(gyms).get();
   const row = {
     id: newId(),
@@ -62,6 +62,7 @@ export function createGym(db: Db, name: string, at: number): Gym {
     updatedAt: at,
     deletedAt: null,
     name,
+    icon,
     // Dead column, kept because dropping it would rebuild a referenced table.
     equipment: [],
     // max + 1 over ALL rows including tombstoned, per the ordering invariant.
@@ -218,6 +219,10 @@ export function availableExerciseEquipment(db: Db, gymId: string): string[] {
   return [...new Set(rows.flatMap((r) => r.satisfies))];
 }
 
+export function setGymIcon(db: Db, gymId: string, icon: string, at: number): void {
+  db.update(gyms).set({ icon, updatedAt: at }).where(eq(gyms.id, gymId)).run();
+}
+
 export function renameGym(db: Db, gymId: string, name: string, at: number): void {
   db.update(gyms).set({ name, updatedAt: at }).where(eq(gyms.id, gymId)).run();
 }
@@ -243,6 +248,83 @@ export function removeGym(db: Db, gymId: string, at: number): void {
     .set({ activeGymId: next?.id ?? null, updatedAt: at })
     .where(eq(appSettings.id, row.id))
     .run();
+}
+
+/**
+ * Creates a gym already stocked from a named preset.
+ *
+ * The preset is a list of equipment NAMES, not ids: the seed has no stable ids,
+ * and matching by name is what survives the catalogue being re-seeded.
+ */
+export function createGymFromPreset(
+  db: Db,
+  name: string,
+  icon: string,
+  equipmentNames: string[],
+  at: number,
+): Gym {
+  const gym = createGym(db, name, at, icon);
+  if (equipmentNames.length === 0) return gym;
+
+  const items = db
+    .select()
+    .from(equipment)
+    .where(and(inArray(equipment.name, equipmentNames), isNull(equipment.deletedAt)))
+    .all();
+  if (items.length === 0) return gym;
+
+  db.insert(gymEquipment)
+    .values(
+      items.map((item) => ({
+        id: newId(), createdAt: at, updatedAt: at, deletedAt: null,
+        gymId: gym.id, equipmentId: item.id, config: item.defaults,
+      })),
+    )
+    .run();
+  return gym;
+}
+
+/**
+ * Copies a gym, its icon and everything it owns — including the weights that
+ * gym has, not the catalogue defaults. Two branches of the same chain differ by
+ * a few machines, and re-ticking 200 boxes to express that is absurd.
+ */
+export function duplicateGym(db: Db, gymId: string, name: string, at: number): Gym | undefined {
+  const source = db.select().from(gyms).where(and(eq(gyms.id, gymId), isNull(gyms.deletedAt))).get();
+  if (!source) return undefined;
+
+  const copy = createGym(db, name, at, source.icon);
+  const owned = db
+    .select()
+    .from(gymEquipment)
+    .where(and(eq(gymEquipment.gymId, gymId), isNull(gymEquipment.deletedAt)))
+    .all();
+
+  if (owned.length > 0) {
+    db.insert(gymEquipment)
+      .values(
+        owned.map((row) => ({
+          id: newId(), createdAt: at, updatedAt: at, deletedAt: null,
+          gymId: copy.id, equipmentId: row.equipmentId, config: row.config,
+        })),
+      )
+      .run();
+  }
+  return copy;
+}
+
+/** How many pieces each gym owns, for the profile list. */
+export function countOwnedEquipment(db: Db): Map<string, number> {
+  const rows = db
+    .select({ gymId: gymEquipment.gymId })
+    .from(gymEquipment)
+    .innerJoin(equipment, eq(equipment.id, gymEquipment.equipmentId))
+    .where(and(isNull(gymEquipment.deletedAt), isNull(equipment.deletedAt)))
+    .all();
+
+  const counts = new Map<string, number>();
+  for (const { gymId } of rows) counts.set(gymId, (counts.get(gymId) ?? 0) + 1);
+  return counts;
 }
 
 /**

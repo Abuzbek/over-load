@@ -1,11 +1,11 @@
 import { Stack } from 'expo-router';
-import { GymScreen } from '../../src/features/settings/GymScreen';
+import { GymProfilesScreen } from '../../src/features/settings/GymProfilesScreen';
 
-export default function GymRoute() {
+export default function GymProfilesRoute() {
   return (
     <>
-      <Stack.Screen options={{ title: 'Gym' }} />
-      <GymScreen />
+      <Stack.Screen options={{ title: 'Gym Profiles' }} />
+      <GymProfilesScreen />
     </>
   );
 }

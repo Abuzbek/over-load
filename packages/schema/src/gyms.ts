@@ -8,6 +8,8 @@ import { syncColumns } from './sync';
 export const gyms = sqliteTable('gyms', {
   ...syncColumns,
   name: text('name').notNull(),
+  /** A lucide icon name, chosen when the gym is created. */
+  icon: text('icon').notNull().default('dumbbell'),
   /**
    * Dead since the real catalogue landed: superseded by the `gym_equipment`
    * table. NOT dropped — dropping a column rebuilds the table, and `gyms` is
