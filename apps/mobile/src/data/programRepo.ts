@@ -3,9 +3,12 @@ import { and, eq, inArray, isNull, max } from 'drizzle-orm';
 
 export type ProgramSummary = { program: Program; trainingDays: number; isActive: boolean };
 
-export type ProgramDay = { weekday: number; routine: Routine | null };
+export type ProgramDay = { dayIndex: number; routine: Routine | null };
 
-const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
+/** A new program starts as a week's worth of days; the cycle is not fixed to it. */
+export const DEFAULT_DAY_COUNT = 7;
+/** A guard rail, not a product rule. Cycles this long are not a real use case. */
+export const MAX_DAY_COUNT = 100;
 
 function getSettingsRow(db: Db) {
   return db.select().from(appSettings).where(isNull(appSettings.deletedAt)).get();
@@ -33,7 +36,7 @@ export function getActiveProgram(db: Db): Program | undefined {
 }
 
 /**
- * A program's week always has exactly seven day rows, created here in the
+ * A new program starts with DEFAULT_DAY_COUNT day rows, created here in the
  * same transaction as the program itself. Rest is represented by a null
  * routineId on a row that exists, never by a missing row — see
  * setProgramDay.
@@ -59,13 +62,13 @@ export function createProgram(
     tx.insert(programs).values(row).run();
     tx.insert(programDays)
       .values(
-        WEEKDAYS.map((weekday) => ({
+        Array.from({ length: DEFAULT_DAY_COUNT }, (_, dayIndex) => ({
           id: newId(),
           createdAt: at,
           updatedAt: at,
           deletedAt: null,
           programId: row.id,
-          weekday,
+          dayIndex,
           routineId: null,
         })),
       )
@@ -76,12 +79,12 @@ export function createProgram(
 }
 
 /**
- * Assigns (or clears, with routineId null) the workout for one weekday of a
- * program's week. Always an update to the existing row — the seven rows
- * created in createProgram are never deleted.
+ * Assigns (or clears, with routineId null) the workout for one day of a
+ * program's cycle. Always an update to the existing row — day rows created
+ * by createProgram or addProgramDay are never deleted.
  */
-export function setProgramDay(db: Db, programId: string, weekday: number, routineId: string | null, at: number): void {
-  // Upsert, not update. createProgram writes all seven days, but programs
+export function setProgramDay(db: Db, programId: string, dayIndex: number, routineId: string | null, at: number): void {
+  // Upsert, not update. createProgram writes its days up front, but programs
   // created before program_days existed have none — and a bare UPDATE against
   // a missing row silently does nothing, so the day would never change and
   // nothing would report an error. Found exactly that way: on a device, tapping
@@ -92,7 +95,7 @@ export function setProgramDay(db: Db, programId: string, weekday: number, routin
     .where(
       and(
         eq(programDays.programId, programId),
-        eq(programDays.weekday, weekday),
+        eq(programDays.dayIndex, dayIndex),
         isNull(programDays.deletedAt),
       ),
     )
@@ -104,31 +107,31 @@ export function setProgramDay(db: Db, programId: string, weekday: number, routin
   }
 
   db.insert(programDays)
-    .values({ id: newId(), createdAt: at, updatedAt: at, deletedAt: null, programId, weekday, routineId })
+    .values({ id: newId(), createdAt: at, updatedAt: at, deletedAt: null, programId, dayIndex, routineId })
     .run();
 }
 
 /**
- * Always returns exactly 7 entries in weekday order (0 = Monday … 6 =
- * Sunday), even if a day row is missing or the program itself is
- * tombstoned — callers rendering a week must never get a short array.
+ * The program's day cycle in order — however many days it has, which is not
+ * fixed at seven. An unknown or tombstoned program reads as no days at all.
  *
  * Three joined levels, each with its own tombstone filter: programs ->
  * program_days -> routines. A tombstoned program, day row, or workout all
  * read as rest rather than as a dangling reference.
  */
-export function getProgramWeek(db: Db, programId: string): ProgramDay[] {
+export function getProgramDays(db: Db, programId: string): ProgramDay[] {
   const program = db
     .select()
     .from(programs)
     .where(and(eq(programs.id, programId), isNull(programs.deletedAt)))
     .get();
-  if (!program) return WEEKDAYS.map((weekday) => ({ weekday, routine: null }));
+  if (!program) return [];
 
   const days = db
     .select()
     .from(programDays)
     .where(and(eq(programDays.programId, programId), isNull(programDays.deletedAt)))
+    .orderBy(programDays.dayIndex)
     .all();
 
   const routineIds = days.map((d) => d.routineId).filter((id): id is string => id !== null);
@@ -137,13 +140,32 @@ export function getProgramWeek(db: Db, programId: string): ProgramDay[] {
     : [];
   const routineById = new Map(liveRoutines.map((r) => [r.id, r]));
 
-  const dayByWeekday = new Map(days.map((d) => [d.weekday, d]));
+  return days.map((day) => ({
+    dayIndex: day.dayIndex,
+    routine: day.routineId ? (routineById.get(day.routineId) ?? null) : null,
+  }));
+}
 
-  return WEEKDAYS.map((weekday) => {
-    const day = dayByWeekday.get(weekday);
-    const routine = day?.routineId ? (routineById.get(day.routineId) ?? null) : null;
-    return { weekday, routine };
-  });
+/**
+ * Appends one rest day to the end of the cycle and returns its index.
+ *
+ * The index is max(dayIndex) + 1 over ALL rows including tombstoned ones, per
+ * the ordering invariant: a count of live rows collides with a soft-deleted
+ * day that still holds the index.
+ */
+export function addProgramDay(db: Db, programId: string, at: number): number | null {
+  const rows = db
+    .select({ maxIndex: max(programDays.dayIndex) })
+    .from(programDays)
+    .where(eq(programDays.programId, programId))
+    .get();
+  const dayIndex = (rows?.maxIndex ?? -1) + 1;
+  if (dayIndex >= MAX_DAY_COUNT) return null;
+
+  db.insert(programDays)
+    .values({ id: newId(), createdAt: at, updatedAt: at, deletedAt: null, programId, dayIndex, routineId: null })
+    .run();
+  return dayIndex;
 }
 
 /**

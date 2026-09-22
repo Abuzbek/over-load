@@ -1,5 +1,5 @@
 import { toStorageKg, type Unit } from '@overload/domain';
-import { router, useFocusEffect } from 'expo-router';
+import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { RoutineDetailExercise } from '../../data/routineRepo';
@@ -183,7 +183,7 @@ export function RoutineBuilder({ routineId }: Props) {
     return (
       <Screen>
         <Text color="textMuted" style={styles.empty}>
-          Routine not found.
+          Workout not found.
         </Text>
       </Screen>
     );
@@ -191,6 +191,10 @@ export function RoutineBuilder({ routineId }: Props) {
 
   return (
     <Screen scroll>
+      {/* The workout's own name, not a generic "Edit workout": a day's inline
+          workout is created as "<program> · Day N" and the header is the only
+          thing that says which one you are in. */}
+      <Stack.Screen options={{ title: detail.routine.name }} />
       {detail.exercises.map((entry, index) => (
         <ExerciseCard
           key={entry.routineExercise.id}

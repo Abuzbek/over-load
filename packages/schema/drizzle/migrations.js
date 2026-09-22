@@ -7,6 +7,7 @@ import m0002 from './0002_ancient_human_robot.sql';
 import m0003 from './0003_fair_lady_ursula.sql';
 import m0004 from './0004_purple_whizzer.sql';
 import m0005 from './0005_far_vance_astro.sql';
+import m0006 from './0006_day_cycle.sql';
 
   export default {
     journal,
@@ -16,7 +17,8 @@ m0001,
 m0002,
 m0003,
 m0004,
-m0005
+m0005,
+m0006
     }
   }
   

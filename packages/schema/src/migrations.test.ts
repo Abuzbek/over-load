@@ -92,6 +92,33 @@ describe('migrations', () => {
     close();
   });
 
+  // 0006 renames program_days.weekday -> day_index. A RENAME COLUMN preserves
+  // the values; an ADD + DROP (what drizzle-kit generates unprompted) would
+  // have thrown them away, and `ADD day_index integer NOT NULL` would have
+  // failed outright on a table with rows.
+  it('carries day assignments across the weekday -> day_index rename', () => {
+    // 5 == through 0005, i.e. program_days exists with a `weekday` column.
+    const { db, close } = createDbAtMigration(5);
+
+    const programId = newId();
+    const routineId = newId();
+    const dayId = newId();
+    db.run(sql`insert into routines (id, created_at, updated_at, name, order_index) values (${routineId}, 1, 1, 'Leg Day', 0)`);
+    db.run(sql`insert into programs (id, created_at, updated_at, name, order_index) values (${programId}, 1, 1, 'My Program', 0)`);
+    db.run(sql`insert into program_days (id, created_at, updated_at, program_id, weekday, routine_id) values (${dayId}, 1, 1, ${programId}, 2, ${routineId})`);
+
+    applyFullMigrations(db);
+
+    const rows = db.all<{ day_index: number; routine_id: string }>(
+      sql`select day_index, routine_id from program_days where id = ${dayId}`,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.day_index).toBe(2);
+    expect(rows[0]!.routine_id).toBe(routineId);
+
+    close();
+  });
+
   it('preserves an existing settings row across the distance_unit migration', () => {
     // 2 == through 0002_ancient_human_robot, i.e. app_settings with only
     // weight_unit, before distance_unit existed. Inserted via raw SQL

@@ -75,7 +75,7 @@ export function TrainScreen() {
       <Card style={styles.programRows}>
         <ListRow
           title={activeProgram?.name ?? 'No active program'}
-          subtitle="This week's schedule"
+          subtitle="Your day cycle"
           onPress={() =>
             activeProgram
               ? router.push({

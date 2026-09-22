@@ -11,16 +11,18 @@ export const programs = sqliteTable('programs', {
 });
 
 /**
- * A program is a week: one row per weekday (0 = Monday … 6 = Sunday). A null
- * routineId means rest. All seven rows are created with the program and rest
- * is always an update to null, never a delete — see programRepo.ts.
+ * A program is a cycle of days, not a calendar week: one row per day, ordered
+ * by `dayIndex` (0-based, rendered as "Day 1"). Seven days are created with a
+ * new program but the cycle can grow — see addProgramDay in programRepo.ts.
+ * A null routineId means rest; rest is always an update to null, never a
+ * delete.
  */
 export const programDays = sqliteTable(
   'program_days',
   {
     ...syncColumns,
     programId: text('program_id').notNull().references(() => programs.id),
-    weekday: integer('weekday').notNull(),
+    dayIndex: integer('day_index').notNull(),
     routineId: text('routine_id').references(() => routines.id),
   },
   (table) => ({

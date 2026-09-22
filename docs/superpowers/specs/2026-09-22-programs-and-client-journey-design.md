@@ -64,29 +64,40 @@ product. Two things exist.
 **A workout** is a named set of exercises — "Full body", "Upper", "Push". It stands on
 its own and lives in the **workout library**.
 
-**A program is a week.** It assigns a workout to each of the seven weekdays, or marks
-the day as rest:
+**A program is a day cycle**, not a calendar week. It is an ordered list of days —
+Day 1, Day 2, Day 3 … — each holding a workout or nothing (rest). The cycle repeats;
+it is not pinned to Monday–Sunday.
+
+- A new program starts with **seven** days, because that is the common case.
+- **+ Add day** grows it. The cap is 100, a guard rail rather than a product rule —
+  cycles that long are not a real use case.
+- A day gets its workout either by **picking one from the library** (reuse) or by
+  **adding exercises directly**, which builds that day its own workout, named
+  `<program> · Day N`, and puts it in the library like any other.
 
 ```
-"Beginner full body"      Mon Full body · Tue rest · Wed Full body · Thu rest ·
-                          Fri Full body · Sat rest · Sun rest
-"Intermediate upper/lower" 4 days a week, 3, 5 — whatever the week needs
+"Beginner full body"   Day 1 Full body · Day 2 rest · Day 3 Full body ·
+                       Day 4 rest · Day 5 Full body · Day 6 rest · Day 7 rest
+"PPL"                  Day 1 Push · Day 2 Pull · Day 3 Legs · Day 4 rest · Day 5 Push …
 ```
 
-Two consequences that the previous version of this document got wrong:
+Three consequences:
 
-1. **A workout is reused across days, not owned by one.** Mon/Wed/Fri all point at the
+1. **A workout is reused across days, not owned by one.** Days 1/3/5 all point at the
    same "Full body" workout. Editing it changes all three, which is the point. A
-   program→workout link is therefore a **many-to-many through the weekday**, not a
-   parent column on the workout.
-2. **The week is the program.** A program with no days assigned is just a name.
+   program→workout link is a **many-to-many through the day**, not a parent column on
+   the workout.
+2. **The cycle is the program.** A program with no days assigned is just a name.
+3. **Day numbering is by position, not by stored index.** `program_days.day_index` is
+   the stored order; the label is the row's position, so a gap (a day tombstoned
+   later) still reads Day 1, Day 2, Day 3.
 
 **The two libraries:**
 
 | Library | What it holds |
 |---|---|
 | **Program library** | Archived programs — every program that is not the active one. |
-| **Workout library** | Standalone workouts. **Starts empty.** "Create workout" adds a one-day workout to it. |
+| **Workout library** | Standalone workouts. **Starts empty.** "New workout" adds one; so does building a day's workout inline. |
 
 ### Naming, decided
 
@@ -143,7 +154,7 @@ template before it is buildable as anything other than a guess.
 **In scope — the single active program rule, and nothing else:**
 
 - A `programs` table: name, icon, icon colour, ordering. **Built.**
-- A `program_days` table: program × weekday → workout, or rest. **Next.**
+- A `program_days` table: program × day_index → workout, or rest. **Built.**
 - Exactly one active program, enforced in the repository, not by UI convention.
 - Activating an archived program deactivates the previously active one, in one
   transaction — a failure must not leave zero or two active.
@@ -176,7 +187,7 @@ Confirm that holds before shipping.
    is shared, and the `routines` table keeps its name while meaning "workout template".
 2. **What happens to a week when a workout in it is deleted?** The day should fall back
    to rest rather than dangle. Needs deciding when deletion exists in the UI.
-3. **Does the week start on Monday?** Assumed yes, per the owner's example. It is a
-   display concern, not a storage one — days are stored by index.
+3. ~~Does the week start on Monday?~~ Moot: a program is a day cycle, not a calendar
+   week, so no weekday is involved at all.
 4. **Daily activity level** is a new profile field with no consumer yet; it presumably
    feeds smart generation.
