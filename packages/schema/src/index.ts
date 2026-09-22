@@ -2,6 +2,7 @@ export * from './sync';
 export * from './appSettings';
 export * from './exercises';
 export * from './gyms';
+export * from './equipment';
 export * from './programs';
 export * from './workouts';
 export * from './sessions';

@@ -147,9 +147,27 @@ Two rules that are easy to get wrong:
   runs at bootstrap for every install including existing ones; starting it empty
   would hide most of the catalogue from someone who never asked for a gym.
 
-Equipment is a JSON array on `gyms` rather than a join table: at most nine
-values, always read as a set, never queried the other way round — the same shape
-as `exercises.secondary_muscles`.
+The catalogue is 259 items from `equipments.csv`, in thirteen groups. Its shape
+is built by `tools/seed-equipment/build.py` and the weight editor each item gets
+is a property of its **group**, not of the item:
+
+| Groups | Weights |
+|---|---|
+| Free weights, loaded bars, fixed weight bars, body weight | a list you add to, remove from and pick from |
+| Bands & ropes | colours / resistances, edited the same way |
+| Loaded accessories, plate loaded machines | one base weight — what the machine weighs empty |
+| Cable machines, pin loaded machines | a range: from, to, step |
+| Benches & racks, accessories, cardio, other | none |
+
+`gym_equipment` holds one row per item a gym owns, carrying **that gym's**
+weights: the same dumbbell rack goes to 40 kg at home and 75 kg at the
+commercial gym. Unticking tombstones the row rather than deleting it, so weights
+you typed survive a mis-tap and a re-tick.
+
+Each catalogue item declares which coarse exercise-equipment values it unlocks
+(`barbell`, `cable`, `machine` …). Without that bridge the 259 items could not
+filter the 743 exercises at all. 55 items unlock nothing, which is correct —
+owning a bench does not make an exercise possible.
 
 **This is also the missing input for smart generation.** A generator cannot pick
 sensible exercises without knowing what is in the room.

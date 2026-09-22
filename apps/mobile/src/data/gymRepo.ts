@@ -1,5 +1,15 @@
-import { appSettings, EQUIPMENT, gyms, newId, type Db, type Gym } from '@overload/schema';
-import { and, eq, isNull, max } from 'drizzle-orm';
+import {
+  appSettings,
+  equipment,
+  type Equipment,
+  type EquipmentConfig,
+  gymEquipment,
+  gyms,
+  newId,
+  type Db,
+  type Gym,
+} from '@overload/schema';
+import { and, eq, inArray, isNull, max } from 'drizzle-orm';
 
 /**
  * Equipment values that mean "nothing needed". They are available at every gym
@@ -44,7 +54,7 @@ export function activateGym(db: Db, gymId: string, at: number): void {
   db.insert(appSettings).values({ id: newId(), activeGymId: gymId, createdAt: at, updatedAt: at }).run();
 }
 
-export function createGym(db: Db, name: string, equipment: string[], at: number): Gym {
+export function createGym(db: Db, name: string, at: number): Gym {
   const highest = db.select({ maxIndex: max(gyms.orderIndex) }).from(gyms).get();
   const row = {
     id: newId(),
@@ -52,7 +62,8 @@ export function createGym(db: Db, name: string, equipment: string[], at: number)
     updatedAt: at,
     deletedAt: null,
     name,
-    equipment,
+    // Dead column, kept because dropping it would rebuild a referenced table.
+    equipment: [],
     // max + 1 over ALL rows including tombstoned, per the ordering invariant.
     orderIndex: (highest?.maxIndex ?? -1) + 1,
   };
@@ -60,8 +71,128 @@ export function createGym(db: Db, name: string, equipment: string[], at: number)
   return row;
 }
 
-export function setGymEquipment(db: Db, gymId: string, equipment: string[], at: number): void {
-  db.update(gyms).set({ equipment, updatedAt: at }).where(eq(gyms.id, gymId)).run();
+/** Every catalogue item, with what this gym owns and the weights it has. */
+export type GymEquipmentRow = {
+  equipment: Equipment;
+  owned: boolean;
+  config: EquipmentConfig;
+};
+
+export function listGymEquipment(db: Db, gymId: string): GymEquipmentRow[] {
+  const catalogue = db
+    .select()
+    .from(equipment)
+    .where(isNull(equipment.deletedAt))
+    .orderBy(equipment.name)
+    .all();
+
+  const owned = db
+    .select()
+    .from(gymEquipment)
+    .where(and(eq(gymEquipment.gymId, gymId), isNull(gymEquipment.deletedAt)))
+    .all();
+  const ownedById = new Map(owned.map((row) => [row.equipmentId, row]));
+
+  return catalogue.map((item) => {
+    const mine = ownedById.get(item.id);
+    return {
+      equipment: item,
+      owned: mine !== undefined,
+      // Not owned yet? Show the catalogue defaults, so ticking it starts from
+      // something sensible rather than from zero.
+      config: mine?.config ?? item.defaults,
+    };
+  });
+}
+
+/**
+ * A row exists only for equipment the gym owns; unticking tombstones it.
+ * Re-ticking revives the same row, which is what keeps the weights you edited
+ * last time rather than resetting them to the catalogue.
+ */
+export function setGymEquipmentOwned(
+  db: Db,
+  gymId: string,
+  equipmentId: string,
+  owned: boolean,
+  at: number,
+): void {
+  const existing = db
+    .select()
+    .from(gymEquipment)
+    .where(and(eq(gymEquipment.gymId, gymId), eq(gymEquipment.equipmentId, equipmentId)))
+    .get();
+
+  if (existing) {
+    db.update(gymEquipment)
+      .set({ deletedAt: owned ? null : at, updatedAt: at })
+      .where(eq(gymEquipment.id, existing.id))
+      .run();
+    return;
+  }
+  if (!owned) return;
+
+  const item = db.select().from(equipment).where(eq(equipment.id, equipmentId)).get();
+  if (!item) return;
+  db.insert(gymEquipment)
+    .values({
+      id: newId(),
+      createdAt: at,
+      updatedAt: at,
+      deletedAt: null,
+      gymId,
+      equipmentId,
+      config: item.defaults,
+    })
+    .run();
+}
+
+export function setGymEquipmentConfig(
+  db: Db,
+  gymId: string,
+  equipmentId: string,
+  config: EquipmentConfig,
+  at: number,
+): void {
+  const existing = db
+    .select()
+    .from(gymEquipment)
+    .where(and(eq(gymEquipment.gymId, gymId), eq(gymEquipment.equipmentId, equipmentId)))
+    .get();
+
+  if (existing) {
+    db.update(gymEquipment)
+      .set({ config, updatedAt: at })
+      .where(eq(gymEquipment.id, existing.id))
+      .run();
+    return;
+  }
+  // Editing the weights of something not yet ticked implies owning it.
+  db.insert(gymEquipment)
+    .values({ id: newId(), createdAt: at, updatedAt: at, deletedAt: null, gymId, equipmentId, config })
+    .run();
+}
+
+/**
+ * The coarse equipment values the gym unlocks, for filtering the exercise
+ * catalogue. Two levels of tombstone: the gym_equipment row and the catalogue
+ * item itself.
+ */
+export function availableExerciseEquipment(db: Db, gymId: string): string[] {
+  const rows = db
+    .select({ satisfies: equipment.satisfies })
+    .from(gymEquipment)
+    .innerJoin(equipment, eq(equipment.id, gymEquipment.equipmentId))
+    .where(
+      and(
+        eq(gymEquipment.gymId, gymId),
+        isNull(gymEquipment.deletedAt),
+        isNull(equipment.deletedAt),
+      ),
+    )
+    .all();
+
+  return [...new Set(rows.flatMap((r) => r.satisfies))];
 }
 
 export function renameGym(db: Db, gymId: string, name: string, at: number): void {
@@ -94,16 +225,34 @@ export function removeGym(db: Db, gymId: string, at: number): void {
 /**
  * For a first run, and for every install that predates gyms.
  *
- * The default has EVERYTHING ticked, not nothing: an existing user who opens
- * the app after this ships must see the same catalogue they saw yesterday.
- * Starting empty would hide 555 of 743 exercises without being asked.
+ * The default owns EVERYTHING, not nothing: an existing user who opens the app
+ * after this ships must see the same exercise catalogue they saw yesterday.
+ * Starting empty would hide most of it without being asked. A gym the user adds
+ * themselves starts empty, because there they are describing a real room.
  */
 export function ensureDefaultGym(db: Db, at: number): Gym {
   const existing = db.select().from(gyms).where(isNull(gyms.deletedAt)).orderBy(gyms.orderIndex).all();
   if (existing.length > 0) return getActiveGym(db) ?? existing[0]!;
 
-  const gym = createGym(db, 'My Gym', [...EQUIPMENT], at);
+  const gym = createGym(db, 'My Gym', at);
   activateGym(db, gym.id, at);
+
+  const catalogue = db.select().from(equipment).where(isNull(equipment.deletedAt)).all();
+  if (catalogue.length > 0) {
+    db.insert(gymEquipment)
+      .values(
+        catalogue.map((item) => ({
+          id: newId(),
+          createdAt: at,
+          updatedAt: at,
+          deletedAt: null,
+          gymId: gym.id,
+          equipmentId: item.id,
+          config: item.defaults,
+        })),
+      )
+      .run();
+  }
   return gym;
 }
 

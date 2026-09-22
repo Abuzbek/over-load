@@ -1,11 +1,17 @@
 import { now } from '@overload/schema';
 import migrations from '@overload/schema/migrations';
 import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
+import equipmentSeed from '../../../../tools/seed-equipment/equipment.json';
 import curated from '../../../../tools/seed-exercises/curated.json';
 import { ensureDefaultGym } from '../data/gymRepo';
 import { ensureDefaultProgram } from '../data/programRepo';
 import { rebuildAllPersonalRecords } from '../data/sessionRepo';
-import { seedExercisesIfEmpty, type SeedExercise } from '../data/seedRepo';
+import {
+  seedEquipmentIfEmpty,
+  seedExercisesIfEmpty,
+  type SeedEquipment,
+  type SeedExercise,
+} from '../data/seedRepo';
 import { backupDatabase, discardBackup, restoreDatabase } from './backup';
 import { db } from './client';
 
@@ -28,6 +34,8 @@ export async function initializeDatabase(): Promise<void> {
 
   await discardBackup();
   seedExercisesIfEmpty(db, curated as SeedExercise[]);
+  // Before ensureDefaultGym, which gives the first gym every catalogue item.
+  seedEquipmentIfEmpty(db, equipmentSeed.items as SeedEquipment[]);
   ensureDefaultProgram(db, now());
   ensureDefaultGym(db, now());
 

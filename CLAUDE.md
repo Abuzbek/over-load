@@ -10,8 +10,9 @@ repeating cycle of days (`programs`, `program_days`); a **workout** is a named
 plan you can train (`workouts`, `workout_exercises`, `workout_sets`); a
 **session** is a workout you performed (`sessions`, `session_exercises`,
 `session_sets`); an **exercise** is a movement in the catalogue; a **gym** is
-a place you train and the equipment in it (`gyms`), which filters that
-catalogue. There is no
+a place you train (`gyms`) and the equipment in it (`equipment` catalogue +
+`gym_equipment`), which filters that catalogue. The weight editor a piece of
+equipment gets is decided by its **category**, never by the item. There is no
 "routine" — migration 0008 removed the last of that name. Release 1 (the logging loop) is built and merged. The app shell and design
 system (four tabs, `src/ui/` component kit) is built on branch `app-shell`,
 not yet merged; see `docs/superpowers/2026-09-22-session-handoff.md` for full

@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { createCustomExercise, listExercises as listExercisesRepo } from '../../data/exerciseRepo';
-import { getActiveGym } from '../../data/gymRepo';
+import { availableExerciseEquipment, getActiveGym } from '../../data/gymRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
@@ -47,11 +47,11 @@ export function ExerciseList({ onSelect }: Props) {
   // The library is static during a session, so re-query only as the search
   // changes. `version` is bumped after a custom exercise is created and is
   // otherwise unused — it forces this memo to re-run against the same search.
-  const availableEquipment = gymOnly && gym ? gym.equipment : null;
+  const availableEquipment = gymOnly && gym ? availableExerciseEquipment(db, gym.id) : null;
   const exercises = useMemo(
     () => listExercisesRepo(db, { search: search.trim() || undefined, availableEquipment }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [search, version, gymOnly, gym?.id, gym?.equipment.length],
+    [search, version, gymOnly, gym?.id],
   );
 
   return (
