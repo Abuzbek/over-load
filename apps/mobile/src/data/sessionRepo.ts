@@ -4,29 +4,29 @@ import {
   newId,
   now,
   personalRecords,
-  sets,
-  workoutExercises,
-  workouts,
+  sessionSets,
+  sessionExercises,
+  sessions,
   type Db,
   type Exercise,
   type PersonalRecordRow,
   type TrackingType,
-  type Workout,
-  type WorkoutExercise,
-  type WorkoutSet,
+  type Session,
+  type SessionExercise,
+  type SessionSet,
 } from '@overload/schema';
 import { and, asc, desc, eq, inArray, isNotNull, isNull, max } from 'drizzle-orm';
-import { markDayDoneForRoutine } from './programRepo';
-import { getRoutineDetail } from './routineRepo';
+import { markDayDoneForWorkout } from './programRepo';
+import { getWorkoutDetail } from './workoutRepo';
 
 export type WorkoutDetailExercise = {
-  workoutExercise: WorkoutExercise;
+  sessionExercise: SessionExercise;
   exercise: Exercise;
-  sets: WorkoutSet[];
+  sessionSets: SessionSet[];
 };
 
-export type WorkoutDetail = {
-  workout: Workout;
+export type SessionDetail = {
+  workout: Session;
   exercises: WorkoutDetailExercise[];
 };
 
@@ -35,45 +35,45 @@ function timestamps(at: number) {
 }
 
 /**
- * Copies the routine into a fresh workout tree. Targets become pre-filled
- * values on planned sets, so the lifter edits a number rather than typing one.
+ * Copies the workout into a fresh workout tree. Targets become pre-filled
+ * values on planned sessionSets, so the lifter edits a number rather than typing one.
  */
-export function startWorkoutFromRoutine(db: Db, routineId: string, at: number): string {
-  const detail = getRoutineDetail(db, routineId);
-  if (!detail) throw new Error(`Routine not found: ${routineId}`);
+export function startSessionFromWorkout(db: Db, workoutId: string, at: number): string {
+  const detail = getWorkoutDetail(db, workoutId);
+  if (!detail) throw new Error(`Workout not found: ${workoutId}`);
 
-  const workoutId = newId();
+  const sessionId = newId();
 
   db.transaction((tx) => {
-    tx.insert(workouts).values({
-      id: workoutId,
+    tx.insert(sessions).values({
+      id: sessionId,
       ...timestamps(at),
-      routineId,
-      name: detail.routine.name,
+      workoutId,
+      name: detail.workout.name,
       startedAt: at,
       endedAt: null,
       notes: null,
     }).run();
 
     for (const entry of detail.exercises) {
-      const workoutExerciseId = newId();
+      const sessionExerciseId = newId();
 
-      tx.insert(workoutExercises).values({
-        id: workoutExerciseId,
+      tx.insert(sessionExercises).values({
+        id: sessionExerciseId,
         ...timestamps(at),
-        workoutId,
+        sessionId,
         exerciseId: entry.exercise.id,
-        orderIndex: entry.routineExercise.orderIndex,
-        notes: entry.routineExercise.notes,
-        restSeconds: entry.routineExercise.restSeconds,
-        supersetGroup: entry.routineExercise.supersetGroup,
+        orderIndex: entry.workoutExercise.orderIndex,
+        notes: entry.workoutExercise.notes,
+        restSeconds: entry.workoutExercise.restSeconds,
+        supersetGroup: entry.workoutExercise.supersetGroup,
       }).run();
 
-      for (const plannedSet of entry.sets) {
-        tx.insert(sets).values({
+      for (const plannedSet of entry.sessionSets) {
+        tx.insert(sessionSets).values({
           id: newId(),
           ...timestamps(at),
-          workoutExerciseId,
+          sessionExerciseId,
           orderIndex: plannedSet.orderIndex,
           setType: plannedSet.setType,
           weightKg: plannedSet.targetWeightKg,
@@ -88,30 +88,30 @@ export function startWorkoutFromRoutine(db: Db, routineId: string, at: number): 
     }
   });
 
-  return workoutId;
+  return sessionId;
 }
 
 /** A workout with no endedAt is in progress. This is what powers crash recovery. */
-export function getActiveWorkoutId(db: Db): string | undefined {
+export function getActiveSessionId(db: Db): string | undefined {
   return db
-    .select({ id: workouts.id })
-    .from(workouts)
-    .where(and(isNull(workouts.endedAt), isNull(workouts.deletedAt)))
-    .orderBy(desc(workouts.startedAt))
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(and(isNull(sessions.endedAt), isNull(sessions.deletedAt)))
+    .orderBy(desc(sessions.startedAt))
     .get()?.id;
 }
 
 /**
  * The row, not just the id — the in-progress bar needs name and startedAt.
- * Same predicate as getActiveWorkoutId so the two can never disagree about
+ * Same predicate as getActiveSessionId so the two can never disagree about
  * which workout is active.
  */
-export function getActiveWorkout(db: Db): Workout | undefined {
+export function getActiveSession(db: Db): Session | undefined {
   return db
     .select()
-    .from(workouts)
-    .where(and(isNull(workouts.deletedAt), isNull(workouts.endedAt)))
-    .orderBy(desc(workouts.startedAt))
+    .from(sessions)
+    .where(and(isNull(sessions.deletedAt), isNull(sessions.endedAt)))
+    .orderBy(desc(sessions.startedAt))
     .limit(1)
     .get();
 }
@@ -119,49 +119,49 @@ export function getActiveWorkout(db: Db): Workout | undefined {
 /**
  * Tombstones an unfinished workout the lifter chose to throw away. Without
  * this, starting a second workout strands the first: it has no endedAt so
- * history never lists it, and getActiveWorkoutId only ever returns the newest.
- * The workout row alone is tombstoned — every read of its exercises and sets
+ * history never lists it, and getActiveSessionId only ever returns the newest.
+ * The workout row alone is tombstoned — every read of its exercises and sessionSets
  * joins through it, so they go with it.
  */
-export function discardWorkout(db: Db, workoutId: string, at: number): void {
+export function discardSession(db: Db, sessionId: string, at: number): void {
   db
-    .update(workouts)
+    .update(sessions)
     .set({ deletedAt: at, updatedAt: at })
-    .where(eq(workouts.id, workoutId))
+    .where(eq(sessions.id, sessionId))
     .run();
 }
 
-export function getWorkoutDetail(db: Db, workoutId: string): WorkoutDetail | undefined {
+export function getSessionDetail(db: Db, sessionId: string): SessionDetail | undefined {
   const workout = db
     .select()
-    .from(workouts)
-    .where(and(eq(workouts.id, workoutId), isNull(workouts.deletedAt)))
+    .from(sessions)
+    .where(and(eq(sessions.id, sessionId), isNull(sessions.deletedAt)))
     .get();
 
   if (!workout) return undefined;
 
   const joined = db
-    .select({ workoutExercise: workoutExercises, exercise: exercises })
-    .from(workoutExercises)
-    .innerJoin(exercises, eq(exercises.id, workoutExercises.exerciseId))
+    .select({ sessionExercise: sessionExercises, exercise: exercises })
+    .from(sessionExercises)
+    .innerJoin(exercises, eq(exercises.id, sessionExercises.exerciseId))
     .where(
       and(
-        eq(workoutExercises.workoutId, workoutId),
-        isNull(workoutExercises.deletedAt),
+        eq(sessionExercises.sessionId, sessionId),
+        isNull(sessionExercises.deletedAt),
         isNull(exercises.deletedAt),
       ),
     )
-    .orderBy(asc(workoutExercises.orderIndex))
+    .orderBy(asc(sessionExercises.orderIndex))
     .all();
 
-  const detailExercises = joined.map(({ workoutExercise, exercise }) => ({
-    workoutExercise,
+  const detailExercises = joined.map(({ sessionExercise, exercise }) => ({
+    sessionExercise,
     exercise,
-    sets: db
+    sessionSets: db
       .select()
-      .from(sets)
-      .where(and(eq(sets.workoutExerciseId, workoutExercise.id), isNull(sets.deletedAt)))
-      .orderBy(asc(sets.orderIndex))
+      .from(sessionSets)
+      .where(and(eq(sessionSets.sessionExerciseId, sessionExercise.id), isNull(sessionSets.deletedAt)))
+      .orderBy(asc(sessionSets.orderIndex))
       .all(),
   }));
 
@@ -177,24 +177,24 @@ export type SetValues = {
   rir?: number | null;
 };
 
-export function addExerciseToWorkout(
+export function addExerciseToSession(
   db: Db,
-  workoutId: string,
+  sessionId: string,
   exerciseId: string,
   at: number,
-): WorkoutExercise {
+): SessionExercise {
   // max(orderIndex) + 1 over ALL rows (including tombstoned), not a count of
   // live siblings — a count collides with an existing index after a soft-delete.
   const highest = db
-    .select({ maxIndex: max(workoutExercises.orderIndex) })
-    .from(workoutExercises)
-    .where(eq(workoutExercises.workoutId, workoutId))
+    .select({ maxIndex: max(sessionExercises.orderIndex) })
+    .from(sessionExercises)
+    .where(eq(sessionExercises.sessionId, sessionId))
     .get();
 
   const row = {
     id: newId(),
     ...timestamps(at),
-    workoutId,
+    sessionId,
     exerciseId,
     orderIndex: (highest?.maxIndex ?? -1) + 1,
     notes: null,
@@ -202,29 +202,29 @@ export function addExerciseToWorkout(
     supersetGroup: null,
   };
 
-  db.insert(workoutExercises).values(row).run();
+  db.insert(sessionExercises).values(row).run();
   return row;
 }
 
-export function addSet(db: Db, workoutExerciseId: string, at: number): WorkoutSet {
+export function addSet(db: Db, sessionExerciseId: string, at: number): SessionSet {
   // Same max-based indexing as above, for the same reason.
   const highest = db
-    .select({ maxIndex: max(sets.orderIndex) })
-    .from(sets)
-    .where(eq(sets.workoutExerciseId, workoutExerciseId))
+    .select({ maxIndex: max(sessionSets.orderIndex) })
+    .from(sessionSets)
+    .where(eq(sessionSets.sessionExerciseId, sessionExerciseId))
     .get();
 
   const previous = db
     .select()
-    .from(sets)
-    .where(and(eq(sets.workoutExerciseId, workoutExerciseId), isNull(sets.deletedAt)))
-    .orderBy(desc(sets.orderIndex))
+    .from(sessionSets)
+    .where(and(eq(sessionSets.sessionExerciseId, sessionExerciseId), isNull(sessionSets.deletedAt)))
+    .orderBy(desc(sessionSets.orderIndex))
     .get();
 
   const row = {
     id: newId(),
     ...timestamps(at),
-    workoutExerciseId,
+    sessionExerciseId,
     orderIndex: (highest?.maxIndex ?? -1) + 1,
     setType: 'normal' as const,
     // Carry the last set's load forward — almost always what the next set uses.
@@ -237,7 +237,7 @@ export function addSet(db: Db, workoutExerciseId: string, at: number): WorkoutSe
     completedAt: null,
   };
 
-  db.insert(sets).values(row).run();
+  db.insert(sessionSets).values(row).run();
   return row;
 }
 
@@ -249,22 +249,22 @@ export function completeSet(db: Db, setId: string, values: SetValues, at: number
   // Typed against the schema, so renaming a column fails to compile here rather
   // than silently writing nothing. Each field is assigned only when present, so
   // an omitted key leaves the stored value alone while an explicit null clears it.
-  const patch: Partial<typeof sets.$inferInsert> = { completedAt: at, updatedAt: at };
+  const patch: Partial<typeof sessionSets.$inferInsert> = { completedAt: at, updatedAt: at };
   if (values.weightKg !== undefined) patch.weightKg = values.weightKg;
   if (values.reps !== undefined) patch.reps = values.reps;
   if (values.durationSeconds !== undefined) patch.durationSeconds = values.durationSeconds;
   if (values.distanceM !== undefined) patch.distanceM = values.distanceM;
   if (values.rpe !== undefined) patch.rpe = values.rpe;
   if (values.rir !== undefined) patch.rir = values.rir;
-  db.update(sets).set(patch).where(eq(sets.id, setId)).run();
+  db.update(sessionSets).set(patch).where(eq(sessionSets.id, setId)).run();
 }
 
 export function uncompleteSet(db: Db, setId: string): void {
-  db.update(sets).set({ completedAt: null, updatedAt: now() }).where(eq(sets.id, setId)).run();
+  db.update(sessionSets).set({ completedAt: null, updatedAt: now() }).where(eq(sessionSets.id, setId)).run();
 }
 
 export function toCompletedSet(
-  row: WorkoutSet,
+  row: SessionSet,
   exerciseId: string,
   trackingType: TrackingType,
 ): CompletedSet {
@@ -281,53 +281,53 @@ export function toCompletedSet(
   };
 }
 
-/** Completed sets for this exercise from the most recent workout that is not the current one. */
+/** Completed sessionSets for this exercise from the most recent workout that is not the current one. */
 export function lastPerformance(
   db: Db,
   exerciseId: string,
-  excludeWorkoutId: string,
+  excludeSessionId: string,
 ): CompletedSet[] {
-  const previousWorkout = db
-    .select({ workoutId: workouts.id })
-    .from(sets)
-    .innerJoin(workoutExercises, eq(workoutExercises.id, sets.workoutExerciseId))
-    .innerJoin(workouts, eq(workouts.id, workoutExercises.workoutId))
+  const previousSession = db
+    .select({ sessionId: sessions.id })
+    .from(sessionSets)
+    .innerJoin(sessionExercises, eq(sessionExercises.id, sessionSets.sessionExerciseId))
+    .innerJoin(sessions, eq(sessions.id, sessionExercises.sessionId))
     .where(
       and(
-        eq(workoutExercises.exerciseId, exerciseId),
-        isNotNull(sets.completedAt),
-        isNull(sets.deletedAt),
-        isNull(workoutExercises.deletedAt),
-        isNull(workouts.deletedAt),
+        eq(sessionExercises.exerciseId, exerciseId),
+        isNotNull(sessionSets.completedAt),
+        isNull(sessionSets.deletedAt),
+        isNull(sessionExercises.deletedAt),
+        isNull(sessions.deletedAt),
       ),
     )
-    .orderBy(desc(workouts.startedAt))
+    .orderBy(desc(sessions.startedAt))
     .all()
-    .find((row) => row.workoutId !== excludeWorkoutId);
+    .find((row) => row.sessionId !== excludeSessionId);
 
-  if (!previousWorkout) return [];
+  if (!previousSession) return [];
 
   return db
-    .select({ set: sets, trackingType: exercises.trackingType })
-    .from(sets)
-    .innerJoin(workoutExercises, eq(workoutExercises.id, sets.workoutExerciseId))
-    .innerJoin(exercises, eq(exercises.id, workoutExercises.exerciseId))
+    .select({ set: sessionSets, trackingType: exercises.trackingType })
+    .from(sessionSets)
+    .innerJoin(sessionExercises, eq(sessionExercises.id, sessionSets.sessionExerciseId))
+    .innerJoin(exercises, eq(exercises.id, sessionExercises.exerciseId))
     .where(
       and(
-        eq(workoutExercises.workoutId, previousWorkout.workoutId),
-        eq(workoutExercises.exerciseId, exerciseId),
-        isNotNull(sets.completedAt),
-        isNull(sets.deletedAt),
-        isNull(workoutExercises.deletedAt),
+        eq(sessionExercises.sessionId, previousSession.sessionId),
+        eq(sessionExercises.exerciseId, exerciseId),
+        isNotNull(sessionSets.completedAt),
+        isNull(sessionSets.deletedAt),
+        isNull(sessionExercises.deletedAt),
         isNull(exercises.deletedAt),
       ),
     )
-    .orderBy(asc(sets.orderIndex))
+    .orderBy(asc(sessionSets.orderIndex))
     .all()
     .map(({ set, trackingType }) => toCompletedSet(set, exerciseId, trackingType));
 }
 
-/** Completed sets for a single exercise across all history, most-recent tombstones excluded. */
+/** Completed sessionSets for a single exercise across all history, most-recent tombstones excluded. */
 export function completedSetsForExercise(db: Db, exerciseId: string): CompletedSet[] {
   return allCompletedSets(db, [exerciseId]);
 }
@@ -336,18 +336,18 @@ function allCompletedSets(db: Db, exerciseIds: string[]): CompletedSet[] {
   if (exerciseIds.length === 0) return [];
 
   return db
-    .select({ set: sets, exerciseId: workoutExercises.exerciseId, trackingType: exercises.trackingType })
-    .from(sets)
-    .innerJoin(workoutExercises, eq(workoutExercises.id, sets.workoutExerciseId))
-    .innerJoin(workouts, eq(workouts.id, workoutExercises.workoutId))
-    .innerJoin(exercises, eq(exercises.id, workoutExercises.exerciseId))
+    .select({ set: sessionSets, exerciseId: sessionExercises.exerciseId, trackingType: exercises.trackingType })
+    .from(sessionSets)
+    .innerJoin(sessionExercises, eq(sessionExercises.id, sessionSets.sessionExerciseId))
+    .innerJoin(sessions, eq(sessions.id, sessionExercises.sessionId))
+    .innerJoin(exercises, eq(exercises.id, sessionExercises.exerciseId))
     .where(
       and(
-        inArray(workoutExercises.exerciseId, exerciseIds),
-        isNotNull(sets.completedAt),
-        isNull(sets.deletedAt),
-        isNull(workoutExercises.deletedAt),
-        isNull(workouts.deletedAt),
+        inArray(sessionExercises.exerciseId, exerciseIds),
+        isNotNull(sessionSets.completedAt),
+        isNull(sessionSets.deletedAt),
+        isNull(sessionExercises.deletedAt),
+        isNull(sessions.deletedAt),
         isNull(exercises.deletedAt),
       ),
     )
@@ -383,38 +383,38 @@ function recomputePersonalRecords(db: Db, exerciseIds: string[]): void {
 }
 
 /**
- * Recomputes every exercise's records from `sets`. personal_records is a derived
+ * Recomputes every exercise's records from `sessionSets`. personal_records is a derived
  * cache, so this is always safe; it exists so installs written before metrics
  * were gated by tracking type drop records that can no longer occur.
  */
 export function rebuildAllPersonalRecords(db: Db): void {
   const ids = db
-    .selectDistinct({ exerciseId: workoutExercises.exerciseId })
-    .from(workoutExercises)
-    .where(isNull(workoutExercises.deletedAt))
+    .selectDistinct({ exerciseId: sessionExercises.exerciseId })
+    .from(sessionExercises)
+    .where(isNull(sessionExercises.deletedAt))
     .all()
     .map((row) => row.exerciseId);
 
   recomputePersonalRecords(db, ids);
 }
 
-export function finishWorkout(db: Db, workoutId: string, at: number): void {
-  db.update(workouts).set({ endedAt: at, updatedAt: at }).where(eq(workouts.id, workoutId)).run();
+export function finishSession(db: Db, sessionId: string, at: number): void {
+  db.update(sessions).set({ endedAt: at, updatedAt: at }).where(eq(sessions.id, sessionId)).run();
 
   // Finishing a workout ticks off the program day it came from, so the user
   // does not have to check the box by hand. An empty or ad-hoc workout has no
-  // routineId and ticks nothing.
-  const routineId = db
-    .select({ routineId: workouts.routineId })
-    .from(workouts)
-    .where(eq(workouts.id, workoutId))
-    .get()?.routineId;
-  if (routineId) markDayDoneForRoutine(db, routineId, at);
+  // workoutId and ticks nothing.
+  const workoutId = db
+    .select({ workoutId: sessions.workoutId })
+    .from(sessions)
+    .where(eq(sessions.id, sessionId))
+    .get()?.workoutId;
+  if (workoutId) markDayDoneForWorkout(db, workoutId, at);
 
   const touched = db
-    .selectDistinct({ exerciseId: workoutExercises.exerciseId })
-    .from(workoutExercises)
-    .where(and(eq(workoutExercises.workoutId, workoutId), isNull(workoutExercises.deletedAt)))
+    .selectDistinct({ exerciseId: sessionExercises.exerciseId })
+    .from(sessionExercises)
+    .where(and(eq(sessionExercises.sessionId, sessionId), isNull(sessionExercises.deletedAt)))
     .all()
     .map((row) => row.exerciseId);
 

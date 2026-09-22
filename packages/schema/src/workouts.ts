@@ -1,24 +1,39 @@
 import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { exercises } from './exercises';
-import { routines, SET_TYPES } from './routines';
+import { programs } from './programs';
 import { syncColumns } from './sync';
 
-export const workouts = sqliteTable(
-  'workouts',
-  {
-    ...syncColumns,
-    /** Null for a freestyle workout started without a routine. */
-    routineId: text('routine_id').references(() => routines.id),
-    name: text('name').notNull(),
-    startedAt: integer('started_at').notNull(),
-    /** Null means in progress. On launch, such a workout is offered for resume. */
-    endedAt: integer('ended_at'),
-    notes: text('notes'),
-  },
-  (table) => ({
-    startedIdx: index('workouts_started_idx').on(table.startedAt),
-  }),
-);
+export const SET_TYPES = ['normal', 'warmup', 'drop', 'failure'] as const;
+export type SetType = (typeof SET_TYPES)[number];
+
+/**
+ * A workout is a named plan — the thing that sits on a program day and that a
+ * session is started from. Performing one produces a `session`.
+ */
+export const workouts = sqliteTable('workouts', {
+  ...syncColumns,
+  name: text('name').notNull(),
+  notes: text('notes'),
+  orderIndex: integer('order_index').notNull().default(0),
+  /**
+   * Unused, and deliberately NOT dropped.
+   *
+   * A program does not own its workouts: the same workout is assigned to
+   * several days through `program_days`, which is what makes
+   * "Day 1/3/5 = Full body" one workout rather than three.
+   *
+   * Dropping a column in SQLite means rebuilding the table, and this table is
+   * referenced by `sessions`, `workout_exercises` and `program_days`. Drizzle
+   * wraps the rebuild in `PRAGMA foreign_keys=OFF`, but that pragma is a NO-OP
+   * inside a transaction and the migrator runs in one — so the DROP fails
+   * against any database that actually holds data. It did, on a device; only
+   * the backup-and-restore path saved it. Tests missed it because their
+   * databases are empty at that migration, so nothing referenced the table.
+   *
+   * A dead nullable column costs nothing. Leave it.
+   */
+  programId: text('program_id').references(() => programs.id),
+});
 
 export const workoutExercises = sqliteTable(
   'workout_exercises',
@@ -29,33 +44,27 @@ export const workoutExercises = sqliteTable(
     orderIndex: integer('order_index').notNull(),
     notes: text('notes'),
     restSeconds: integer('rest_seconds'),
+    /** Same number within one workout means the same superset. Null means none. */
     supersetGroup: integer('superset_group'),
   },
   (table) => ({
     workoutIdx: index('workout_exercises_workout_idx').on(table.workoutId),
-    exerciseIdx: index('workout_exercises_exercise_idx').on(table.exerciseId),
   }),
 );
 
-export const sets = sqliteTable(
-  'sets',
+export const workoutSets = sqliteTable(
+  'workout_sets',
   {
     ...syncColumns,
     workoutExerciseId: text('workout_exercise_id').notNull().references(() => workoutExercises.id),
     orderIndex: integer('order_index').notNull(),
     setType: text('set_type', { enum: SET_TYPES }).notNull().default('normal'),
-    weightKg: real('weight_kg'),
-    reps: integer('reps'),
-    durationSeconds: integer('duration_seconds'),
-    distanceM: real('distance_m'),
-    rpe: real('rpe'),
-    rir: integer('rir'),
-    /** Null means planned but not yet performed. This is what makes crash recovery work. */
-    completedAt: integer('completed_at'),
+    targetReps: integer('target_reps'),
+    targetWeightKg: real('target_weight_kg'),
+    targetRpe: real('target_rpe'),
   },
   (table) => ({
-    parentIdx: index('sets_parent_idx').on(table.workoutExerciseId),
-    completedIdx: index('sets_completed_idx').on(table.completedAt),
+    parentIdx: index('workout_sets_parent_idx').on(table.workoutExerciseId),
   }),
 );
 
@@ -63,5 +72,5 @@ export type Workout = typeof workouts.$inferSelect;
 export type NewWorkout = typeof workouts.$inferInsert;
 export type WorkoutExercise = typeof workoutExercises.$inferSelect;
 export type NewWorkoutExercise = typeof workoutExercises.$inferInsert;
-export type WorkoutSet = typeof sets.$inferSelect;
-export type NewWorkoutSet = typeof sets.$inferInsert;
+export type WorkoutSet = typeof workoutSets.$inferSelect;
+export type NewWorkoutSet = typeof workoutSets.$inferInsert;

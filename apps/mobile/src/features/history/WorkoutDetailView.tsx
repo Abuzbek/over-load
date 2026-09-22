@@ -2,7 +2,7 @@ import { formatTrackedSet } from '@overload/domain';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet } from 'react-native';
-import { getWorkoutDetail } from '../../data/sessionRepo';
+import { getSessionDetail } from '../../data/sessionRepo';
 import { getDistanceUnit, getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
 import { Card } from '../../ui/Card';
@@ -10,13 +10,13 @@ import { Screen } from '../../ui/Screen';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 
-type Props = { workoutId: string };
+type Props = { sessionId: string };
 
-export function WorkoutDetailView({ workoutId }: Props) {
+export function WorkoutDetailView({ sessionId }: Props) {
   // See HistoryList: this screen stays mounted underneath the stack, so a
   // unit change made on Settings needs this bump to show up on return.
   const [, setVersion] = useState(0);
-  const detail = getWorkoutDetail(db, workoutId);
+  const detail = getSessionDetail(db, sessionId);
   const unit = getWeightUnit(db);
   const distanceUnit = getDistanceUnit(db);
 
@@ -30,7 +30,7 @@ export function WorkoutDetailView({ workoutId }: Props) {
     return (
       <Screen>
         <Text color="textMuted" style={styles.empty}>
-          Workout not found.
+          Session not found.
         </Text>
       </Screen>
     );
@@ -40,9 +40,9 @@ export function WorkoutDetailView({ workoutId }: Props) {
     <Screen scroll>
       <Text variant="display">{detail.workout.name}</Text>
       {detail.exercises.map((entry) => (
-        <Card key={entry.workoutExercise.id}>
+        <Card key={entry.sessionExercise.id}>
           <Text variant="heading">{entry.exercise.name}</Text>
-          {entry.sets
+          {entry.sessionSets
             .filter((set) => set.completedAt !== null)
             .map((set, index) => (
               <Text key={set.id} variant="numeric" color="textMuted">

@@ -26,7 +26,7 @@ type Mode = 'week' | 'all';
 
 /**
  * The reference design measures these against an "Active Program" target. This
- * app has routines, not programs — nothing defines a weekly goal. So "this
+ * app has workouts, not programs — nothing defines a weekly goal. So "this
  * week" is measured against **last week**, which is real data and gives the
  * same "N left" shape. Swap the denominator when programs exist.
  */
@@ -171,7 +171,7 @@ export function DashboardScreen() {
       <ScrollView
         horizontal
         pagingEnabled
-        // Screen's contentContainer sets flexGrow:1; without this the carousel
+        // Screen's contentContainer sessionSets flexGrow:1; without this the carousel
         // stretches to fill the screen and leaves a gap under the slide.
         style={styles.carousel}
         showsHorizontalScrollIndicator={false}

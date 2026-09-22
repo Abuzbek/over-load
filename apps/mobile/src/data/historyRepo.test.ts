@@ -1,10 +1,10 @@
-import { exercises, newId, now, sets, workoutExercises, workouts, type Exercise } from '@overload/schema';
+import { exercises, newId, now, sessionSets, sessionExercises, sessions, type Exercise } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { startBareWorkout } from './sessionTestFixtures';
+import { startBareSession } from './sessionTestFixtures';
 import { listFinishedWorkouts, periodTotals } from './historyRepo';
-import { addExerciseToWorkout, addSet, completeSet, finishWorkout } from './sessionRepo';
+import { addExerciseToSession, addSet, completeSet, finishSession } from './sessionRepo';
 
 const AT = 1_700_000_000_000;
 
@@ -43,15 +43,15 @@ beforeEach(() => {
 
 afterEach(() => close());
 
-function logWorkout(name: string, at: number, sets: Array<[number, number]>, finish = true) {
-  const workoutId = startBareWorkout(db, name, at);
-  const we = addExerciseToWorkout(db, workoutId, bench.id, at);
-  for (const [weightKg, reps] of sets) {
+function logWorkout(name: string, at: number, sessionSets: Array<[number, number]>, finish = true) {
+  const sessionId = startBareSession(db, name, at);
+  const we = addExerciseToSession(db, sessionId, bench.id, at);
+  for (const [weightKg, reps] of sessionSets) {
     const set = addSet(db, we.id, at);
     completeSet(db, set.id, { weightKg, reps }, at);
   }
-  if (finish) finishWorkout(db, workoutId, at + 1000);
-  return workoutId;
+  if (finish) finishSession(db, sessionId, at + 1000);
+  return sessionId;
 }
 
 describe('listFinishedWorkouts', () => {
@@ -59,12 +59,12 @@ describe('listFinishedWorkouts', () => {
     expect(listFinishedWorkouts(db)).toEqual([]);
   });
 
-  it('excludes workouts that are still in progress', () => {
+  it('excludes sessions that are still in progress', () => {
     logWorkout('In progress', AT, [[100, 5]], false);
     expect(listFinishedWorkouts(db)).toEqual([]);
   });
 
-  it('returns finished workouts newest first', () => {
+  it('returns finished sessions newest first', () => {
     logWorkout('Older', AT - 100_000, [[100, 5]]);
     logWorkout('Newer', AT, [[100, 5]]);
     expect(listFinishedWorkouts(db).map((s) => s.workout.name)).toEqual(['Newer', 'Older']);
@@ -78,22 +78,22 @@ describe('listFinishedWorkouts', () => {
   });
 
   it('counts a set on a non-weight exercise toward setCount but not volumeKg, even with a stray weightKg/reps', () => {
-    const workoutId = startBareWorkout(db, 'Core', AT);
-    const we = addExerciseToWorkout(db, workoutId, plank.id, AT);
+    const sessionId = startBareSession(db, 'Core', AT);
+    const we = addExerciseToSession(db, sessionId, plank.id, AT);
     const set = addSet(db, we.id, AT);
     // The stray weightKg/reps are the kind of junk a duration set can carry
     // (e.g. left over from switching an exercise's tracking type); they must
     // not be counted as volume just because the columns are populated.
     completeSet(db, set.id, { weightKg: 17, reps: 8, durationSeconds: 60 }, AT);
-    finishWorkout(db, workoutId, AT + 1000);
+    finishSession(db, sessionId, AT + 1000);
 
     const [summary] = listFinishedWorkouts(db);
-    expect(summary?.workout.id).toBe(workoutId);
+    expect(summary?.workout.id).toBe(sessionId);
     expect(summary?.setCount).toBe(1);
     expect(summary?.volumeKg).toBe(0);
   });
 
-  it('respects the limit, keeping the newest workouts rather than an arbitrary two', () => {
+  it('respects the limit, keeping the newest sessions rather than an arbitrary two', () => {
     logWorkout('A', AT - 200_000, [[100, 5]]);
     logWorkout('B', AT - 100_000, [[100, 5]]);
     logWorkout('C', AT, [[100, 5]]);
@@ -103,14 +103,14 @@ describe('listFinishedWorkouts', () => {
     expect(listFinishedWorkouts(db, 2).map((s) => s.workout.name)).toEqual(['C', 'B']);
   });
 
-  it('ignores sets whose exercise definition has been tombstoned, as the detail read does', () => {
-    const workoutId = logWorkout('Push', AT, [[100, 5], [100, 3]]);
+  it('ignores sessionSets whose exercise definition has been tombstoned, as the detail read does', () => {
+    const sessionId = logWorkout('Push', AT, [[100, 5], [100, 3]]);
     expect(listFinishedWorkouts(db)[0]).toMatchObject({ setCount: 2, volumeKg: 800 });
 
     db.update(exercises).set({ deletedAt: now() }).where(eq(exercises.id, bench.id)).run();
 
     const [summary] = listFinishedWorkouts(db);
-    expect(summary?.workout.id).toBe(workoutId);
+    expect(summary?.workout.id).toBe(sessionId);
     expect(summary?.setCount).toBe(0);
     expect(summary?.volumeKg).toBe(0);
   });
@@ -122,8 +122,8 @@ describe('periodTotals', () => {
   });
 
   it('counts completed sets, distinct exercises and distinct primary muscles', () => {
-    const workoutId = startBareWorkout(db, 'Push', AT);
-    const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
+    const sessionId = startBareSession(db, 'Push', AT);
+    const we = addExerciseToSession(db, sessionId, bench.id, AT);
     for (const [weightKg, reps] of [[100, 5], [100, 5], [100, 3]] as Array<[number, number]>) {
       const set = addSet(db, we.id, AT);
       completeSet(db, set.id, { weightKg, reps }, AT);
@@ -133,21 +133,21 @@ describe('periodTotals', () => {
   });
 
   it('excludes a planned-but-not-performed set (completedAt IS NULL)', () => {
-    const workoutId = startBareWorkout(db, 'Push', AT);
-    const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
+    const sessionId = startBareSession(db, 'Push', AT);
+    const we = addExerciseToSession(db, sessionId, bench.id, AT);
     addSet(db, we.id, AT); // never completed
 
     expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 0, exercises: 0, muscles: 0 });
   });
 
-  it('counts the same exercise across two workouts once, distinctly', () => {
-    const w1 = startBareWorkout(db, 'A', AT);
-    const we1 = addExerciseToWorkout(db, w1, bench.id, AT);
+  it('counts the same exercise across two sessions once, distinctly', () => {
+    const w1 = startBareSession(db, 'A', AT);
+    const we1 = addExerciseToSession(db, w1, bench.id, AT);
     const s1 = addSet(db, we1.id, AT);
     completeSet(db, s1.id, { weightKg: 100, reps: 5 }, AT);
 
-    const w2 = startBareWorkout(db, 'B', AT + 500);
-    const we2 = addExerciseToWorkout(db, w2, bench.id, AT + 500);
+    const w2 = startBareSession(db, 'B', AT + 500);
+    const we2 = addExerciseToSession(db, w2, bench.id, AT + 500);
     const s2 = addSet(db, we2.id, AT + 500);
     completeSet(db, s2.id, { weightKg: 100, reps: 5 }, AT + 500);
 
@@ -155,8 +155,8 @@ describe('periodTotals', () => {
   });
 
   it('includes a set exactly at sinceMs and one exactly at untilMs; excludes one a millisecond outside either edge', () => {
-    const workoutId = startBareWorkout(db, 'Push', AT);
-    const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
+    const sessionId = startBareSession(db, 'Push', AT);
+    const we = addExerciseToSession(db, sessionId, bench.id, AT);
 
     const atSince = addSet(db, we.id, AT);
     completeSet(db, atSince.id, { weightKg: 100, reps: 5 }, AT);
@@ -176,23 +176,23 @@ describe('periodTotals', () => {
 
 describe('periodTotals tombstone filtering', () => {
   function loggedSet() {
-    const workoutId = startBareWorkout(db, 'Push', AT);
-    const we = addExerciseToWorkout(db, workoutId, bench.id, AT);
+    const sessionId = startBareSession(db, 'Push', AT);
+    const we = addExerciseToSession(db, sessionId, bench.id, AT);
     const set = addSet(db, we.id, AT);
     completeSet(db, set.id, { weightKg: 100, reps: 5 }, AT);
-    return { workoutId, workoutExerciseId: we.id, setId: set.id };
+    return { sessionId, sessionExerciseId: we.id, setId: set.id };
   }
 
   it('excludes a soft-deleted set', () => {
     const { setId } = loggedSet();
-    db.update(sets).set({ deletedAt: now() }).where(eq(sets.id, setId)).run();
+    db.update(sessionSets).set({ deletedAt: now() }).where(eq(sessionSets.id, setId)).run();
 
     expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 0, exercises: 0, muscles: 0 });
   });
 
   it('excludes a set whose workout_exercise is soft-deleted', () => {
-    const { workoutExerciseId } = loggedSet();
-    db.update(workoutExercises).set({ deletedAt: now() }).where(eq(workoutExercises.id, workoutExerciseId)).run();
+    const { sessionExerciseId } = loggedSet();
+    db.update(sessionExercises).set({ deletedAt: now() }).where(eq(sessionExercises.id, sessionExerciseId)).run();
 
     expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 0, exercises: 0, muscles: 0 });
   });
@@ -205,8 +205,8 @@ describe('periodTotals tombstone filtering', () => {
   });
 
   it('excludes a set whose workout is soft-deleted', () => {
-    const { workoutId } = loggedSet();
-    db.update(workouts).set({ deletedAt: now() }).where(eq(workouts.id, workoutId)).run();
+    const { sessionId } = loggedSet();
+    db.update(sessions).set({ deletedAt: now() }).where(eq(sessions.id, sessionId)).run();
 
     expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 0, exercises: 0, muscles: 0 });
   });

@@ -1,5 +1,5 @@
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { routines } from './routines';
+import { workouts } from './workouts';
 import { syncColumns } from './sync';
 
 export const programs = sqliteTable('programs', {
@@ -14,7 +14,7 @@ export const programs = sqliteTable('programs', {
  * A program is a cycle of days, not a calendar week: one row per day, ordered
  * by `dayIndex` (0-based, rendered as "Day 1"). Seven days are created with a
  * new program but the cycle can grow — see addProgramDay in programRepo.ts.
- * A null routineId means rest; rest is always an update to null, never a
+ * A null workoutId means rest; rest is always an update to null, never a
  * delete.
  */
 export const programDays = sqliteTable(
@@ -23,7 +23,7 @@ export const programDays = sqliteTable(
     ...syncColumns,
     programId: text('program_id').notNull().references(() => programs.id),
     dayIndex: integer('day_index').notNull(),
-    routineId: text('routine_id').references(() => routines.id),
+    workoutId: text('workout_id').references(() => workouts.id),
     /**
      * When this day was last ticked off. Set by finishing its workout or by
      * ticking the box by hand, cleared by unticking. Nothing resets it when the

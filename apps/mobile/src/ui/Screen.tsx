@@ -13,7 +13,7 @@ type Props = {
    * they render their own `display` title with `headerShown: false`, so nothing
    * else reserves that space and the title collides with the clock.
    *
-   * Screens pushed on the stack (routine builder, workout detail) keep their
+   * Screens pushed on the stack (workout builder, workout detail) keep their
    * native header, which already reserves it — turning this on there would
    * inset twice. Bottom insets are deliberately still nobody's job here; the
    * tab bar and the pinned rest timer handle their own.

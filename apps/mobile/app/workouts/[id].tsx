@@ -1,12 +1,12 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { RoutineBuilder } from '../../src/features/routines/RoutineBuilder';
+import { WorkoutBuilder } from '../../src/features/workouts/WorkoutBuilder';
 
-export default function RoutineScreen() {
+export default function WorkoutScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
     <>
       <Stack.Screen options={{ title: 'Edit workout' }} />
-      <RoutineBuilder routineId={id} />
+      <WorkoutBuilder workoutId={id} />
     </>
   );
 }

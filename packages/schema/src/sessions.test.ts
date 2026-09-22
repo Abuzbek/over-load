@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { exercises } from './exercises';
 import { newId } from './sync';
 import { createTestDb, type TestDb } from './testing/memoryDb';
-import { sets, workoutExercises, workouts } from './workouts';
+import { sessionSets, sessionExercises, sessions } from './sessions';
 
 let db: TestDb;
 let close: () => void;
@@ -16,8 +16,8 @@ afterEach(() => close());
 
 function seedWorkoutExercise() {
   const exerciseId = newId();
-  const workoutId = newId();
-  const workoutExerciseId = newId();
+  const sessionId = newId();
+  const sessionExerciseId = newId();
 
   db.insert(exercises).values({
     id: exerciseId,
@@ -28,67 +28,67 @@ function seedWorkoutExercise() {
     equipment: 'barbell',
   }).run();
 
-  db.insert(workouts).values({
-    id: workoutId,
+  db.insert(sessions).values({
+    id: sessionId,
     name: 'Leg Day',
     startedAt: 1_700_000_000_000,
   }).run();
 
-  db.insert(workoutExercises).values({
-    id: workoutExerciseId,
-    workoutId,
+  db.insert(sessionExercises).values({
+    id: sessionExerciseId,
+    sessionId,
     exerciseId,
     orderIndex: 0,
   }).run();
 
-  return { exerciseId, workoutId, workoutExerciseId };
+  return { exerciseId, sessionId, sessionExerciseId };
 }
 
 describe('workouts tree', () => {
   it('treats a workout with no endedAt as in progress', () => {
-    const { workoutId } = seedWorkoutExercise();
-    const [row] = db.select().from(workouts).where(eq(workouts.id, workoutId)).all();
+    const { sessionId } = seedWorkoutExercise();
+    const [row] = db.select().from(sessions).where(eq(sessions.id, sessionId)).all();
     expect(row?.endedAt).toBeNull();
   });
 
   it('stores planned sets with a null completedAt', () => {
-    const { workoutExerciseId } = seedWorkoutExercise();
-    db.insert(sets).values({
-      workoutExerciseId,
+    const { sessionExerciseId } = seedWorkoutExercise();
+    db.insert(sessionSets).values({
+      sessionExerciseId,
       orderIndex: 0,
       setType: 'normal',
       weightKg: 100,
       reps: 5,
     }).run();
 
-    const [row] = db.select().from(sets).all();
+    const [row] = db.select().from(sessionSets).all();
     expect(row?.completedAt).toBeNull();
     expect(row?.weightKg).toBe(100);
   });
 
   it('distinguishes completed from planned sets', () => {
-    const { workoutExerciseId } = seedWorkoutExercise();
-    db.insert(sets).values([
-      { id: newId(), workoutExerciseId, orderIndex: 0, weightKg: 100, reps: 5, completedAt: 1_700_000_001_000 },
-      { id: newId(), workoutExerciseId, orderIndex: 1, weightKg: 100, reps: 5 },
+    const { sessionExerciseId } = seedWorkoutExercise();
+    db.insert(sessionSets).values([
+      { id: newId(), sessionExerciseId, orderIndex: 0, weightKg: 100, reps: 5, completedAt: 1_700_000_001_000 },
+      { id: newId(), sessionExerciseId, orderIndex: 1, weightKg: 100, reps: 5 },
     ]).run();
 
-    const completed = db.select().from(sets).where(isNotNull(sets.completedAt)).all();
+    const completed = db.select().from(sessionSets).where(isNotNull(sessionSets.completedAt)).all();
     expect(completed).toHaveLength(1);
     expect(completed[0]?.orderIndex).toBe(0);
   });
 
   it('groups supersets by a shared integer on workout_exercises', () => {
-    const { workoutId, exerciseId } = seedWorkoutExercise();
-    db.insert(workoutExercises).values([
-      { id: newId(), workoutId, exerciseId, orderIndex: 1, supersetGroup: 1 },
-      { id: newId(), workoutId, exerciseId, orderIndex: 2, supersetGroup: 1 },
+    const { sessionId, exerciseId } = seedWorkoutExercise();
+    db.insert(sessionExercises).values([
+      { id: newId(), sessionId, exerciseId, orderIndex: 1, supersetGroup: 1 },
+      { id: newId(), sessionId, exerciseId, orderIndex: 2, supersetGroup: 1 },
     ]).run();
 
     const superset = db
       .select()
-      .from(workoutExercises)
-      .where(and(eq(workoutExercises.workoutId, workoutId), eq(workoutExercises.supersetGroup, 1)))
+      .from(sessionExercises)
+      .where(and(eq(sessionExercises.sessionId, sessionId), eq(sessionExercises.supersetGroup, 1)))
       .all();
 
     expect(superset).toHaveLength(2);
@@ -96,7 +96,7 @@ describe('workouts tree', () => {
 
   it('rejects a set whose parent workout_exercise does not exist', () => {
     expect(() =>
-      db.insert(sets).values({ workoutExerciseId: newId(), orderIndex: 0 }).run(),
+      db.insert(sessionSets).values({ sessionExerciseId: newId(), orderIndex: 0 }).run(),
     ).toThrow(/FOREIGN KEY/i);
   });
 });

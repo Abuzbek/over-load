@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { getActiveWorkout } from '../../data/sessionRepo';
+import { getActiveSession } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 
 /**
@@ -15,7 +15,7 @@ import { db } from '../../db/client';
  */
 export function useActiveWorkout() {
   // Unbound state value — the setter only needs to trigger a re-render so
-  // getActiveWorkout below re-queries on focus; nothing reads the count itself.
+  // getActiveSession below re-queries on focus; nothing reads the count itself.
   const [, refresh] = useState(0);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -25,7 +25,7 @@ export function useActiveWorkout() {
     }, []),
   );
 
-  const workout = getActiveWorkout(db);
+  const workout = getActiveSession(db);
 
   useEffect(() => {
     if (!workout) return;

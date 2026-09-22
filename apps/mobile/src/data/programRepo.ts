@@ -1,9 +1,9 @@
-import { appSettings, newId, programDays, programs, routines, type Db, type Program, type Routine } from '@overload/schema';
+import { appSettings, newId, programDays, programs, workouts, type Db, type Program, type Workout } from '@overload/schema';
 import { and, eq, inArray, isNull, max } from 'drizzle-orm';
 
 export type ProgramSummary = { program: Program; trainingDays: number; isActive: boolean };
 
-export type ProgramDay = { dayIndex: number; routine: Routine | null; completedAt: number | null };
+export type ProgramDay = { dayIndex: number; workout: Workout | null; completedAt: number | null };
 
 /** A new program starts as a week's worth of days; the cycle is not fixed to it. */
 export const DEFAULT_DAY_COUNT = 7;
@@ -38,7 +38,7 @@ export function getActiveProgram(db: Db): Program | undefined {
 /**
  * A new program starts with DEFAULT_DAY_COUNT day rows, created here in the
  * same transaction as the program itself. Rest is represented by a null
- * routineId on a row that exists, never by a missing row — see
+ * workoutId on a row that exists, never by a missing row — see
  * setProgramDay.
  */
 export function createProgram(
@@ -69,7 +69,7 @@ export function createProgram(
           deletedAt: null,
           programId: row.id,
           dayIndex,
-          routineId: null,
+          workoutId: null,
         })),
       )
       .run();
@@ -79,11 +79,11 @@ export function createProgram(
 }
 
 /**
- * Assigns (or clears, with routineId null) the workout for one day of a
+ * Assigns (or clears, with workoutId null) the workout for one day of a
  * program's cycle. Always an update to the existing row — day rows created
  * by createProgram or addProgramDay are never deleted.
  */
-export function setProgramDay(db: Db, programId: string, dayIndex: number, routineId: string | null, at: number): void {
+export function setProgramDay(db: Db, programId: string, dayIndex: number, workoutId: string | null, at: number): void {
   // Upsert, not update. createProgram writes its days up front, but programs
   // created before program_days existed have none — and a bare UPDATE against
   // a missing row silently does nothing, so the day would never change and
@@ -102,12 +102,12 @@ export function setProgramDay(db: Db, programId: string, dayIndex: number, routi
     .get();
 
   if (existing) {
-    db.update(programDays).set({ routineId, updatedAt: at }).where(eq(programDays.id, existing.id)).run();
+    db.update(programDays).set({ workoutId, updatedAt: at }).where(eq(programDays.id, existing.id)).run();
     return;
   }
 
   db.insert(programDays)
-    .values({ id: newId(), createdAt: at, updatedAt: at, deletedAt: null, programId, dayIndex, routineId })
+    .values({ id: newId(), createdAt: at, updatedAt: at, deletedAt: null, programId, dayIndex, workoutId })
     .run();
 }
 
@@ -116,7 +116,7 @@ export function setProgramDay(db: Db, programId: string, dayIndex: number, routi
  * fixed at seven. An unknown or tombstoned program reads as no days at all.
  *
  * Three joined levels, each with its own tombstone filter: programs ->
- * program_days -> routines. A tombstoned program, day row, or workout all
+ * program_days -> workouts. A tombstoned program, day row, or workout all
  * read as rest rather than as a dangling reference.
  */
 export function getProgramDays(db: Db, programId: string): ProgramDay[] {
@@ -134,15 +134,15 @@ export function getProgramDays(db: Db, programId: string): ProgramDay[] {
     .orderBy(programDays.dayIndex)
     .all();
 
-  const routineIds = days.map((d) => d.routineId).filter((id): id is string => id !== null);
-  const liveRoutines = routineIds.length
-    ? db.select().from(routines).where(and(inArray(routines.id, routineIds), isNull(routines.deletedAt))).all()
+  const workoutIds = days.map((d) => d.workoutId).filter((id): id is string => id !== null);
+  const liveWorkouts = workoutIds.length
+    ? db.select().from(workouts).where(and(inArray(workouts.id, workoutIds), isNull(workouts.deletedAt))).all()
     : [];
-  const routineById = new Map(liveRoutines.map((r) => [r.id, r]));
+  const workoutById = new Map(liveWorkouts.map((r) => [r.id, r]));
 
   return days.map((day) => ({
     dayIndex: day.dayIndex,
-    routine: day.routineId ? (routineById.get(day.routineId) ?? null) : null,
+    workout: day.workoutId ? (workoutById.get(day.workoutId) ?? null) : null,
     completedAt: day.completedAt,
   }));
 }
@@ -180,7 +180,7 @@ export function setProgramDayCompleted(
  * The first, not all of them — the same workout sits on several days of a
  * cycle, and finishing it once completes one of those days, not the lot.
  */
-export function markDayDoneForRoutine(db: Db, routineId: string, at: number): void {
+export function markDayDoneForWorkout(db: Db, workoutId: string, at: number): void {
   const program = getActiveProgram(db);
   if (!program) return;
 
@@ -190,7 +190,7 @@ export function markDayDoneForRoutine(db: Db, routineId: string, at: number): vo
     .where(
       and(
         eq(programDays.programId, program.id),
-        eq(programDays.routineId, routineId),
+        eq(programDays.workoutId, workoutId),
         isNull(programDays.completedAt),
         isNull(programDays.deletedAt),
       ),
@@ -237,15 +237,15 @@ export function addProgramDay(db: Db, programId: string, at: number): number | n
   if (dayIndex >= MAX_DAY_COUNT) return null;
 
   db.insert(programDays)
-    .values({ id: newId(), createdAt: at, updatedAt: at, deletedAt: null, programId, dayIndex, routineId: null })
+    .values({ id: newId(), createdAt: at, updatedAt: at, deletedAt: null, programId, dayIndex, workoutId: null })
     .run();
   return dayIndex;
 }
 
 /**
- * Three joined levels: programs -> program_days -> routines. Each carries
- * its own tombstone filter, and the inner join against routines drops rest
- * days (null routineId) for free.
+ * Three joined levels: programs -> program_days -> workouts. Each carries
+ * its own tombstone filter, and the inner join against workouts drops rest
+ * days (null workoutId) for free.
  */
 export function listPrograms(db: Db): ProgramSummary[] {
   const activeId = getSettingsRow(db)?.activeProgramId ?? null;
@@ -255,8 +255,8 @@ export function listPrograms(db: Db): ProgramSummary[] {
   const dayRows = db
     .select({ programId: programDays.programId })
     .from(programDays)
-    .innerJoin(routines, eq(routines.id, programDays.routineId))
-    .where(and(isNull(programDays.deletedAt), isNull(routines.deletedAt)))
+    .innerJoin(workouts, eq(workouts.id, programDays.workoutId))
+    .where(and(isNull(programDays.deletedAt), isNull(workouts.deletedAt)))
     .all();
 
   const trainingDaysByProgram = new Map<string, number>();

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { discardWorkout, getActiveWorkoutId, startWorkoutFromRoutine } from '../../data/sessionRepo';
+import { discardSession, getActiveSessionId, startSessionFromWorkout } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { Sheet } from '../../ui/Sheet';
@@ -8,9 +8,9 @@ import { Sheet } from '../../ui/Sheet';
 /**
  * Starting a workout, with the one guard that must never be skipped.
  *
- * getActiveWorkoutId only ever returns the newest unfinished workout, so
+ * getActiveSessionId only ever returns the newest unfinished workout, so
  * silently starting a second one strands the first: no endedAt keeps it out of
- * history, and a newer sibling keeps it out of resume. Its sets then sit in
+ * history, and a newer sibling keeps it out of resume. Its sessionSets then sit in
  * SQLite, invisible to every screen, forever.
  *
  * This lives in one place because it has two callers — the workout builder and
@@ -18,54 +18,54 @@ import { Sheet } from '../../ui/Sheet';
  * eventually gets missed.
  */
 export function useWorkoutStarter() {
-  const [pendingRoutineId, setPendingRoutineId] = useState<string | null>(null);
-  const [blockingWorkoutId, setBlockingWorkoutId] = useState<string | null>(null);
+  const [pendingWorkoutId, setPendingWorkoutId] = useState<string | null>(null);
+  const [blockingSessionId, setBlockingWorkoutId] = useState<string | null>(null);
 
-  const launch = useCallback((routineId: string) => {
+  const launch = useCallback((workoutId: string) => {
     setBlockingWorkoutId(null);
-    setPendingRoutineId(null);
-    const workoutId = startWorkoutFromRoutine(db, routineId, Date.now());
-    router.push(`/session/${workoutId}`);
+    setPendingWorkoutId(null);
+    const sessionId = startSessionFromWorkout(db, workoutId, Date.now());
+    router.push(`/session/${sessionId}`);
   }, []);
 
   const start = useCallback(
-    (routineId: string) => {
-      const active = getActiveWorkoutId(db);
+    (workoutId: string) => {
+      const active = getActiveSessionId(db);
       if (active) {
-        setPendingRoutineId(routineId);
+        setPendingWorkoutId(workoutId);
         setBlockingWorkoutId(active);
         return;
       }
-      launch(routineId);
+      launch(workoutId);
     },
     [launch],
   );
 
   const cancel = useCallback(() => {
     setBlockingWorkoutId(null);
-    setPendingRoutineId(null);
+    setPendingWorkoutId(null);
   }, []);
 
   const resume = useCallback(() => {
-    const active = blockingWorkoutId;
+    const active = blockingSessionId;
     cancel();
     if (active) router.push(`/session/${active}`);
-  }, [blockingWorkoutId, cancel]);
+  }, [blockingSessionId, cancel]);
 
   const discardAndStart = useCallback(() => {
-    if (blockingWorkoutId) discardWorkout(db, blockingWorkoutId, Date.now());
-    if (pendingRoutineId) launch(pendingRoutineId);
+    if (blockingSessionId) discardSession(db, blockingSessionId, Date.now());
+    if (pendingWorkoutId) launch(pendingWorkoutId);
     else cancel();
-  }, [blockingWorkoutId, pendingRoutineId, launch, cancel]);
+  }, [blockingSessionId, pendingWorkoutId, launch, cancel]);
 
-  return { start, blockingWorkoutId, resume, discardAndStart, cancel };
+  return { start, blockingSessionId, resume, discardAndStart, cancel };
 }
 
 /** Sheet, never Alert: Alert.prompt is iOS-only and this app ships Android. */
 export function WorkoutStartSheet({ starter }: { starter: ReturnType<typeof useWorkoutStarter> }) {
   return (
     <Sheet
-      visible={starter.blockingWorkoutId !== null}
+      visible={starter.blockingSessionId !== null}
       onRequestClose={starter.cancel}
       title="A workout is already in progress"
       body="Resume it, or discard it and start this workout instead. Discarding keeps nothing from the unfinished workout."

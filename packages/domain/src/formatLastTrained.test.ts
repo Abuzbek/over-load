@@ -6,7 +6,7 @@ const DAY = 86_400_000;
 const NOW = new Date(2026, 8, 21, 12, 0, 0).getTime();
 
 describe('formatLastTrained', () => {
-  it('says Never when the routine has never been trained', () => {
+  it('says Never when the workout has never been trained', () => {
     expect(formatLastTrained(null, NOW)).toBe('Never');
   });
 

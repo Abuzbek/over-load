@@ -4,7 +4,7 @@ import { useFocusEffect, router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { getDistanceUnit, getWeightUnit } from '../../data/settingsRepo';
-import { finishWorkout, getWorkoutDetail, lastPerformance } from '../../data/sessionRepo';
+import { finishSession, getSessionDetail, lastPerformance } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
@@ -13,10 +13,10 @@ import { ExerciseCard } from './ExerciseCard';
 import { cancelRestNotification, scheduleRestNotification } from './notifications';
 import { RestTimer } from './RestTimer';
 
-type Props = { workoutId: string };
+type Props = { sessionId: string };
 
-export function ActiveSession({ workoutId }: Props) {
-  // The phone must not lock between sets.
+export function ActiveSession({ sessionId }: Props) {
+  // The phone must not lock between sessionSets.
   useKeepAwake();
 
   const [rest, setRest] = useState<{ startedAt: number; seconds: number } | null>(null);
@@ -34,7 +34,7 @@ export function ActiveSession({ workoutId }: Props) {
   // The next person who adds a way to reach a session WITHOUT a fresh push
   // needs to know this trap exists before doing that.
   const [, setVersion] = useState(0);
-  const detail = getWorkoutDetail(db, workoutId);
+  const detail = getSessionDetail(db, sessionId);
   const unit = getWeightUnit(db);
   const distanceUnit = getDistanceUnit(db);
 
@@ -48,10 +48,10 @@ export function ActiveSession({ workoutId }: Props) {
   const previousByExercise = useMemo(() => {
     const map = new Map<string, CompletedSet[]>();
     for (const entry of detail?.exercises ?? []) {
-      map.set(entry.exercise.id, lastPerformance(db, entry.exercise.id, workoutId));
+      map.set(entry.exercise.id, lastPerformance(db, entry.exercise.id, sessionId));
     }
     return map;
-  }, [workoutId, detail?.exercises.length]);
+  }, [sessionId, detail?.exercises.length]);
 
   if (!detail) {
     return (
@@ -87,7 +87,7 @@ export function ActiveSession({ workoutId }: Props) {
       >
         {detail.exercises.map((entry) => (
           <ExerciseCard
-            key={entry.workoutExercise.id}
+            key={entry.sessionExercise.id}
             entry={entry}
             previous={previousByExercise.get(entry.exercise.id) ?? []}
             unit={unit}
@@ -108,13 +108,13 @@ export function ActiveSession({ workoutId }: Props) {
         <Button
           title="Add exercise"
           variant="secondary"
-          onPress={() => router.push(`/session/${workoutId}/add-exercise`)}
+          onPress={() => router.push(`/session/${sessionId}/add-exercise`)}
         />
 
         <Button
           title="Finish workout"
           onPress={() => {
-            finishWorkout(db, workoutId, Date.now());
+            finishSession(db, sessionId, Date.now());
             // A rest notification outlives the screen that scheduled it: it is
             // an OS-level scheduled notification, and it survives navigation
             // and even a force-quit. Without this, finishing a workout inside
@@ -123,7 +123,7 @@ export function ActiveSession({ workoutId }: Props) {
             setRest(null);
             void cancelRestNotification();
             // replace() alone swaps only the top route, leaving
-            // Home -> Routines -> Builder -> Home with a back button into the
+            // Home -> Workouts -> Builder -> Home with a back button into the
             // builder of a workout that is already over. Pop to the root first.
             router.dismissAll();
             router.replace('/');

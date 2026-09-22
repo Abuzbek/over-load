@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { setProgramDayCompleted, type ProgramDay } from '../../data/programRepo';
-import type { RoutineSummary } from '../../data/routineRepo';
+import type { WorkoutSummary } from '../../data/workoutRepo';
 import { db } from '../../db/client';
 import { Card } from '../../ui/Card';
 import { Text } from '../../ui/Text';
@@ -14,7 +14,7 @@ type Props = {
   programId: string;
   programName: string;
   days: ProgramDay[];
-  summaryByRoutineId: Map<string, RoutineSummary>;
+  summaryByWorkoutId: Map<string, WorkoutSummary>;
   starter: ReturnType<typeof useWorkoutStarter>;
   onChanged: () => void;
 };
@@ -43,22 +43,22 @@ function DayRow({
 }: {
   day: ProgramDay;
   position: number;
-  summary: RoutineSummary | undefined;
+  summary: WorkoutSummary | undefined;
   onToggle: () => void;
   onStart: () => void;
 }) {
   const done = day.completedAt !== null;
-  const title = day.routine?.name ?? 'Rest Day';
+  const title = day.workout?.name ?? 'Rest Day';
   const preview = summary?.exerciseNames.join(', ');
 
   return (
     <View style={styles.dayRow}>
       <Pressable
         // Rest days have nothing to start, so only a workout day is pressable.
-        accessibilityRole={day.routine ? 'button' : undefined}
+        accessibilityRole={day.workout ? 'button' : undefined}
         accessibilityLabel={`Day ${position + 1}, ${title}`}
-        onPress={day.routine ? onStart : undefined}
-        style={({ pressed }) => [styles.dayMain, pressed && day.routine ? styles.pressed : null]}
+        onPress={day.workout ? onStart : undefined}
+        style={({ pressed }) => [styles.dayMain, pressed && day.workout ? styles.pressed : null]}
       >
         <Text variant="heading" color={done ? 'textMuted' : 'text'}>{title}</Text>
         {preview ? (
@@ -80,7 +80,7 @@ function DayRow({
 }
 
 /**
- * The active program, expanded in place on the Workout tab rather than behind a
+ * The active program, expanded in place on the Session tab rather than behind a
  * push: this is the screen a user opens to start today's session, so tapping a
  * day starts its workout. Editing the cycle lives in the program library.
  */
@@ -88,12 +88,12 @@ export function ActiveProgramCard({
   programId,
   programName,
   days,
-  summaryByRoutineId,
+  summaryByWorkoutId,
   starter,
   onChanged,
 }: Props) {
   const [open, setOpen] = useState(true);
-  const workoutDays = days.filter((d) => d.routine !== null).length;
+  const workoutDays = days.filter((d) => d.workout !== null).length;
 
   return (
     <Card style={styles.card}>
@@ -123,12 +123,12 @@ export function ActiveProgramCard({
               key={day.dayIndex}
               day={day}
               position={position}
-              summary={day.routine ? summaryByRoutineId.get(day.routine.id) : undefined}
+              summary={day.workout ? summaryByWorkoutId.get(day.workout.id) : undefined}
               onToggle={() => {
                 setProgramDayCompleted(db, programId, day.dayIndex, day.completedAt === null, Date.now());
                 onChanged();
               }}
-              onStart={() => day.routine && starter.start(day.routine.id)}
+              onStart={() => day.workout && starter.start(day.workout.id)}
             />
           ))
         : null}

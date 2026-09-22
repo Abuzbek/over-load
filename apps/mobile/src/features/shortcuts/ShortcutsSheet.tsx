@@ -2,7 +2,7 @@ import { Lucide } from '@react-native-vector-icons/lucide';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
-import { createRoutine } from '../../data/routineRepo';
+import { createWorkout } from '../../data/workoutRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { ListRow } from '../../ui/ListRow';
@@ -64,14 +64,14 @@ export function ShortcutsSheet({ visible, onClose }: { visible: boolean; onClose
     onClose();
   }
 
-  function createWorkout() {
+  function create() {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const workout = createRoutine(db, trimmed);
+    const workout = createWorkout(db, trimmed);
     close();
     // Straight into the builder: a workout with no exercises is not useful yet,
     // and it is already in the library for the Workout tab to list.
-    router.push(`/routines/${workout.id}`);
+    router.push(`/workouts/${workout.id}`);
   }
 
   // ONE Sheet, contents switched inside it. Returning a different <Sheet>
@@ -93,10 +93,10 @@ export function ShortcutsSheet({ visible, onClose }: { visible: boolean; onClose
             placeholder="Workout name"
             placeholderTextColor={theme.colors.textMuted}
             autoFocus
-            onSubmitEditing={createWorkout}
+            onSubmitEditing={create}
             style={styles.input}
           />
-          <Button title="Create" onPress={createWorkout} />
+          <Button title="Create" onPress={create} />
           <Button title="Cancel" variant="secondary" onPress={close} />
         </>
       ) : (

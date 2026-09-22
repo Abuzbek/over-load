@@ -7,7 +7,7 @@ import {
   type TrackingType,
   type Unit,
 } from '@overload/domain';
-import type { WorkoutSet } from '@overload/schema';
+import type { SessionSet } from '@overload/schema';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import type { SetValues } from '../../data/sessionRepo';
@@ -24,7 +24,7 @@ import {
 } from './setInputs';
 
 type Props = {
-  set: WorkoutSet;
+  set: SessionSet;
   index: number;
   trackingType: TrackingType;
   previous: CompletedSet[];
@@ -42,12 +42,12 @@ type Props = {
  * when there was no matching set at this index.
  */
 export function formatPrevious(
-  sets: CompletedSet[],
+  sessionSets: CompletedSet[],
   index: number,
   unit: Unit,
   distanceUnit: DistanceUnit,
 ): string {
-  const match = sets[index];
+  const match = sessionSets[index];
   if (!match) return '—';
   return formatTrackedSet(match.trackingType, match, unit, distanceUnit);
 }

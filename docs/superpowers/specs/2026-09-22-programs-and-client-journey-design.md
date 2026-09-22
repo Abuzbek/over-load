@@ -107,18 +107,26 @@ workout to log sets into.
 
 ### Naming, decided
 
-The table called `routines` **is** the workout template; `routine_exercises` and
-`routine_sets` are its contents. The table called `workouts` is a **logged session**.
+The vocabulary is one word per concept, in the product **and** in the database:
 
-The product vocabulary is now "workout" for both the template and the session, which
-is how lifters talk and is fine in the UI — "Push Day" the plan and "Push Day" you did
-on Monday.
+| Concept | Tables |
+|---|---|
+| A repeating cycle of days | `programs`, `program_days` |
+| A named plan you can train | `workouts`, `workout_exercises`, `workout_sets` |
+| A plan you actually performed | `sessions`, `session_exercises`, `session_sets` |
+| A movement in the catalogue | `exercises` |
 
-**The database keeps the `routines` name for now.** Renaming it to
-`workout_templates` is a migration plus a rename across every repository, screen and
-test, for no behavioural gain, and the risk of a half-done rename is worse than the
-confusion. Recorded here so the next person reads `routines` as "workout template"
-rather than as a second concept. Revisit if the codebase grows a second reason to.
+**There is no `routine` anywhere.** An earlier version of this document kept the
+name, arguing a rename was a migration plus a sweep across every repository,
+screen and test for no behavioural gain. That was wrong twice over: the word
+`routine` does not exist in the product, and the table named `workouts` held the
+*performed* thing, so the name the owner cares about was taken by the wrong
+concept. Migration 0008 renames six tables and six columns.
+
+The renames go in a fixed order, because `routines` cannot become `workouts`
+until the old `workouts` has become `sessions`. `ALTER TABLE ... RENAME TO` and
+`RENAME COLUMN` do not rebuild a table, so the foreign-key hazard that broke
+0005 does not apply here.
 
 ### Creation paths (future)
 

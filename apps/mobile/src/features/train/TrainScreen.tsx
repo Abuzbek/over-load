@@ -3,7 +3,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { getActiveProgram, getProgramDays } from '../../data/programRepo';
-import { listRoutineSummaries, type RoutineSummary } from '../../data/routineRepo';
+import { listWorkoutSummaries, type WorkoutSummary } from '../../data/workoutRepo';
 import { db } from '../../db/client';
 import { ActiveProgramCard } from '../programs/ActiveProgramCard';
 import { useWorkoutStarter, WorkoutStartSheet } from '../session/useWorkoutStarter';
@@ -16,18 +16,18 @@ import { SectionLabel } from '../../ui/SectionLabel';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 
-function RoutineCard({ summary }: { summary: RoutineSummary }) {
-  const { routine, exerciseCount, lastTrainedAt, primaryMuscles } = summary;
+function WorkoutCard({ summary }: { summary: WorkoutSummary }) {
+  const { workout, exerciseCount, lastTrainedAt, primaryMuscles } = summary;
   const count = `${exerciseCount} ${exerciseCount === 1 ? 'exercise' : 'exercises'}`;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${routine.name}, ${count}`}
-      onPress={() => router.push(`/routines/${routine.id}`)}
+      accessibilityLabel={`${workout.name}, ${count}`}
+      onPress={() => router.push(`/workouts/${workout.id}`)}
       style={({ pressed }) => pressed && styles.pressed}
     >
       <Card>
-        <Text variant="title">{routine.name}</Text>
+        <Text variant="title">{workout.name}</Text>
         <Text variant="caption" color="textMuted">
           {count} · {formatLastTrained(lastTrainedAt, Date.now())}
         </Text>
@@ -40,7 +40,7 @@ function RoutineCard({ summary }: { summary: RoutineSummary }) {
 }
 
 export function TrainScreen() {
-  // Bumping this forces a re-read of listRoutineSummaries. useFocusEffect bumps
+  // Bumping this forces a re-read of listWorkoutSummaries. useFocusEffect bumps
   // it when the screen regains focus, since the builder and the session mutate
   // this data and navigate back, leaving this screen mounted underneath.
   // Do NOT switch this to key={version} — that remounts and resets scroll (6b249e9).
@@ -49,10 +49,10 @@ export function TrainScreen() {
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const starter = useWorkoutStarter();
-  const summaries = listRoutineSummaries(db);
+  const summaries = listWorkoutSummaries(db);
   const activeProgram = getActiveProgram(db);
   const days = activeProgram ? getProgramDays(db, activeProgram.id) : [];
-  const summaryByRoutineId = new Map(summaries.map((s) => [s.routine.id, s]));
+  const summaryByWorkoutId = new Map(summaries.map((s) => [s.workout.id, s]));
 
   return (
     <Screen scroll safeTop>
@@ -64,7 +64,7 @@ export function TrainScreen() {
           programId={activeProgram.id}
           programName={activeProgram.name}
           days={days}
-          summaryByRoutineId={summaryByRoutineId}
+          summaryByWorkoutId={summaryByWorkoutId}
           starter={starter}
           onChanged={() => setVersion((v) => v + 1)}
         />
@@ -94,7 +94,7 @@ export function TrainScreen() {
           />
         ) : (
           <View style={styles.list}>
-            {summaries.map((s) => <RoutineCard key={s.routine.id} summary={s} />)}
+            {summaries.map((s) => <WorkoutCard key={s.workout.id} summary={s} />)}
           </View>
         )}
       </Collapsible>

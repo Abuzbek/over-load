@@ -20,7 +20,7 @@ export function ExerciseCard({ entry, previous, unit, distanceUnit, onChanged, o
     <Card>
       <Text variant="title">{entry.exercise.name}</Text>
 
-      {entry.sets.map((set, index) => (
+      {entry.sessionSets.map((set, index) => (
         <SetRow
           key={set.id}
           set={set}
@@ -32,7 +32,7 @@ export function ExerciseCard({ entry, previous, unit, distanceUnit, onChanged, o
           onComplete={(values) => {
             completeSet(db, set.id, values, Date.now());
             onChanged();
-            onSetCompleted(entry.workoutExercise.restSeconds);
+            onSetCompleted(entry.sessionExercise.restSeconds);
           }}
           onUncomplete={() => {
             uncompleteSet(db, set.id);
@@ -45,7 +45,7 @@ export function ExerciseCard({ entry, previous, unit, distanceUnit, onChanged, o
         title="Add set"
         variant="secondary"
         onPress={() => {
-          addSet(db, entry.workoutExercise.id, Date.now());
+          addSet(db, entry.sessionExercise.id, Date.now());
           onChanged();
         }}
       />

@@ -2,8 +2,8 @@ import { toStorageKg, type Unit } from '@overload/domain';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import type { RoutineDetailExercise } from '../../data/routineRepo';
-import { addRoutineSet, getRoutineDetail, reorderRoutineExercises } from '../../data/routineRepo';
+import type { WorkoutDetailExercise } from '../../data/workoutRepo';
+import { addWorkoutSet, getWorkoutDetail, reorderWorkoutExercises } from '../../data/workoutRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
@@ -15,26 +15,26 @@ import { theme } from '../../ui/theme';
 import { parseDecimalInput, parseIntegerInput } from '../session/setInputs';
 import { useWorkoutStarter, WorkoutStartSheet } from '../session/useWorkoutStarter';
 import {
-  formatRoutineTarget,
+  formatWorkoutTarget,
   targetInputsFor,
-  type RoutineTargetField,
-} from './routineTargets';
+  type WorkoutTargetField,
+} from './workoutTargets';
 
-type Props = { routineId: string };
+type Props = { workoutId: string };
 
 type ExerciseCardProps = {
-  entry: RoutineDetailExercise;
+  entry: WorkoutDetailExercise;
   unit: Unit;
   onSetAdded: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
 };
 
-const EMPTY_DRAFT: Record<RoutineTargetField, string> = { weightKg: '', reps: '' };
+const EMPTY_DRAFT: Record<WorkoutTargetField, string> = { weightKg: '', reps: '' };
 
 function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: ExerciseCardProps) {
   const trackingType = entry.exercise.trackingType;
-  // A duration/distance_duration exercise gets [] here — routine_sets has no
+  // A duration/distance_duration exercise gets [] here — workout_sets has no
   // column for a target duration or distance, so rendering a box for it would
   // silently discard whatever the user typed. Keep this empty rather than
   // inventing a weight/reps pair for every tracking type.
@@ -52,10 +52,10 @@ function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: Exercis
           {onMoveDown ? <Button title="Move down" variant="secondary" onPress={onMoveDown} /> : null}
         </View>
       </View>
-      {entry.sets.map((set, index) => {
+      {entry.sessionSets.map((set, index) => {
         // null is the signal to render the bare set number — a plank does not
         // get an invented "— × 8".
-        const target = formatRoutineTarget(trackingType, set, unit);
+        const target = formatWorkoutTarget(trackingType, set, unit);
         return (
           <Text key={set.id} color="textMuted">
             {target === null ? `Set ${index + 1}` : `Set ${index + 1}: ${target}`}
@@ -81,7 +81,7 @@ function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: Exercis
           title="Add set"
           variant="secondary"
           onPress={() => {
-            const offers = (field: RoutineTargetField) => inputs.some((i) => i.field === field);
+            const offers = (field: WorkoutTargetField) => inputs.some((i) => i.field === field);
 
             // Only send a target for a field this tracking type actually
             // offers. The old unconditional `?? 8` gave a plank a rep target.
@@ -91,7 +91,7 @@ function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: Exercis
               ? (draft.reps ? parseIntegerInput(draft.reps) : null) ?? 8
               : undefined;
 
-            addRoutineSet(db, entry.routineExercise.id, {
+            addWorkoutSet(db, entry.workoutExercise.id, {
               targetReps: repsValue,
               targetWeightKg: weightValue != null ? toStorageKg(weightValue, unit) : undefined,
             });
@@ -104,16 +104,16 @@ function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: Exercis
   );
 }
 
-export function RoutineBuilder({ routineId }: Props) {
+export function WorkoutBuilder({ workoutId }: Props) {
   // A local counter is the refresh signal: bumping it forces a re-read of
-  // getRoutineDetail. "Add set" bumps it directly; useFocusEffect bumps it
+  // getWorkoutDetail. "Add set" bumps it directly; useFocusEffect bumps it
   // whenever this screen regains focus, since other screens (e.g.
-  // add-exercise) mutate this routine and navigate back via router.back(),
+  // add-exercise) mutate this workout and navigate back via router.back(),
   // leaving this screen mounted underneath rather than remounting it.
   // Do NOT switch this to key={version} — that remounts and resets scroll
   // (6b249e9's failure mode).
   const [, setVersion] = useState(0);
-  const detail = getRoutineDetail(db, routineId);
+  const detail = getWorkoutDetail(db, workoutId);
   const unit = getWeightUnit(db);
 
   const starter = useWorkoutStarter();
@@ -134,16 +134,16 @@ export function RoutineBuilder({ routineId }: Props) {
       const targetIndex = index + direction;
       if (targetIndex < 0 || targetIndex >= detail.exercises.length) return;
 
-      const ids = detail.exercises.map((entry) => entry.routineExercise.id);
+      const ids = detail.exercises.map((entry) => entry.workoutExercise.id);
       const moved = ids[index];
       if (moved === undefined) return;
       ids.splice(index, 1);
       ids.splice(targetIndex, 0, moved);
 
-      reorderRoutineExercises(db, routineId, ids, Date.now());
+      reorderWorkoutExercises(db, workoutId, ids, Date.now());
       setVersion((v) => v + 1);
     },
-    [detail, routineId],
+    [detail, workoutId],
   );
 
   if (!detail) {
@@ -161,10 +161,10 @@ export function RoutineBuilder({ routineId }: Props) {
       {/* The workout's own name, not a generic "Edit workout": a day's inline
           workout is created as "<program> · Day N" and the header is the only
           thing that says which one you are in. */}
-      <Stack.Screen options={{ title: detail.routine.name }} />
+      <Stack.Screen options={{ title: detail.workout.name }} />
       {detail.exercises.map((entry, index) => (
         <ExerciseCard
-          key={entry.routineExercise.id}
+          key={entry.workoutExercise.id}
           entry={entry}
           unit={unit}
           onSetAdded={() => setVersion((v) => v + 1)}
@@ -179,9 +179,9 @@ export function RoutineBuilder({ routineId }: Props) {
         </Text>
       ) : null}
 
-      <Button title="Start workout" onPress={() => starter.start(routineId)} />
+      <Button title="Start workout" onPress={() => starter.start(workoutId)} />
 
-      <Button title="Add exercise" onPress={() => router.push(`/routines/${routineId}/add-exercise`)} />
+      <Button title="Add exercise" onPress={() => router.push(`/workouts/${workoutId}/add-exercise`)} />
 
       <WorkoutStartSheet starter={starter} />
     </Screen>

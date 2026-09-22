@@ -3,7 +3,14 @@
 Expo/React Native app targeting **iOS and Android**, pnpm monorepo, SQLite via
 Drizzle. Packages are scoped `@overload/*`; the app's bundle id is
 `com.overload.app`. Note that `workouts` is also domain vocabulary — the table,
-`workout_exercises`, `getWorkoutDetail` — and is unrelated to the project name. Release 1 (the logging loop) is built and merged. The app shell and design
+`workout_exercises`, `getWorkoutDetail` — and is unrelated to the project name.
+
+**One word per concept, in the product and the database.** A **program** is a
+repeating cycle of days (`programs`, `program_days`); a **workout** is a named
+plan you can train (`workouts`, `workout_exercises`, `workout_sets`); a
+**session** is a workout you performed (`sessions`, `session_exercises`,
+`session_sets`); an **exercise** is a movement in the catalogue. There is no
+"routine" — migration 0008 removed the last of that name. Release 1 (the logging loop) is built and merged. The app shell and design
 system (four tabs, `src/ui/` component kit) is built on branch `app-shell`,
 not yet merged; see `docs/superpowers/2026-09-22-session-handoff.md` for full
 state and history.

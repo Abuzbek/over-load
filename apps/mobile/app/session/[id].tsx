@@ -6,7 +6,7 @@ export default function SessionScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Workout', headerBackVisible: false }} />
-      <ActiveSession workoutId={id} />
+      <ActiveSession sessionId={id} />
     </>
   );
 }

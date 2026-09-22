@@ -13,7 +13,7 @@ import { theme } from '../../ui/theme';
 
 function WorkoutCard({ summary, unit }: { summary: WorkoutSummary; unit: Unit }) {
   const { workout, setCount, volumeKg } = summary;
-  const sets = `${setCount} ${setCount === 1 ? 'set' : 'sets'}`;
+  const sessionSets = `${setCount} ${setCount === 1 ? 'set' : 'sets'}`;
   return (
     <Pressable
       accessibilityRole="button"
@@ -24,7 +24,7 @@ function WorkoutCard({ summary, unit }: { summary: WorkoutSummary; unit: Unit })
       <Card>
         <Text variant="heading">{workout.name}</Text>
         <Text variant="caption" color="textMuted">
-          {new Date(workout.startedAt).toLocaleDateString()} · {sets} · {formatWeight(volumeKg, unit)}
+          {new Date(workout.startedAt).toLocaleDateString()} · {sessionSets} · {formatWeight(volumeKg, unit)}
         </Text>
       </Card>
     </Pressable>

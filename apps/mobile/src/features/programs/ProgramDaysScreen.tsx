@@ -7,7 +7,7 @@ import {
   removeProgramDay,
   setProgramDay,
 } from '../../data/programRepo';
-import { createRoutine, listRoutines } from '../../data/routineRepo';
+import { createWorkout, listWorkouts } from '../../data/workoutRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
@@ -23,14 +23,14 @@ export function ProgramDaysScreen({ programId, programName }: { programId: strin
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const days = getProgramDays(db, programId);
-  const library = listRoutines(db);
+  const library = listWorkouts(db);
 
   // Day rows are numbered by position, not by dayIndex: a gap in the indexes
   // (a day tombstoned later) should still read Day 1, Day 2, Day 3.
   const labelFor = (position: number) => `Day ${position + 1}`;
 
-  function assign(dayIndex: number, routineId: string | null) {
-    setProgramDay(db, programId, dayIndex, routineId, Date.now());
+  function assign(dayIndex: number, workoutId: string | null) {
+    setProgramDay(db, programId, dayIndex, workoutId, Date.now());
     setEditing(null);
     setVersion((v) => v + 1);
   }
@@ -48,13 +48,13 @@ export function ProgramDaysScreen({ programId, programName }: { programId: strin
 
   /** Builds this day its own workout and opens the builder to fill it. */
   function addExercises(dayIndex: number, position: number) {
-    const workout = createRoutine(db, `${programName} · ${labelFor(position)}`);
+    const workout = createWorkout(db, `${programName} · ${labelFor(position)}`);
     setProgramDay(db, programId, dayIndex, workout.id, Date.now());
     setEditing(null);
-    router.push(`/routines/${workout.id}`);
+    router.push(`/workouts/${workout.id}`);
   }
 
-  const trainingDays = days.filter((d) => d.routine !== null).length;
+  const trainingDays = days.filter((d) => d.workout !== null).length;
   const editingPosition = days.findIndex((d) => d.dayIndex === editing);
 
   return (
@@ -70,8 +70,8 @@ export function ProgramDaysScreen({ programId, programName }: { programId: strin
             key={day.dayIndex}
             title={labelFor(position)}
             right={
-              <Text variant="body" color={day.routine ? 'text' : 'textMuted'}>
-                {day.routine?.name ?? 'Rest'}
+              <Text variant="body" color={day.workout ? 'text' : 'textMuted'}>
+                {day.workout?.name ?? 'Rest'}
               </Text>
             }
             onPress={() => setEditing(day.dayIndex)}
