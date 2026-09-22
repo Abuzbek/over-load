@@ -36,8 +36,13 @@ export function RestTimer({ startedAt, restSeconds, onDismiss }: Props) {
       <Text variant="numeric" style={styles.time}>
         {formatDuration(remaining)}
       </Text>
-      <Pressable onPress={onDismiss} accessibilityLabel="Skip rest">
-        <Text color="accent">Skip</Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onDismiss}
+        accessibilityLabel="Skip rest"
+        hitSlop={theme.spacing.md}
+      >
+        <Text variant="heading" color="accent">Skip</Text>
       </Pressable>
     </View>
   );

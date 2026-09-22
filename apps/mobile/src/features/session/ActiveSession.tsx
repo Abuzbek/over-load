@@ -7,7 +7,7 @@ import { getWeightUnit } from '../../data/settingsRepo';
 import { finishWorkout, getWorkoutDetail, lastPerformance } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
-import { Text } from '../../ui/Text';
+import { EmptyState } from '../../ui/EmptyState';
 import { theme } from '../../ui/theme';
 import { ExerciseCard } from './ExerciseCard';
 import { cancelRestNotification, scheduleRestNotification } from './notifications';
@@ -53,9 +53,7 @@ export function ActiveSession({ workoutId }: Props) {
   if (!detail) {
     return (
       <View style={styles.container}>
-        <Text color="textMuted" style={styles.empty}>
-          Workout not found.
-        </Text>
+        <EmptyState title="Workout not found" />
       </View>
     );
   }
@@ -100,9 +98,7 @@ export function ActiveSession({ workoutId }: Props) {
         ))}
 
         {detail.exercises.length === 0 ? (
-          <Text color="textMuted" style={styles.empty}>
-            This workout has no exercises.
-          </Text>
+          <EmptyState title="No exercises yet" body="Add one to start logging sets." />
         ) : null}
 
         <Button
@@ -149,5 +145,4 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   scroll: { flex: 1 },
   content: { padding: theme.spacing.lg, gap: theme.spacing.lg },
-  empty: { textAlign: 'center' },
 });

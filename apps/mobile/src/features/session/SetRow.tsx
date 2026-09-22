@@ -1,11 +1,11 @@
 import { formatTrackedSet, formatWeight, toStorageKg, type CompletedSet, type TrackingType, type Unit } from '@overload/domain';
 import type { WorkoutSet } from '@overload/schema';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text as RNText, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import type { SetValues } from '../../data/sessionRepo';
+import { NumericField } from '../../ui/NumericField';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
-import { textStyle } from '../../ui/typography';
 import {
   formatDurationInput,
   inputsFor,
@@ -90,15 +90,14 @@ export function SetRow({ set, index, trackingType, previous, unit, onComplete, o
       </Text>
 
       {inputs.map((input) => (
-        <TextInput
+        <NumericField
           key={input.field}
           value={values[input.field]}
           onChangeText={(text) => setValues((v) => ({ ...v, [input.field]: text }))}
           editable={!completed}
-          keyboardType={input.keyboard}
+          keyboard={input.keyboard}
           placeholder={input.field === 'weightKg' ? unit : input.placeholder}
-          placeholderTextColor={theme.colors.textMuted}
-          style={[styles.input, completed && styles.inputLocked]}
+          accessibilityLabel={input.placeholder}
         />
       ))}
 
@@ -124,17 +123,6 @@ const styles = StyleSheet.create({
   rowCompleted: { opacity: 0.6 },
   index: { width: 20 },
   previous: { width: 86 },
-  input: {
-    flex: 1,
-    ...textStyle('body', true),
-    color: theme.colors.text,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radius.sm,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    textAlign: 'center',
-  },
-  inputLocked: { color: theme.colors.textMuted },
   check: {
     width: 34,
     height: 34,
@@ -145,5 +133,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkOn: { backgroundColor: theme.colors.success, borderColor: theme.colors.success },
-  checkMark: { color: '#0B0B0F', fontWeight: '700' },
+  checkMark: { color: theme.colors.onAccent, fontWeight: '700' },
 });
