@@ -216,7 +216,7 @@ export function RoutineBuilder({ routineId }: Props) {
         visible={blockingWorkoutId !== null}
         onRequestClose={() => setBlockingWorkoutId(null)}
         title="A workout is already in progress"
-        body="Resume it, or discard it and start this routine instead. Discarding keeps nothing from the unfinished workout."
+        body="Resume it, or discard it and start this workout instead. Discarding keeps nothing from the unfinished workout."
       >
         <Button title="Resume it" onPress={onResume} />
         <Button title="Discard it and start" variant="secondary" onPress={onDiscardAndStart} />

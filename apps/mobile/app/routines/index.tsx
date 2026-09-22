@@ -4,7 +4,7 @@ import { RoutineList } from '../../src/features/routines/RoutineList';
 export default function RoutinesScreen() {
   return (
     <>
-      <Stack.Screen options={{ title: 'Routines' }} />
+      <Stack.Screen options={{ title: 'Workout library' }} />
       <RoutineList />
     </>
   );

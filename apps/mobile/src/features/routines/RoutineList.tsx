@@ -56,14 +56,14 @@ export function RoutineList() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.emptyContent}
         ListEmptyComponent={
-          <EmptyState title="No routines yet" body="Create one and it will show up here." />
+          <EmptyState title="No workouts yet" body="Create one and it will show up here." />
         }
         renderItem={({ item }) => (
           <ListRow title={item.name} onPress={() => router.push(`/routines/${item.id}`)} />
         )}
       />
       <View style={styles.footer}>
-        <Button title="New routine" onPress={onCreate} />
+        <Button title="New workout" onPress={onCreate} />
       </View>
 
       <Modal
@@ -80,7 +80,7 @@ export function RoutineList() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={styles.modalCard}>
-            <Text variant="title">New routine</Text>
+            <Text variant="title">New workout</Text>
             <TextInput
               ref={inputRef}
               value={name}

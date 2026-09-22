@@ -95,9 +95,9 @@ export function TrainScreen() {
       <SectionLabel>Workout library</SectionLabel>
       {summaries.length === 0 ? (
         <EmptyState
-          title="No routines yet"
+          title="No workouts yet"
           body="Build one and it will show up here, with the last time you trained it."
-          action={{ title: 'New routine', onPress: () => router.push('/routines') }}
+          action={{ title: 'New workout', onPress: () => router.push('/routines') }}
         />
       ) : (
         <View style={styles.list}>
@@ -106,9 +106,9 @@ export function TrainScreen() {
       )}
 
       {/* Always present, not only in the empty state: the cards route to a
-          single routine, so without this there is no way to reach the routine
-          list and create a second one. */}
-      <Button title="New routine" variant="secondary" onPress={() => router.push('/routines')} />
+          single workout, so without this there is no way to reach the workout
+          library and create a second one. */}
+      <Button title="New workout" variant="secondary" onPress={() => router.push('/routines')} />
       <Button title="Start empty workout" variant="secondary" onPress={onStartEmptyPressed} />
       <Button title="Browse exercises" variant="secondary" onPress={() => router.push('/exercises')} />
 

@@ -5,7 +5,7 @@ export default function RoutineScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
     <>
-      <Stack.Screen options={{ title: 'Edit routine' }} />
+      <Stack.Screen options={{ title: 'Edit workout' }} />
       <RoutineBuilder routineId={id} />
     </>
   );
