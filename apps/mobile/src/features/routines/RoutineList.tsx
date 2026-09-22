@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createRoutine, listRoutines } from '../../data/routineRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
@@ -19,6 +20,9 @@ import { theme } from '../../ui/theme';
 import { textStyle } from '../../ui/typography';
 
 export function RoutineList() {
+  // This screen is pushed on the stack, so there is no tab bar under the
+  // footer to reserve the home indicator gap.
+  const insets = useSafeAreaInsets();
   // A local counter is the refresh signal: every mutation bumps it and
   // re-reads listRoutines below. It is not used as a `key` on the container —
   // that would remount the FlatList and reset scroll position.
@@ -65,7 +69,7 @@ export function RoutineList() {
           <ListRow title={item.name} onPress={() => router.push(`/routines/${item.id}`)} />
         )}
       />
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + theme.spacing.lg }]}>
         <Button title="New workout" onPress={onCreate} />
       </View>
 

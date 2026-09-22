@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from './Text';
 import { theme } from './theme';
 
@@ -16,10 +17,19 @@ type Props = {
 // A Modal, never Alert: Alert.prompt is iOS-only and Alert's button semantics
 // are iOS-shaped. This app ships Android too (R19).
 export function Sheet({ visible, onRequestClose, title, body, anchor = 'center', children }: Props) {
+  const insets = useSafeAreaInsets();
+
+  // A bottom-anchored card sits on the screen edge, so it owns the home
+  // indicator gap — nothing else reserves it. Added to the card's own padding,
+  // never in place of it, or the last button hugs the edge on a device with no
+  // indicator at all.
+  const bottomInset =
+    anchor === 'bottom' ? { paddingBottom: insets.bottom + theme.spacing.lg } : undefined;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onRequestClose}>
       <View style={[styles.backdrop, anchor === 'bottom' && styles.backdropBottom]}>
-        <View style={[styles.card, anchor === 'bottom' && styles.cardBottom]}>
+        <View style={[styles.card, anchor === 'bottom' && styles.cardBottom, bottomInset]}>
           <Text variant="title">{title}</Text>
           {body ? <Text color="textMuted">{body}</Text> : null}
           {children}
