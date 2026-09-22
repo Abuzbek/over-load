@@ -1,4 +1,4 @@
-import { appSettings, newId, now, programs, routines } from '@overload/schema';
+import { appSettings, newId, now, programDays, programs, routines } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -7,7 +7,9 @@ import {
   createProgram,
   ensureDefaultProgram,
   getActiveProgram,
+  getProgramWeek,
   listPrograms,
+  setProgramDay,
 } from './programRepo';
 
 let db: ReturnType<typeof createTestDb>['db'];
@@ -18,6 +20,12 @@ beforeEach(() => {
 });
 
 afterEach(() => close());
+
+function insertRoutine(name: string) {
+  const id = newId();
+  db.insert(routines).values({ id, name }).run();
+  return id;
+}
 
 describe('createProgram', () => {
   it('creates a program with the given fields', () => {
@@ -42,6 +50,14 @@ describe('createProgram', () => {
     expect(a.orderIndex).toBe(0);
     expect(b.orderIndex).toBe(1);
     expect(c.orderIndex).toBe(2);
+  });
+
+  it('creates all seven days as rest in the same transaction', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    const days = db.select().from(programDays).where(eq(programDays.programId, program.id)).all();
+    expect(days).toHaveLength(7);
+    expect(days.map((d) => d.weekday).sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(days.every((d) => d.routineId === null)).toBe(true);
   });
 });
 
@@ -77,77 +93,150 @@ describe('listPrograms', () => {
     expect(listPrograms(db).map((s) => s.program.id)).toEqual([c.id, a.id, b.id]);
   });
 
-  it('counts only live routines toward workoutCount', () => {
+  it('counts only weekdays with a live workout toward trainingDays', () => {
     const program = createProgram(db, { name: 'A' }, now());
-    db.insert(routines).values([
-      { id: newId(), name: 'R1', programId: program.id },
-      { id: newId(), name: 'R2', programId: program.id },
-    ]).run();
+    const r1 = insertRoutine('R1');
+    setProgramDay(db, program.id, 0, r1, now());
+    setProgramDay(db, program.id, 2, r1, now());
 
-    expect(listPrograms(db).find((s) => s.program.id === program.id)!.workoutCount).toBe(2);
+    expect(listPrograms(db).find((s) => s.program.id === program.id)!.trainingDays).toBe(2);
   });
 
-  // --- one tombstone test per joined level ---
+  it('does not count a tombstoned workout toward trainingDays', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    const r1 = insertRoutine('R1');
+    setProgramDay(db, program.id, 0, r1, now());
+    db.update(routines).set({ deletedAt: now() }).where(eq(routines.id, r1)).run();
+
+    expect(listPrograms(db).find((s) => s.program.id === program.id)!.trainingDays).toBe(0);
+  });
 
   it('level 1: excludes a tombstoned program', () => {
     const program = createProgram(db, { name: 'A' }, now());
     db.update(programs).set({ deletedAt: now() }).where(eq(programs.id, program.id)).run();
     expect(listPrograms(db)).toHaveLength(0);
   });
+});
 
-  it('level 2: does not count a tombstoned routine toward workoutCount', () => {
+describe('getProgramWeek', () => {
+  it('always returns exactly 7 entries in weekday order', () => {
     const program = createProgram(db, { name: 'A' }, now());
-    const live = newId();
-    const dead = newId();
-    db.insert(routines).values([
-      { id: live, name: 'R1', programId: program.id },
-      { id: dead, name: 'R2', programId: program.id },
-    ]).run();
-    db.update(routines).set({ deletedAt: now() }).where(eq(routines.id, dead)).run();
+    const week = getProgramWeek(db, program.id);
+    expect(week).toHaveLength(7);
+    expect(week.map((d) => d.weekday)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(week.every((d) => d.routine === null)).toBe(true);
+  });
 
-    expect(listPrograms(db).find((s) => s.program.id === program.id)!.workoutCount).toBe(1);
+  it('returns exactly 7 entries even if a day row is missing', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    db.delete(programDays).where(eq(programDays.weekday, 3)).run();
+    const week = getProgramWeek(db, program.id);
+    expect(week).toHaveLength(7);
+    expect(week.map((d) => d.weekday)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(week.find((d) => d.weekday === 3)!.routine).toBeNull();
+  });
+
+  it('reflects an assigned workout on its weekday', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    const r1 = insertRoutine('Full body');
+    setProgramDay(db, program.id, 1, r1, now());
+
+    const week = getProgramWeek(db, program.id);
+    expect(week.find((d) => d.weekday === 1)!.routine?.id).toBe(r1);
+  });
+
+  it('the same workout can be assigned to three different weekdays (reuse)', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    const r1 = insertRoutine('Full body');
+    setProgramDay(db, program.id, 0, r1, now());
+    setProgramDay(db, program.id, 2, r1, now());
+    setProgramDay(db, program.id, 4, r1, now());
+
+    const week = getProgramWeek(db, program.id);
+    expect(week.find((d) => d.weekday === 0)!.routine?.id).toBe(r1);
+    expect(week.find((d) => d.weekday === 2)!.routine?.id).toBe(r1);
+    expect(week.find((d) => d.weekday === 4)!.routine?.id).toBe(r1);
+    expect(week.find((d) => d.weekday === 1)!.routine).toBeNull();
+  });
+
+  it('setting a day to null returns it to rest without deleting the row', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    const r1 = insertRoutine('Full body');
+    setProgramDay(db, program.id, 0, r1, now());
+    setProgramDay(db, program.id, 0, null, now());
+
+    const week = getProgramWeek(db, program.id);
+    expect(week.find((d) => d.weekday === 0)!.routine).toBeNull();
+    const rows = db.select().from(programDays).where(eq(programDays.programId, program.id)).all();
+    expect(rows).toHaveLength(7);
+  });
+
+  // --- one tombstone test per joined level: programs -> program_days -> routines ---
+
+  it('level 1: a tombstoned program reads as an empty week', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    const r1 = insertRoutine('Full body');
+    setProgramDay(db, program.id, 0, r1, now());
+    db.update(programs).set({ deletedAt: now() }).where(eq(programs.id, program.id)).run();
+
+    const week = getProgramWeek(db, program.id);
+    expect(week).toHaveLength(7);
+    expect(week.every((d) => d.routine === null)).toBe(true);
+  });
+
+  it('level 2: a tombstoned program_day row reads as rest', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    const r1 = insertRoutine('Full body');
+    setProgramDay(db, program.id, 0, r1, now());
+    db.update(programDays)
+      .set({ deletedAt: now() })
+      .where(eq(programDays.programId, program.id))
+      .run();
+
+    const week = getProgramWeek(db, program.id);
+    // Every underlying row is tombstoned, so every weekday falls back to rest.
+    expect(week).toHaveLength(7);
+    expect(week.every((d) => d.routine === null)).toBe(true);
+  });
+
+  it('level 3: a tombstoned workout assigned to a day reads as rest, not a dangling reference', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    const r1 = insertRoutine('Full body');
+    setProgramDay(db, program.id, 0, r1, now());
+    db.update(routines).set({ deletedAt: now() }).where(eq(routines.id, r1)).run();
+
+    const week = getProgramWeek(db, program.id);
+    expect(week.find((d) => d.weekday === 0)!.routine).toBeNull();
   });
 });
 
 describe('ensureDefaultProgram', () => {
-  it('creates and activates "My Program" and adopts orphaned routines when none exists', () => {
+  it('creates and activates a program with an empty week, and does not adopt routines', () => {
     const r1 = { id: newId(), name: 'R1' };
     const r2 = { id: newId(), name: 'R2' };
     db.insert(routines).values([r1, r2]).run();
 
     const created = ensureDefaultProgram(db, now());
 
-    expect(created.name).toBe('My Program');
     expect(getActiveProgram(db)?.id).toBe(created.id);
-    const rows = db.select().from(routines).all();
-    expect(rows.every((r) => r.programId === created.id)).toBe(true);
+    const week = getProgramWeek(db, created.id);
+    expect(week).toHaveLength(7);
+    expect(week.every((d) => d.routine === null)).toBe(true);
   });
 
-  it('is idempotent: calling it twice creates only one program and does not re-parent routines', () => {
-    const r1 = { id: newId(), name: 'R1' };
-    db.insert(routines).values([r1]).run();
+  it('is idempotent: calling it twice creates only one program', () => {
+    ensureDefaultProgram(db, now());
+    ensureDefaultProgram(db, now());
 
-    const first = ensureDefaultProgram(db, now());
-    // Move the routine to a different program to prove a second call leaves it alone.
-    const other = createProgram(db, { name: 'Other' }, now());
-    db.update(routines).set({ programId: other.id }).where(eq(routines.id, r1.id)).run();
-
-    const second = ensureDefaultProgram(db, now());
-
-    expect(second.id).toBe(first.id);
-    expect(db.select().from(programs).all()).toHaveLength(2);
-    expect(db.select().from(routines).where(eq(routines.id, r1.id)).get()!.programId).toBe(other.id);
+    expect(db.select().from(programs).all()).toHaveLength(1);
   });
 
-  it('does nothing when a live program already exists, even with orphaned routines', () => {
+  it('does nothing when a live program already exists', () => {
     createProgram(db, { name: 'Existing' }, now());
-    const r1 = { id: newId(), name: 'R1' };
-    db.insert(routines).values([r1]).run();
 
     ensureDefaultProgram(db, now());
 
     expect(db.select().from(programs).all()).toHaveLength(1);
-    expect(db.select().from(routines).where(eq(routines.id, r1.id)).get()!.programId).toBeNull();
   });
 });
 

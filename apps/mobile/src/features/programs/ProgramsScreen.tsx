@@ -48,7 +48,7 @@ export function ProgramsScreen() {
           <Card style={styles.rows}>
             <ListRow
               title={active.program.name}
-              subtitle={`${active.workoutCount} ${active.workoutCount === 1 ? 'workout' : 'workouts'}`}
+              subtitle={`${active.trainingDays} ${active.trainingDays === 1 ? 'training day' : 'training days'}`}
               right={<Lucide name="check" size={18} color={theme.colors.accent} />}
             />
           </Card>
@@ -72,7 +72,7 @@ export function ProgramsScreen() {
               <ListRow
                 key={p.program.id}
                 title={p.program.name}
-                subtitle={`${p.workoutCount} ${p.workoutCount === 1 ? 'workout' : 'workouts'}`}
+                subtitle={`${p.trainingDays} ${p.trainingDays === 1 ? 'training day' : 'training days'}`}
                 right={<Text variant="caption" color="accent">Activate</Text>}
                 onPress={() => activate(p.program.id)}
               />
