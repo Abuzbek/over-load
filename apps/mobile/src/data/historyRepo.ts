@@ -94,3 +94,59 @@ export function periodTotals(db: Db, sinceMs: number, untilMs: number): PeriodTo
 
   return row ?? { sets: 0, exercises: 0, muscles: 0 };
 }
+
+export type MuscleLoad = { muscle: string; sets: number };
+
+/**
+ * Sets per muscle in a window, for the heatmap.
+ *
+ * **Sets, not kilograms.** Volume in kg is only defined for weight_reps; a
+ * plank and a 5 km row would both score zero and the heatmap would call your
+ * core and your legs untrained. Fractional set counting works across every
+ * tracking type.
+ *
+ * A secondary muscle counts half. Ignoring them entirely makes a squat look
+ * like a quads-only movement, and counting them fully makes every compound
+ * light up the whole body.
+ *
+ * Four joined levels, four tombstone filters — sets, session_exercises,
+ * exercises and sessions — the same four periodTotals guards.
+ */
+export function muscleLoad(db: Db, sinceMs: number, untilMs: number): MuscleLoad[] {
+  const rows = db
+    .select({
+      primaryMuscle: exercises.primaryMuscle,
+      secondaryMuscles: exercises.secondaryMuscles,
+    })
+    .from(sessionSets)
+    .innerJoin(sessionExercises, eq(sessionExercises.id, sessionSets.sessionExerciseId))
+    .innerJoin(exercises, eq(exercises.id, sessionExercises.exerciseId))
+    .innerJoin(sessions, eq(sessions.id, sessionExercises.sessionId))
+    .where(
+      and(
+        isNotNull(sessionSets.completedAt),
+        gte(sessionSets.completedAt, sinceMs),
+        lte(sessionSets.completedAt, untilMs),
+        isNull(sessionSets.deletedAt),
+        isNull(sessionExercises.deletedAt),
+        isNull(exercises.deletedAt),
+        isNull(sessions.deletedAt),
+      ),
+    )
+    .all();
+
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    totals.set(row.primaryMuscle, (totals.get(row.primaryMuscle) ?? 0) + 1);
+    for (const secondary of row.secondaryMuscles ?? []) {
+      // A muscle listed as both primary and secondary on one exercise would
+      // otherwise score 1.5 for a single set.
+      if (secondary === row.primaryMuscle) continue;
+      totals.set(secondary, (totals.get(secondary) ?? 0) + 0.5);
+    }
+  }
+
+  return [...totals.entries()]
+    .map(([muscle, sets]) => ({ muscle, sets }))
+    .sort((a, b) => b.sets - a.sets || a.muscle.localeCompare(b.muscle));
+}

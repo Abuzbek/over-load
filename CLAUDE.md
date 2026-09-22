@@ -113,6 +113,12 @@ consumed by the in-progress bar.
 - **`pnpm` strict linking.** A package named by a config string must be *declared*, not
   merely transitively present. The app failed to bundle until `babel-preset-expo`,
   `@babel/runtime` and `query-string` were declared explicitly.
+- **A third-party package's `exports` map can resolve to a build that breaks under
+  Metro.** `body-muscles` exports fine under vitest but its ESM re-exports came back
+  `undefined` in the RN bundle, crashing on `Object.values(MUSCLE_MAP)`. Static data
+  from such a package is vendored to JSON instead (`tools/body-muscles/build.mjs`),
+  which also keeps its React component out of the bundle. Tests passing is not
+  evidence that Metro resolves a dependency.
 - **Metro needs `unstable_enablePackageExports`** (set in `apps/mobile/metro.config.js`)
   because `@overload/schema` exposes `./migrations` and `./testing` only via its
   `exports` map.

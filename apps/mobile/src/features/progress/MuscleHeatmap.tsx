@@ -1,0 +1,68 @@
+import { StyleSheet, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
+import { Text } from '../../ui/Text';
+import { theme } from '../../ui/theme';
+import { REGIONS } from './muscleRegions';
+
+/** The coordinate space the body-muscles paths are drawn in. */
+const VIEW_BOX = { FRONT: '0 0 35 93', BACK: '37 0 35 93' } as const;
+
+function mix(from: string, to: string, t: number): string {
+  const parse = (hex: string) => [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
+  const [r1, g1, b1] = parse(from);
+  const [r2, g2, b2] = parse(to);
+  const channel = (a: number, b: number) => Math.round(a + (b - a) * t).toString(16).padStart(2, '0');
+  return `#${channel(r1!, r2!)}${channel(g1!, g2!)}${channel(b1!, b2!)}`;
+}
+
+type Props = {
+  /** Sets per muscle, already windowed. */
+  load: Map<string, number>;
+  /** Sets that count as a fully trained muscle for this window. */
+  target: number;
+};
+
+/**
+ * Front and back, coloured by how much each muscle has been worked.
+ *
+ * Intensity is measured against an absolute target, not against the busiest
+ * muscle in the window. Scaling to the maximum would paint a single-set week
+ * as fully trained, which is exactly the week you want to look empty.
+ */
+export function MuscleHeatmap({ load, target }: Props) {
+  const fillFor = (muscle: string | null) => {
+    if (!muscle) return theme.colors.surfaceRaised;
+    const sets = load.get(muscle) ?? 0;
+    if (sets === 0) return theme.colors.surfaceRaised;
+    return mix(theme.colors.surfaceRaised, theme.colors.accent, Math.min(sets / target, 1));
+  };
+
+  return (
+    <View style={styles.row}>
+      {(['FRONT', 'BACK'] as const).map((view) => (
+        <View key={view} style={styles.column}>
+          <Svg viewBox={VIEW_BOX[view]} style={styles.body}>
+            {REGIONS.filter((r) => r.view === view).map((region) => (
+              <Path
+                key={region.id}
+                d={region.path}
+                fill={fillFor(region.muscle)}
+                stroke={theme.colors.border}
+                strokeWidth={0.15}
+              />
+            ))}
+          </Svg>
+          <Text variant="caption" color="textMuted">{view === 'FRONT' ? 'Front' : 'Back'}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', justifyContent: 'center', gap: theme.spacing.xl },
+  column: { alignItems: 'center', gap: theme.spacing.xs },
+  // Height drives the size and the 35x93 path box gives the width. Sizing by
+  // width instead made each body two and a half screens tall.
+  body: { height: 260, aspectRatio: 35 / 93 },
+});
