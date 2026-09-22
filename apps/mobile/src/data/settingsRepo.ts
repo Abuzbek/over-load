@@ -1,4 +1,4 @@
-import type { Unit } from '@overload/domain';
+import type { DistanceUnit, Unit } from '@overload/domain';
 import { appSettings, newId, now, type Db } from '@overload/schema';
 import { eq, isNull } from 'drizzle-orm';
 
@@ -42,5 +42,41 @@ export function setWeightUnit(db: Db, unit: Unit, at: number): void {
 
   db.insert(appSettings)
     .values({ id: newId(), weightUnit: unit, createdAt: at, updatedAt: at })
+    .run();
+}
+
+export function getDistanceUnit(db: Db): DistanceUnit {
+  const row = db
+    .select()
+    .from(appSettings)
+    .where(isNull(appSettings.deletedAt))
+    .get();
+
+  if (row) return row.distanceUnit as DistanceUnit;
+
+  const timestamp = now();
+  db.insert(appSettings)
+    .values({ id: newId(), distanceUnit: 'km', createdAt: timestamp, updatedAt: timestamp })
+    .run();
+  return 'km';
+}
+
+export function setDistanceUnit(db: Db, unit: DistanceUnit, at: number): void {
+  const row = db
+    .select()
+    .from(appSettings)
+    .where(isNull(appSettings.deletedAt))
+    .get();
+
+  if (row) {
+    db.update(appSettings)
+      .set({ distanceUnit: unit, updatedAt: at })
+      .where(eq(appSettings.id, row.id))
+      .run();
+    return;
+  }
+
+  db.insert(appSettings)
+    .values({ id: newId(), distanceUnit: unit, createdAt: at, updatedAt: at })
     .run();
 }

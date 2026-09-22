@@ -4,13 +4,18 @@ import { syncColumns } from './sync';
 export const WEIGHT_UNITS = ['kg', 'lb'] as const;
 export type WeightUnit = (typeof WEIGHT_UNITS)[number];
 
+export const DISTANCE_UNITS = ['km', 'mi'] as const;
+export type DistanceUnit = (typeof DISTANCE_UNITS)[number];
+
 /**
- * A single row. Weight is stored in kilograms everywhere; this records how to
- * display it, which is why it does not violate the no-stored-units rule.
+ * A single row. Weight is stored in kilograms and distance in metres
+ * everywhere; this records how to display them, which is why it does not
+ * violate the no-stored-units rule.
  */
 export const appSettings = sqliteTable('app_settings', {
   ...syncColumns,
   weightUnit: text('weight_unit', { enum: WEIGHT_UNITS }).notNull().default('kg'),
+  distanceUnit: text('distance_unit', { enum: DISTANCE_UNITS }).notNull().default('km'),
 });
 
 export type AppSettings = typeof appSettings.$inferSelect;

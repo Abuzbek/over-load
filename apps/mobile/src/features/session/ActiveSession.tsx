@@ -3,7 +3,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { useFocusEffect, router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { getWeightUnit } from '../../data/settingsRepo';
+import { getDistanceUnit, getWeightUnit } from '../../data/settingsRepo';
 import { finishWorkout, getWorkoutDetail, lastPerformance } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
@@ -36,6 +36,7 @@ export function ActiveSession({ workoutId }: Props) {
   const [, setVersion] = useState(0);
   const detail = getWorkoutDetail(db, workoutId);
   const unit = getWeightUnit(db);
+  const distanceUnit = getDistanceUnit(db);
 
   useFocusEffect(
     useCallback(() => {
@@ -90,6 +91,7 @@ export function ActiveSession({ workoutId }: Props) {
             entry={entry}
             previous={previousByExercise.get(entry.exercise.id) ?? []}
             unit={unit}
+            distanceUnit={distanceUnit}
             onChanged={() => setVersion((v) => v + 1)}
             onSetCompleted={(restSeconds) => {
               const seconds = restSeconds ?? DEFAULT_REST_SECONDS;

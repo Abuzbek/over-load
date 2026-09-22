@@ -1,4 +1,12 @@
-import { formatTrackedSet, formatWeight, toStorageKg, type CompletedSet, type TrackingType, type Unit } from '@overload/domain';
+import {
+  formatTrackedSet,
+  formatWeight,
+  toStorageKg,
+  type CompletedSet,
+  type DistanceUnit,
+  type TrackingType,
+  type Unit,
+} from '@overload/domain';
 import type { WorkoutSet } from '@overload/schema';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
@@ -21,6 +29,7 @@ type Props = {
   trackingType: TrackingType;
   previous: CompletedSet[];
   unit: Unit;
+  distanceUnit: DistanceUnit;
   onComplete: (values: SetValues) => void;
   onUncomplete: () => void;
 };
@@ -32,10 +41,15 @@ type Props = {
  * "2:05" for duration, "5000 m · 30:00" for distance_duration, or an em dash
  * when there was no matching set at this index.
  */
-export function formatPrevious(sets: CompletedSet[], index: number, unit: Unit): string {
+export function formatPrevious(
+  sets: CompletedSet[],
+  index: number,
+  unit: Unit,
+  distanceUnit: DistanceUnit,
+): string {
   const match = sets[index];
   if (!match) return '—';
-  return formatTrackedSet(match.trackingType, match, unit);
+  return formatTrackedSet(match.trackingType, match, unit, distanceUnit);
 }
 
 /** The weight text input holds a plain number in the display unit, never "kg"/"lb" suffixed. */
@@ -46,7 +60,16 @@ function weightInputValue(weightKg: number | null, unit: Unit): string {
   return displayKg.slice(0, displayKg.lastIndexOf(' '));
 }
 
-export function SetRow({ set, index, trackingType, previous, unit, onComplete, onUncomplete }: Props) {
+export function SetRow({
+  set,
+  index,
+  trackingType,
+  previous,
+  unit,
+  distanceUnit,
+  onComplete,
+  onUncomplete,
+}: Props) {
   const inputs = inputsFor(trackingType);
   const completed = set.completedAt !== null;
 
@@ -86,7 +109,7 @@ export function SetRow({ set, index, trackingType, previous, unit, onComplete, o
         {index + 1}
       </Text>
       <Text variant="caption" color="textMuted" style={styles.previous}>
-        {formatPrevious(previous, index, unit)}
+        {formatPrevious(previous, index, unit, distanceUnit)}
       </Text>
 
       {inputs.map((input) => (

@@ -1,3 +1,4 @@
+import { formatDistance, type DistanceUnit } from './formatDistance';
 import { formatWeight } from './formatWeight';
 import { formatDuration } from './restTimer';
 import type { TrackingType } from './trackingTypes';
@@ -21,6 +22,7 @@ export function formatTrackedSet(
   trackingType: TrackingType,
   values: TrackedSetValues,
   unit: Unit,
+  distanceUnit: DistanceUnit,
 ): string {
   switch (trackingType) {
     case 'weight_reps':
@@ -31,7 +33,7 @@ export function formatTrackedSet(
       return values.durationSeconds === null ? '—' : formatDuration(values.durationSeconds);
     case 'distance_duration': {
       const duration = values.durationSeconds === null ? '—' : formatDuration(values.durationSeconds);
-      return `${values.distanceM ?? '—'} m · ${duration}`;
+      return `${formatDistance(values.distanceM, distanceUnit)} · ${duration}`;
     }
   }
 }

@@ -1,4 +1,4 @@
-import type { CompletedSet, Unit } from '@overload/domain';
+import type { CompletedSet, DistanceUnit, Unit } from '@overload/domain';
 import { addSet, completeSet, uncompleteSet, type WorkoutDetailExercise } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
@@ -10,11 +10,12 @@ type Props = {
   entry: WorkoutDetailExercise;
   previous: CompletedSet[];
   unit: Unit;
+  distanceUnit: DistanceUnit;
   onChanged: () => void;
   onSetCompleted: (restSeconds: number | null) => void;
 };
 
-export function ExerciseCard({ entry, previous, unit, onChanged, onSetCompleted }: Props) {
+export function ExerciseCard({ entry, previous, unit, distanceUnit, onChanged, onSetCompleted }: Props) {
   return (
     <Card>
       <Text variant="title">{entry.exercise.name}</Text>
@@ -27,6 +28,7 @@ export function ExerciseCard({ entry, previous, unit, onChanged, onSetCompleted 
           trackingType={entry.exercise.trackingType}
           previous={previous}
           unit={unit}
+          distanceUnit={distanceUnit}
           onComplete={(values) => {
             completeSet(db, set.id, values, Date.now());
             onChanged();

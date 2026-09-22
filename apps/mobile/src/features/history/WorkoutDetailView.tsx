@@ -3,7 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { getWorkoutDetail } from '../../data/sessionRepo';
-import { getWeightUnit } from '../../data/settingsRepo';
+import { getDistanceUnit, getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
 import { Card } from '../../ui/Card';
 import { Screen } from '../../ui/Screen';
@@ -18,6 +18,7 @@ export function WorkoutDetailView({ workoutId }: Props) {
   const [, setVersion] = useState(0);
   const detail = getWorkoutDetail(db, workoutId);
   const unit = getWeightUnit(db);
+  const distanceUnit = getDistanceUnit(db);
 
   useFocusEffect(
     useCallback(() => {
@@ -45,7 +46,7 @@ export function WorkoutDetailView({ workoutId }: Props) {
             .filter((set) => set.completedAt !== null)
             .map((set, index) => (
               <Text key={set.id} variant="numeric" color="textMuted">
-                {index + 1}. {formatTrackedSet(entry.exercise.trackingType, set, unit)}
+                {index + 1}. {formatTrackedSet(entry.exercise.trackingType, set, unit, distanceUnit)}
               </Text>
             ))}
         </Card>

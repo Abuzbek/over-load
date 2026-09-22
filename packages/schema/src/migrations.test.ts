@@ -1,5 +1,6 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { appSettings } from './appSettings';
 import { exercises } from './exercises';
 import { newId } from './sync';
 import { applyFullMigrations, createDbAtMigration } from './testing/partialMigrate';
@@ -54,6 +55,25 @@ describe('migrations', () => {
     applyFullMigrations(db);
 
     expect(db.select().from(exercises).where(eq(exercises.id, id)).get()).toBeDefined();
+    close();
+  });
+
+  it('preserves an existing settings row across the distance_unit migration', () => {
+    // 2 == through 0002_ancient_human_robot, i.e. app_settings with only
+    // weight_unit, before distance_unit existed. Inserted via raw SQL
+    // (rather than the drizzle query builder) because the builder's schema
+    // object already knows about distance_unit and would try to write it
+    // into a table that, at this frozen migration point, doesn't have it yet.
+    const { db, close } = createDbAtMigration(2);
+    const id = newId();
+    db.run(sql`insert into app_settings (id, created_at, updated_at, weight_unit) values (${id}, 1, 1, 'lb')`);
+
+    applyFullMigrations(db);
+
+    const row = db.select().from(appSettings).where(eq(appSettings.id, id)).get();
+    expect(row).toBeDefined();
+    expect(row!.weightUnit).toBe('lb');
+    expect(row!.distanceUnit).toBe('km');
     close();
   });
 });
