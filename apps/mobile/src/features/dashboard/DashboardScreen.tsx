@@ -56,8 +56,9 @@ function TotalsSlide({ width }: { width: number }) {
 
   return (
     <View style={{ width }}>
-      <Card>
+      <Card style={styles.slideCard}>
         <Text variant="title">{mode === 'all' ? 'All workouts' : 'This week'}</Text>
+        <View style={styles.slideBody}>
 
         {/* Rings in one row so they share a centre line, labels in a second
             row so they share a baseline — a single column per metric makes the
@@ -76,6 +77,7 @@ function TotalsSlide({ width }: { width: number }) {
               </View>
             ),
           )}
+          </View>
         </View>
 
         <Segmented
@@ -114,8 +116,9 @@ function RecordsSlide({ width }: { width: number }) {
 
   return (
     <View style={{ width }}>
-      <Card>
+      <Card style={styles.slideCard}>
         <Text variant="title">Recent records</Text>
+        <View style={styles.slideBody}>
         {top.length === 0 ? (
           <Text variant="caption" color="textMuted">
             Log a set and your records will show up here.
@@ -139,6 +142,7 @@ function RecordsSlide({ width }: { width: number }) {
             </View>
           ))
         )}
+        </View>
         <Segmented
           accessibilityLabel="Metric"
           value={metric}
@@ -205,6 +209,10 @@ export function DashboardScreen() {
 
 const styles = StyleSheet.create({
   carousel: { flexGrow: 0 },
+  // The carousel is as tall as its tallest slide; a short slide's card fills
+  // that height so its switcher sits at the bottom instead of leaving a gap.
+  slideCard: { flex: 1 },
+  slideBody: { flex: 1, gap: theme.spacing.sm },
   rings: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.sm, marginVertical: theme.spacing.md },
   ringLabels: { flexDirection: 'row', justifyContent: 'space-between', gap: theme.spacing.md, marginBottom: theme.spacing.md },
   ringLabel: { alignItems: 'center', flex: 1, gap: theme.spacing.xs },
