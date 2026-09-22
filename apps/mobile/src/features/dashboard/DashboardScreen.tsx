@@ -6,48 +6,87 @@ import { periodTotals } from '../../data/historyRepo';
 import { listAllPersonalRecords, type PersonalRecordSummary } from '../../data/sessionRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
-import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
+import { ProgressRing } from '../../ui/ProgressRing';
 import { Screen } from '../../ui/Screen';
 import { SectionLabel } from '../../ui/SectionLabel';
-import { StatTile } from '../../ui/StatTile';
+import { Segmented } from '../../ui/Segmented';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 
 const WEEK_MS = 7 * 86_400_000;
 
 /**
- * The reference design shows these three as progress rings against an "Active
- * Program" target. This app has routines but no program, so nothing defines a
- * weekly target and a ring would read 100% forever. Numbers until targets
- * exist; the ring is the easy part to add afterwards.
+ * Chart colours, deliberately local rather than theme tokens: three rings need
+ * to be told apart, which is a charting concern, not part of the app's palette.
+ */
+const RING = { muscles: '#6E9BFF', sets: theme.colors.accent, exercises: '#4FD1C5' };
+
+type Mode = 'week' | 'all';
+
+/**
+ * The reference design measures these against an "Active Program" target. This
+ * app has routines, not programs — nothing defines a weekly goal. So "this
+ * week" is measured against **last week**, which is real data and gives the
+ * same "N left" shape. Swap the denominator when programs exist.
  */
 function TotalsSlide({ width }: { width: number }) {
-  const [allTime, setAllTime] = useState(false);
+  const [mode, setMode] = useState<Mode>('week');
   const now = Date.now();
-  const totals = periodTotals(db, allTime ? 0 : now - WEEK_MS, now);
+
+  const totals = periodTotals(db, mode === 'all' ? 0 : now - WEEK_MS, now);
+  // Only needed for the comparison, so only queried in week mode.
+  const prior = mode === 'week' ? periodTotals(db, now - 2 * WEEK_MS, now - WEEK_MS) : null;
+
+  const ring = (value: number, target: number | undefined, size: number, color: string) => {
+    const left = target && target > value ? target - value : 0;
+    return (
+      <ProgressRing
+        value={value}
+        target={target}
+        size={size}
+        color={color}
+        caption={left > 0 ? `${left} left` : undefined}
+      />
+    );
+  };
+
+  const sub = (target: number | undefined) =>
+    target === undefined ? ' ' : `${target} last week`;
 
   return (
     <View style={{ width }}>
       <Card>
-        <Text variant="title">{allTime ? 'All workouts' : 'This week'}</Text>
-        <View style={styles.tiles}>
-          <StatTile label="Muscles" value={String(totals.muscles)} />
-          <StatTile label="Sets" value={String(totals.sets)} />
-          <StatTile label="Exercises" value={String(totals.exercises)} />
+        <Text variant="title">{mode === 'all' ? 'All workouts' : 'This week'}</Text>
+
+        {/* Rings in one row so they share a centre line, labels in a second
+            row so they share a baseline — a single column per metric makes the
+            short columns float against the tall middle one. */}
+        <View style={styles.rings}>
+          {ring(totals.muscles, prior?.muscles, 86, RING.muscles)}
+          {ring(totals.sets, prior?.sets, 128, RING.sets)}
+          {ring(totals.exercises, prior?.exercises, 86, RING.exercises)}
         </View>
-        <View style={styles.toggle}>
-          <Button
-            title="This week"
-            variant={allTime ? 'secondary' : 'primary'}
-            onPress={() => setAllTime(false)}
-          />
-          <Button
-            title="All workouts"
-            variant={allTime ? 'primary' : 'secondary'}
-            onPress={() => setAllTime(true)}
-          />
+        <View style={styles.ringLabels}>
+          {([['Muscles', prior?.muscles], ['Sets', prior?.sets], ['Exercises', prior?.exercises]] as const).map(
+            ([label, target]) => (
+              <View key={label} style={styles.ringLabel}>
+                <Text variant="heading">{label}</Text>
+                <Text variant="caption" color="textMuted">{sub(target)}</Text>
+              </View>
+            ),
+          )}
         </View>
+
+        <Segmented
+          accessibilityLabel="Period"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: 'week', label: 'This week' },
+            { value: 'all', label: 'All workouts' },
+          ]}
+        />
       </Card>
     </View>
   );
@@ -100,16 +139,12 @@ function RecordsSlide({ width }: { width: number }) {
             </View>
           ))
         )}
-        <View style={styles.toggle}>
-          {METRICS.map((m) => (
-            <Button
-              key={m.type}
-              title={m.label}
-              variant={m.type === metric ? 'primary' : 'secondary'}
-              onPress={() => setMetric(m.type)}
-            />
-          ))}
-        </View>
+        <Segmented
+          accessibilityLabel="Metric"
+          value={metric}
+          onChange={setMetric}
+          options={METRICS.map((m) => ({ value: m.type, label: m.label }))}
+        />
       </Card>
     </View>
   );
@@ -170,8 +205,9 @@ export function DashboardScreen() {
 
 const styles = StyleSheet.create({
   carousel: { flexGrow: 0 },
-  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
-  toggle: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.sm },
+  rings: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.spacing.sm, marginVertical: theme.spacing.md },
+  ringLabels: { flexDirection: 'row', justifyContent: 'space-between', gap: theme.spacing.sm, marginBottom: theme.spacing.md },
+  ringLabel: { alignItems: 'center', flex: 1, gap: theme.spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
   rowName: { width: 96 },
   rowValue: { width: 82, textAlign: 'right' },
