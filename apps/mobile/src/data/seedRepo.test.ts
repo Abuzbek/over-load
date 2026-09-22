@@ -5,7 +5,7 @@ import equipmentSeed from '../../../../tools/seed-equipment/equipment.json';
 import curated from '../../../../tools/seed-exercises/curated.json';
 import { listExercises } from './exerciseRepo';
 import {
-  seedEquipmentIfEmpty,
+  syncEquipmentCatalogue,
   seedExercisesIfEmpty,
   type SeedEquipment,
   type SeedExercise,
@@ -61,7 +61,7 @@ describe('seedExercisesIfEmpty with the real curated exercise library', () => {
   });
 });
 
-describe('seedEquipmentIfEmpty with the real catalogue', () => {
+describe('syncEquipmentCatalogue with the real catalogue', () => {
   let db: ReturnType<typeof createTestDb>['db'];
   let close: () => void;
   const realSeed = equipmentSeed.items as SeedEquipment[];
@@ -70,14 +70,14 @@ describe('seedEquipmentIfEmpty with the real catalogue', () => {
   afterEach(() => close());
 
   it('seeds every row from equipments.csv', () => {
-    expect(seedEquipmentIfEmpty(db, realSeed)).toBe(realSeed.length);
+    expect(syncEquipmentCatalogue(db, realSeed).added).toBe(realSeed.length);
     expect(db.select().from(equipment).all()).toHaveLength(realSeed.length);
   });
 
   // The invariant the build script asserts, re-checked against what actually
   // lands in the database: the weight editor is chosen by category alone.
   it('gives every item the weight kind its category implies', () => {
-    seedEquipmentIfEmpty(db, realSeed);
+    syncEquipmentCatalogue(db, realSeed);
     const rows = db.select().from(equipment).all();
     const kindByCategory = new Map<string, string>();
     for (const row of rows) {
@@ -90,7 +90,7 @@ describe('seedEquipmentIfEmpty with the real catalogue', () => {
   });
 
   it('only unlocks exercise equipment the catalogue actually uses', () => {
-    seedEquipmentIfEmpty(db, realSeed);
+    syncEquipmentCatalogue(db, realSeed);
     const unlocked = new Set(db.select().from(equipment).all().flatMap((r) => r.satisfies));
     // Anything outside this set would filter to zero exercises forever.
     expect([...unlocked].sort()).toEqual([

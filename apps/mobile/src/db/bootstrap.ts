@@ -7,7 +7,7 @@ import { ensureDefaultGym } from '../data/gymRepo';
 import { ensureDefaultProgram } from '../data/programRepo';
 import { rebuildAllPersonalRecords } from '../data/sessionRepo';
 import {
-  seedEquipmentIfEmpty,
+  syncEquipmentCatalogue,
   seedExercisesIfEmpty,
   type SeedEquipment,
   type SeedExercise,
@@ -35,7 +35,7 @@ export async function initializeDatabase(): Promise<void> {
   await discardBackup();
   seedExercisesIfEmpty(db, curated as SeedExercise[]);
   // Before ensureDefaultGym, which gives the first gym every catalogue item.
-  seedEquipmentIfEmpty(db, equipmentSeed.items as SeedEquipment[]);
+  syncEquipmentCatalogue(db, equipmentSeed.items as SeedEquipment[]);
   ensureDefaultProgram(db, now());
   ensureDefaultGym(db, now());
 

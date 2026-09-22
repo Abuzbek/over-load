@@ -13,6 +13,18 @@
       "satisfies": []
     },
     {
+      "name": "Anchor Point For Resistance Band",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Anchor Point For Suspension Trainer",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
       "name": "Bench Press Board/Block",
       "category": "accessories_functional",
       "kind": "none",
@@ -45,13 +57,40 @@
       "satisfies": []
     },
     {
-      "name": "Furniture Sliders",
+      "name": "Dip Bars",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Gymnastics Rings",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Landmine Attachment/Wall Corner",
       "category": "accessories_functional",
       "kind": "none",
       "satisfies": []
     },
     {
-      "name": "Landmine Attachment/Wall Corner",
+      "name": "Multi-Grip Pull-Up Bar",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Nordic Hamstring Curl Strap",
       "category": "accessories_functional",
       "kind": "none",
       "satisfies": []
@@ -69,7 +108,28 @@
       "satisfies": []
     },
     {
+      "name": "Push-Up Handles",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
       "name": "Slant Board",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Sled Pulling Belt/Harness",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Slingshot",
       "category": "accessories_functional",
       "kind": "none",
       "satisfies": []
@@ -84,6 +144,21 @@
     },
     {
       "name": "Straight Handle Landmine Attachment",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Straight Pull-Up Bar",
+      "category": "accessories_functional",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Suspension Trainer",
       "category": "accessories_functional",
       "kind": "none",
       "satisfies": []
@@ -104,24 +179,9 @@
       "name": "Yoga Blocks",
       "category": "accessories_functional",
       "kind": "none",
-      "satisfies": []
-    },
-    {
-      "name": "Anchor Point For Resistance Band",
-      "category": "bands_ropes",
-      "kind": "labels",
-      "labels": [],
       "satisfies": [
-        "bands"
-      ]
-    },
-    {
-      "name": "Anchor Point For Suspension Trainer",
-      "category": "bands_ropes",
-      "kind": "labels",
-      "labels": [],
-      "satisfies": [
-        "bands"
+        "body only",
+        "none"
       ]
     },
     {
@@ -152,15 +212,6 @@
       ]
     },
     {
-      "name": "Nordic Hamstring Curl Strap",
-      "category": "bands_ropes",
-      "kind": "labels",
-      "labels": [],
-      "satisfies": [
-        "bands"
-      ]
-    },
-    {
       "name": "Short Resistance Band",
       "category": "bands_ropes",
       "kind": "labels",
@@ -172,24 +223,6 @@
         "Black",
         "Purple"
       ],
-      "satisfies": [
-        "bands"
-      ]
-    },
-    {
-      "name": "Sled Pulling Belt/Harness",
-      "category": "bands_ropes",
-      "kind": "labels",
-      "labels": [],
-      "satisfies": [
-        "bands"
-      ]
-    },
-    {
-      "name": "Suspension Trainer",
-      "category": "bands_ropes",
-      "kind": "labels",
-      "labels": [],
       "satisfies": [
         "bands"
       ]
@@ -285,12 +318,6 @@
       "satisfies": []
     },
     {
-      "name": "Sissy Squat Machine",
-      "category": "benches_racks",
-      "kind": "none",
-      "satisfies": []
-    },
-    {
       "name": "Split Squat Roller Stand",
       "category": "benches_racks",
       "kind": "none",
@@ -380,191 +407,6 @@
           "kg": 55.0
         }
       ],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Another Human",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Bed",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Bodyweight Only",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Captain’s Chair",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Chair",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Couch",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Dip Bars",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Dip/Pull-Up/Belt Squat Belt",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [
-        {
-          "kg": 0.0
-        }
-      ],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Gymnastics Rings",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Hand Gripper",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [
-        {
-          "kg": 23.0
-        },
-        {
-          "kg": 36.0
-        },
-        {
-          "kg": 45.0
-        },
-        {
-          "kg": 54.0
-        },
-        {
-          "kg": 63.0
-        },
-        {
-          "kg": 68.0
-        },
-        {
-          "kg": 76.0
-        },
-        {
-          "kg": 88.0
-        },
-        {
-          "kg": 91.0
-        },
-        {
-          "kg": 108.0
-        },
-        {
-          "kg": 113.0
-        },
-        {
-          "kg": 126.0
-        }
-      ],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Multi-Grip Pull-Up Bar",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Neck Harness",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [
-        {
-          "kg": 0.0
-        }
-      ],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Push-Up Handles",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [],
-      "satisfies": [
-        "body only",
-        "none"
-      ]
-    },
-    {
-      "name": "Straight Pull-Up Bar",
-      "category": "body_weights",
-      "kind": "list",
-      "values": [],
       "satisfies": [
         "body only",
         "none"
@@ -795,7 +637,10 @@
       "name": "Staircase",
       "category": "cardio",
       "kind": "none",
-      "satisfies": []
+      "satisfies": [
+        "body only",
+        "none"
+      ]
     },
     {
       "name": "Treadmill",
@@ -1034,6 +879,52 @@
       ]
     },
     {
+      "name": "Hand Gripper",
+      "category": "free_weights",
+      "kind": "list",
+      "values": [
+        {
+          "kg": 23.0
+        },
+        {
+          "kg": 36.0
+        },
+        {
+          "kg": 45.0
+        },
+        {
+          "kg": 54.0
+        },
+        {
+          "kg": 63.0
+        },
+        {
+          "kg": 68.0
+        },
+        {
+          "kg": 76.0
+        },
+        {
+          "kg": 88.0
+        },
+        {
+          "kg": 91.0
+        },
+        {
+          "kg": 108.0
+        },
+        {
+          "kg": 113.0
+        },
+        {
+          "kg": 126.0
+        }
+      ],
+      "satisfies": [
+        "barbell"
+      ]
+    },
+    {
       "name": "Kettlebells",
       "category": "free_weights",
       "kind": "list",
@@ -1220,6 +1111,13 @@
       ]
     },
     {
+      "name": "Dip/Pull-Up/Belt Squat Belt",
+      "category": "loaded_accessories",
+      "kind": "base",
+      "baseKg": 0.0,
+      "satisfies": []
+    },
+    {
       "name": "Farmer’s Handles",
       "category": "loaded_accessories",
       "kind": "base",
@@ -1234,21 +1132,14 @@
       "satisfies": []
     },
     {
-      "name": "Jammer",
+      "name": "Neck Harness",
       "category": "loaded_accessories",
       "kind": "base",
-      "baseKg": 3.6,
+      "baseKg": 0.0,
       "satisfies": []
     },
     {
-      "name": "Sled",
-      "category": "loaded_accessories",
-      "kind": "base",
-      "baseKg": 36.3,
-      "satisfies": []
-    },
-    {
-      "name": "Slingshot",
+      "name": "Plate-Loaded Wrist Bar",
       "category": "loaded_accessories",
       "kind": "base",
       "baseKg": 0.0,
@@ -1531,7 +1422,73 @@
       ]
     },
     {
+      "name": "Another Human",
+      "category": "other",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Bed",
+      "category": "other",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Bodyweight Only",
+      "category": "other",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Captain’s Chair",
+      "category": "other",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Chair",
+      "category": "other",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Couch",
+      "category": "other",
+      "kind": "none",
+      "satisfies": [
+        "body only",
+        "none"
+      ]
+    },
+    {
+      "name": "Furniture Sliders",
+      "category": "other",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
       "name": "Incline Sliding Core Trainer",
+      "category": "other",
+      "kind": "none",
+      "satisfies": []
+    },
+    {
+      "name": "Sissy Squat Machine",
       "category": "other",
       "kind": "none",
       "satisfies": []
@@ -2278,6 +2235,15 @@
       ]
     },
     {
+      "name": "Jammer",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 3.6,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
       "name": "Kneeling Plate-Loaded Glute Kickback",
       "category": "plate_loaded_machines",
       "kind": "base",
@@ -2683,15 +2649,6 @@
       ]
     },
     {
-      "name": "Plate-Loaded Wrist Bar",
-      "category": "plate_loaded_machines",
-      "kind": "base",
-      "baseKg": 0.0,
-      "satisfies": [
-        "machine"
-      ]
-    },
-    {
       "name": "Power Squat Pro",
       "category": "plate_loaded_machines",
       "kind": "base",
@@ -2831,6 +2788,15 @@
       "category": "plate_loaded_machines",
       "kind": "base",
       "baseKg": 9.0,
+      "satisfies": [
+        "machine"
+      ]
+    },
+    {
+      "name": "Sled",
+      "category": "plate_loaded_machines",
+      "kind": "base",
+      "baseKg": 36.3,
       "satisfies": [
         "machine"
       ]

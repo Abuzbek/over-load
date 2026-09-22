@@ -16,7 +16,7 @@ import {
   setGymEquipmentConfig,
   setGymEquipmentOwned,
 } from './gymRepo';
-import { seedEquipmentIfEmpty, type SeedEquipment } from './seedRepo';
+import { syncEquipmentCatalogue, type SeedEquipment } from './seedRepo';
 
 let db: ReturnType<typeof createTestDb>['db'];
 let close: () => void;
@@ -33,7 +33,7 @@ const SEED: SeedEquipment[] = [
 
 beforeEach(() => {
   ({ db, close } = createTestDb());
-  seedEquipmentIfEmpty(db, SEED);
+  syncEquipmentCatalogue(db, SEED);
 });
 
 afterEach(() => close());
@@ -49,7 +49,7 @@ function insertExercise(name: string, equip: string) {
   }).run();
 }
 
-describe('seedEquipmentIfEmpty', () => {
+describe('syncEquipmentCatalogue', () => {
   it('splits the seed row into the config the gym screen edits', () => {
     const barbell = db.select().from(equipment).where(eq(equipment.name, 'Barbell')).get()!;
     expect(barbell.defaults).toEqual({ kind: 'list', values: [{ kg: 20 }] });
@@ -58,9 +58,49 @@ describe('seedEquipmentIfEmpty', () => {
     expect(press.defaults).toEqual({ kind: 'range', minKg: 0, maxKg: 250, incrementKg: 5 });
   });
 
-  it('does not seed twice', () => {
-    expect(seedEquipmentIfEmpty(db, SEED)).toBe(0);
+  it('is idempotent: running it again changes nothing', () => {
+    expect(syncEquipmentCatalogue(db, SEED)).toEqual({ added: 0, changed: 0, retired: 0 });
     expect(db.select().from(equipment).all()).toHaveLength(SEED.length);
+  });
+
+  // The upgrade path for a catalogue correction: an item moves group, and every
+  // install has to pick that up rather than only fresh ones.
+  it('moves an item to its new group without losing the gyms that own it', () => {
+    const gym = createGym(db, 'Home', now());
+    const id = equipmentId('Barbell');
+    setGymEquipmentOwned(db, gym.id, id, true, now());
+
+    const corrected = SEED.map((row) =>
+      row.name === 'Barbell' ? { ...row, category: 'other' as const, kind: 'none' as const } : row,
+    );
+    expect(syncEquipmentCatalogue(db, corrected).changed).toBe(1);
+
+    const row = listGymEquipment(db, gym.id).find((r) => r.equipment.id === id)!;
+    expect(row.equipment.category).toBe('other');
+    expect(row.owned).toBe(true);
+    // The kind changed, so the gym's saved weights are reset to the new shape
+    // rather than left as a list the editor can no longer render.
+    expect(row.config).toEqual({ kind: 'none' });
+  });
+
+  it('keeps a gym’s edited weights when only the group moves', () => {
+    const gym = createGym(db, 'Home', now());
+    const id = equipmentId('Dumbbells');
+    setGymEquipmentConfig(db, gym.id, id, { kind: 'list', values: [{ kg: 42 }] }, now());
+
+    const corrected = SEED.map((row) =>
+      row.name === 'Dumbbells' ? { ...row, category: 'loaded_bars' as const } : row,
+    );
+    syncEquipmentCatalogue(db, corrected);
+
+    expect(listGymEquipment(db, gym.id).find((r) => r.equipment.id === id)!.config)
+      .toEqual({ kind: 'list', values: [{ kg: 42 }] });
+  });
+
+  it('tombstones an item that leaves the catalogue', () => {
+    const shorter = SEED.filter((row) => row.name !== 'Flat Bench');
+    expect(syncEquipmentCatalogue(db, shorter).retired).toBe(1);
+    expect(listGymEquipment(db, createGym(db, 'Home', now()).id)).toHaveLength(SEED.length - 1);
   });
 });
 

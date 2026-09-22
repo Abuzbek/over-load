@@ -27,16 +27,16 @@ CATEGORY_RULES = [
         'Swiss Bar', 'Trap Bar', 'Triceps Bar', 'Yoke', 'Smith Machine',
     ]),
     ('fixed_weight_bars', ['Fixed-Weight EZ Bar', 'Fixed-Weight Straight Bar']),
-    ('bands_ropes', [
-        'Long Resistance Bands', 'Short Resistance Band', 'Battle Ropes',
-        'Suspension Trainer', 'Nordic Hamstring Curl Strap', 'Sled Pulling Belt/Harness',
-        'Anchor Point For Resistance Band', 'Anchor Point For Suspension Trainer',
-    ]),
-    ('body_weights', [
-        'Bodyweight Only', 'Another Human', 'Bed', 'Chair', 'Couch', 'Captain’s Chair',
-        'Dip Bars', 'Straight Pull-Up Bar', 'Multi-Grip Pull-Up Bar', 'Gymnastics Rings',
-        'Push-Up Handles', 'Ankle Weights', 'Weighted Vest', 'Dip/Pull-Up/Belt Squat Belt',
-        'Neck Harness', 'Hand Gripper',
+    # Bands & ropes is exactly these three: the anchors, straps and harnesses
+    # that go with them are accessories, not the resistance itself.
+    ('bands_ropes', ['Long Resistance Bands', 'Short Resistance Band', 'Battle Ropes']),
+    # Body weight is exactly these two: things you strap on to make bodyweight
+    # work heavier. The bars and rings you hang off are accessories; a belt or a
+    # harness you hang plates from is a loaded accessory.
+    ('body_weights', ['Ankle Weights', 'Weighted Vest']),
+    ('other', [
+        'Another Human', 'Bed', 'Chair', 'Couch', 'Furniture Sliders',
+        'Sissy Squat Machine', 'Bodyweight Only', 'Captain’s Chair',
     ]),
     ('benches_racks', [
         'Adjustable Bench', 'Flat Bench', 'Decline Bench', 'Hip Thrust Bench',
@@ -45,10 +45,25 @@ CATEGORY_RULES = [
         'Decline Bench Press Station', 'Seated Overhead Press Station', 'Roman Chair',
         'Glute Ham Developer', 'Sissy Squat Machine', 'Squat Box', 'Split Squat Roller Stand',
     ]),
+    # Loaded accessories is exactly these: things you hang or clamp plates onto.
     ('loaded_accessories', [
-        'Farmer’s Handles', 'Fat Grip Attachments', 'T-Bell', 'Tib Bar Trainer',
-        'Wrist Roller', 'Sled', 'Jammer', 'Slingshot',
+        'Dip/Pull-Up/Belt Squat Belt', 'Farmer’s Handles', 'Fat Grip Attachments',
+        'Neck Harness', 'Plate-Loaded Wrist Bar', 'T-Bell', 'Tib Bar Trainer',
+        'Wrist Roller',
     ]),
+    # Displaced by the rules above and not named anywhere: a jammer and a sled
+    # are loaded with plates like a machine; the rest are things you hold, hang
+    # off or stand on.
+    ('plate_loaded_machines', ['Jammer', 'Sled']),
+    ('accessories_functional', [
+        'Slingshot', 'Suspension Trainer', 'Nordic Hamstring Curl Strap',
+        'Sled Pulling Belt/Harness', 'Anchor Point For Resistance Band',
+        'Anchor Point For Suspension Trainer', 'Dip Bars', 'Straight Pull-Up Bar',
+        'Multi-Grip Pull-Up Bar', 'Gymnastics Rings', 'Push-Up Handles',
+    ]),
+    # Keeps its eleven resistance settings, which accessories_functional would
+    # discard. Move it if that reads wrong.
+    ('free_weights_extra', ['Hand Gripper']),
 ]
 
 # Anything with a range is a stack: pin-loaded, or a cable machine.
@@ -90,7 +105,7 @@ def parse_weights(raw: str):
 def categorise(name: str, weights: dict) -> str:
     for category, names in CATEGORY_RULES:
         if name in names:
-            return category
+            return 'free_weights' if category == 'free_weights_extra' else category
     if 'Pin-Loaded' in name or 'Pin Loaded' in name:
         return 'cable_machines' if any(h in name for h in CABLE_HINTS) else 'pin_loaded_machines'
     if 'Plate-Loaded' in name or 'Plate Loaded' in name:
@@ -136,6 +151,16 @@ def coerce(item: dict) -> dict:
     raise SystemExit(f"cannot coerce {item['name']}: {have} -> {want}")
 
 
+# Bodyweight movements need one of these to be possible, and they no longer
+# live in the body_weights group. Without this list the catalogue would unlock
+# no bodyweight exercise at all.
+BODYWEIGHT_APPARATUS = {
+    'Bodyweight Only', 'Another Human', 'Bed', 'Chair', 'Couch', 'Captain’s Chair',
+    'Dip Bars', 'Straight Pull-Up Bar', 'Multi-Grip Pull-Up Bar', 'Gymnastics Rings',
+    'Push-Up Handles', 'Floor', 'Staircase', 'Yoga Blocks',
+}
+
+
 # Which of the exercise catalogue's coarse equipment values this unlocks. The
 # exercise rows say "barbell"/"cable"/"machine"; without this the 259-item gym
 # list could not filter them at all.
@@ -157,6 +182,8 @@ def satisfies(item: dict) -> list:
     if name in ('Bosu Ball', 'Stability Ball'):
         return ['exercise ball']
     if cat == 'body_weights':
+        return ['body only', 'none']
+    if name in BODYWEIGHT_APPARATUS:
         return ['body only', 'none']
     return []
 

@@ -16,14 +16,14 @@ vi.mock('./backup', () => ({
 }));
 vi.mock('@overload/schema/migrations', () => ({ default: {} }));
 vi.mock('drizzle-orm/expo-sqlite/migrator', () => ({ migrate: vi.fn() }));
-vi.mock('../data/seedRepo', () => ({ seedExercisesIfEmpty: vi.fn(), seedEquipmentIfEmpty: vi.fn() }));
+vi.mock('../data/seedRepo', () => ({ seedExercisesIfEmpty: vi.fn(), syncEquipmentCatalogue: vi.fn() }));
 vi.mock('../data/programRepo', () => ({ ensureDefaultProgram: vi.fn() }));
 vi.mock('../data/gymRepo', () => ({ ensureDefaultGym: vi.fn() }));
 vi.mock('../data/sessionRepo', () => ({ rebuildAllPersonalRecords: vi.fn() }));
 
 const { backupDatabase, discardBackup, restoreDatabase } = await import('./backup');
 const { migrate } = await import('drizzle-orm/expo-sqlite/migrator');
-const { seedExercisesIfEmpty, seedEquipmentIfEmpty } = await import('../data/seedRepo');
+const { seedExercisesIfEmpty, syncEquipmentCatalogue } = await import('../data/seedRepo');
 const { ensureDefaultProgram } = await import('../data/programRepo');
 const { ensureDefaultGym } = await import('../data/gymRepo');
 const { rebuildAllPersonalRecords } = await import('../data/sessionRepo');
@@ -87,7 +87,7 @@ describe('initializeDatabase', () => {
     expect(discardBackup).toHaveBeenCalledTimes(1);
     expect(seedExercisesIfEmpty).toHaveBeenCalledTimes(1);
     expect(ensureDefaultProgram).toHaveBeenCalledTimes(1);
-    expect(seedEquipmentIfEmpty).toHaveBeenCalledTimes(1);
+    expect(syncEquipmentCatalogue).toHaveBeenCalledTimes(1);
     expect(ensureDefaultGym).toHaveBeenCalledTimes(1);
     expect(rebuildAllPersonalRecords).toHaveBeenCalledTimes(1);
 
@@ -97,7 +97,7 @@ describe('initializeDatabase', () => {
     expect(callOrder(discardBackup)).toBeLessThan(callOrder(seedExercisesIfEmpty));
     expect(callOrder(seedExercisesIfEmpty)).toBeLessThan(callOrder(ensureDefaultProgram));
     // The first gym owns every catalogue item, so the catalogue has to exist first.
-    expect(callOrder(seedEquipmentIfEmpty)).toBeLessThan(callOrder(ensureDefaultGym));
+    expect(callOrder(syncEquipmentCatalogue)).toBeLessThan(callOrder(ensureDefaultGym));
     expect(callOrder(ensureDefaultProgram)).toBeLessThan(callOrder(rebuildAllPersonalRecords));
   });
 
