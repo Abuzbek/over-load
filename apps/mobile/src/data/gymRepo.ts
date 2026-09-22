@@ -147,6 +147,29 @@ export function setGymEquipmentOwned(
     .run();
 }
 
+/**
+ * Ticks or unticks a whole group at once — a commercial gym is 250 taps
+ * otherwise.
+ *
+ * One transaction, not one write per item: 84 separate statements is slow
+ * enough to be visible, and a half-applied group is a worse state than either
+ * end of it.
+ */
+export function setGymEquipmentOwnedBulk(
+  db: Db,
+  gymId: string,
+  equipmentIds: string[],
+  owned: boolean,
+  at: number,
+): void {
+  if (equipmentIds.length === 0) return;
+  db.transaction((tx) => {
+    for (const equipmentId of equipmentIds) {
+      setGymEquipmentOwned(tx as Db, gymId, equipmentId, owned, at);
+    }
+  });
+}
+
 export function setGymEquipmentConfig(
   db: Db,
   gymId: string,

@@ -16,6 +16,7 @@ import {
   removeGym,
   setGymEquipmentConfig,
   setGymEquipmentOwned,
+  setGymEquipmentOwnedBulk,
   type GymEquipmentRow,
 } from '../../data/gymRepo';
 import { db } from '../../db/client';
@@ -140,6 +141,7 @@ export function GymScreen() {
             const items = byCategory.get(category) ?? [];
             if (items.length === 0) return null;
             const owned = items.filter((i) => i.owned).length;
+            const allOwned = owned === items.length;
             return (
               <Collapsible
                 key={category}
@@ -147,6 +149,25 @@ export function GymScreen() {
                 defaultOpen={false}
               >
                 <Card style={styles.rows}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${allOwned ? 'Untick' : 'Tick'} all ${CATEGORY_LABELS[category]}`}
+                    onPress={() => {
+                      setGymEquipmentOwnedBulk(
+                        db,
+                        active.gym.id,
+                        items.map((i) => i.equipment.id),
+                        !allOwned,
+                        Date.now(),
+                      );
+                      bump();
+                    }}
+                    style={({ pressed }) => [styles.bulk, pressed && styles.bulkPressed]}
+                  >
+                    <Text variant="caption" color="accent">
+                      {allOwned ? 'Untick all' : 'Tick all'}
+                    </Text>
+                  </Pressable>
                   {items.map((row) => (
                     <ListRow
                       key={row.equipment.id}
@@ -237,6 +258,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   boxOn: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  bulk: {
+    alignItems: 'flex-end',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border,
+  },
+  bulkPressed: { opacity: 0.6 },
   remove: { alignItems: 'center', paddingVertical: theme.spacing.md },
   input: {
     minHeight: 44,

@@ -15,6 +15,7 @@ import {
   removeGym,
   setGymEquipmentConfig,
   setGymEquipmentOwned,
+  setGymEquipmentOwnedBulk,
 } from './gymRepo';
 import { syncEquipmentCatalogue, type SeedEquipment } from './seedRepo';
 
@@ -256,5 +257,59 @@ describe('canDoWithEquipment', () => {
 
   it('requires everything else to be present', () => {
     expect(canDoWithEquipment('barbell', ['dumbbell'])).toBe(false);
+  });
+});
+
+describe('setGymEquipmentOwnedBulk', () => {
+  it('ticks a whole group in one go', () => {
+    const gym = createGym(db, 'Home', now());
+    const ids = [equipmentId('Barbell'), equipmentId('Dumbbells')];
+
+    setGymEquipmentOwnedBulk(db, gym.id, ids, true, now());
+
+    const rows = listGymEquipment(db, gym.id);
+    expect(rows.filter((r) => r.owned).map((r) => r.equipment.name).sort())
+      .toEqual(['Barbell', 'Dumbbells']);
+  });
+
+  it('unticks a whole group in one go', () => {
+    const gym = createGym(db, 'Home', now());
+    const ids = [equipmentId('Barbell'), equipmentId('Dumbbells')];
+    setGymEquipmentOwnedBulk(db, gym.id, ids, true, now());
+
+    setGymEquipmentOwnedBulk(db, gym.id, ids, false, now());
+
+    expect(listGymEquipment(db, gym.id).filter((r) => r.owned)).toHaveLength(0);
+  });
+
+  // Same tombstone semantics as ticking one at a time: unticking a group and
+  // putting it back must not throw away the weights you typed.
+  it('keeps edited weights across a bulk untick and re-tick', () => {
+    const gym = createGym(db, 'Home', now());
+    const id = equipmentId('Dumbbells');
+    setGymEquipmentOwned(db, gym.id, id, true, now());
+    setGymEquipmentConfig(db, gym.id, id, { kind: 'list', values: [{ kg: 42 }] }, now());
+
+    setGymEquipmentOwnedBulk(db, gym.id, [id], false, now());
+    setGymEquipmentOwnedBulk(db, gym.id, [id], true, now());
+
+    expect(listGymEquipment(db, gym.id).find((r) => r.equipment.id === id)!.config)
+      .toEqual({ kind: 'list', values: [{ kg: 42 }] });
+  });
+
+  it('leaves equipment outside the group alone', () => {
+    const gym = createGym(db, 'Home', now());
+    setGymEquipmentOwned(db, gym.id, equipmentId('Flat Bench'), true, now());
+
+    setGymEquipmentOwnedBulk(db, gym.id, [equipmentId('Barbell')], true, now());
+
+    expect(listGymEquipment(db, gym.id).filter((r) => r.owned).map((r) => r.equipment.name).sort())
+      .toEqual(['Barbell', 'Flat Bench']);
+  });
+
+  it('does nothing for an empty group', () => {
+    const gym = createGym(db, 'Home', now());
+    setGymEquipmentOwnedBulk(db, gym.id, [], true, now());
+    expect(listGymEquipment(db, gym.id).filter((r) => r.owned)).toHaveLength(0);
   });
 });
