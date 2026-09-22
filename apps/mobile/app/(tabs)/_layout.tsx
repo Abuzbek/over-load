@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import { InProgressBar } from '../../src/features/session/InProgressBar';
 import { Text } from '../../src/ui/Text';
 import { theme } from '../../src/ui/theme';
-
+import {Lucide} from '@react-native-vector-icons/lucide'
 function TabIcon({ glyph, color }: { glyph: string; color: string }) {
   return <Text style={{ color }}>{glyph}</Text>;
 }
@@ -32,19 +32,19 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Train', tabBarIcon: ({ color }) => <TabIcon glyph="◈" color={color} /> }}
+        options={{ title: 'Workout', tabBarIcon: ({ color }) => <Lucide name="dumbbell" color={color} size={22} /> }}
       />
       <Tabs.Screen
         name="history"
-        options={{ title: 'History', tabBarIcon: ({ color }) => <TabIcon glyph="◷" color={color} /> }}
+        options={{ title: 'History', tabBarIcon: ({ color }) => <Lucide name="clock" color={color} size={22} /> }}
       />
       <Tabs.Screen
         name="progress"
-        options={{ title: 'Progress', tabBarIcon: ({ color }) => <TabIcon glyph="◭" color={color} /> }}
+        options={{ title: 'Progress', tabBarIcon: ({ color }) => <Lucide name="rocket" color={color} size={22} /> }}
       />
       <Tabs.Screen
         name="profile"
-        options={{ title: 'Profile', tabBarIcon: ({ color }) => <TabIcon glyph="◉" color={color} /> }}
+        options={{ title: 'More', tabBarIcon: ({ color }) => <Lucide name="cog" color={color} size={22} /> }}
       />
     </Tabs>
   );
