@@ -71,6 +71,13 @@
       "when": 1790075801115,
       "tag": "0009_height_unit",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1790076715742,
+      "tag": "0010_gyms",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,7 @@ import { theme } from '../../ui/theme';
 
 const GENERAL = [
   { title: 'Account', icon: 'user', href: '/settings/account' },
+  { title: 'Gym', icon: 'dumbbell', href: '/settings/gym' },
   { title: 'Units', icon: 'ruler', href: '/settings/units' },
   { title: 'Language', icon: 'languages', href: '/settings/language' },
 ] as const;

@@ -188,6 +188,24 @@ describe('migrations', () => {
     close();
   });
 
+  it('adds gyms without disturbing the settings row that predates them', () => {
+    // 9 == through 0009, i.e. before gyms existed at all.
+    const { db, close } = createDbAtMigration(9);
+    const id = newId();
+    db.run(sql`insert into app_settings (id, created_at, updated_at, weight_unit, distance_unit, height_unit) values (${id}, 1, 1, 'lb', 'mi', 'ft')`);
+
+    applyFullMigrations(db);
+
+    const row = db.select().from(appSettings).where(eq(appSettings.id, id)).get();
+    expect(row!.weightUnit).toBe('lb');
+    expect(row!.heightUnit).toBe('ft');
+    // No gym yet: the column is nullable and ensureDefaultGym fills it at
+    // bootstrap, not in the migration.
+    expect(row!.activeGymId).toBeNull();
+    expect(db.all(sql`select count(*) as n from gyms`)).toEqual([{ n: 0 }]);
+    close();
+  });
+
   it('preserves an existing settings row across the distance_unit migration', () => {
     // 2 == through 0002_ancient_human_robot, i.e. app_settings with only
     // weight_unit, before distance_unit existed. Inserted via raw SQL

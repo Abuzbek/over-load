@@ -128,6 +128,32 @@ until the old `workouts` has become `sessions`. `ALTER TABLE ... RENAME TO` and
 `RENAME COLUMN` do not rebuild a table, so the foreign-key hazard that broke
 0005 does not apply here.
 
+## Gyms
+
+A **gym** is a place you train and the equipment in it. One is active at a time,
+enforced by `app_settings.active_gym_id` — the same single-column rule as the
+active program, so there is never a moment with two.
+
+The exercise catalogue is filtered to the active gym by default, with a "Show
+all" escape on the browser: a home lifter should not scroll past 170 barbell
+movements, but must still be able to reach one when standing somewhere else.
+
+Two rules that are easy to get wrong:
+
+- **`body only` and `none` are always available.** They mean "no equipment", so
+  they are not tickable and a gym with nothing in it still offers bodyweight
+  work. An empty gym is not an empty catalogue.
+- **The default gym has everything ticked, not nothing.** `ensureDefaultGym`
+  runs at bootstrap for every install including existing ones; starting it empty
+  would hide most of the catalogue from someone who never asked for a gym.
+
+Equipment is a JSON array on `gyms` rather than a join table: at most nine
+values, always read as a set, never queried the other way round — the same shape
+as `exercises.secondary_muscles`.
+
+**This is also the missing input for smart generation.** A generator cannot pick
+sensible exercises without knowing what is in the room.
+
 ### Creation paths (future)
 
 Choosing to create a program offers three routes:

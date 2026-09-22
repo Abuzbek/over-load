@@ -18,12 +18,14 @@ vi.mock('@overload/schema/migrations', () => ({ default: {} }));
 vi.mock('drizzle-orm/expo-sqlite/migrator', () => ({ migrate: vi.fn() }));
 vi.mock('../data/seedRepo', () => ({ seedExercisesIfEmpty: vi.fn() }));
 vi.mock('../data/programRepo', () => ({ ensureDefaultProgram: vi.fn() }));
+vi.mock('../data/gymRepo', () => ({ ensureDefaultGym: vi.fn() }));
 vi.mock('../data/sessionRepo', () => ({ rebuildAllPersonalRecords: vi.fn() }));
 
 const { backupDatabase, discardBackup, restoreDatabase } = await import('./backup');
 const { migrate } = await import('drizzle-orm/expo-sqlite/migrator');
 const { seedExercisesIfEmpty } = await import('../data/seedRepo');
 const { ensureDefaultProgram } = await import('../data/programRepo');
+const { ensureDefaultGym } = await import('../data/gymRepo');
 const { rebuildAllPersonalRecords } = await import('../data/sessionRepo');
 const { initializeDatabase } = await import('./bootstrap');
 
@@ -85,6 +87,7 @@ describe('initializeDatabase', () => {
     expect(discardBackup).toHaveBeenCalledTimes(1);
     expect(seedExercisesIfEmpty).toHaveBeenCalledTimes(1);
     expect(ensureDefaultProgram).toHaveBeenCalledTimes(1);
+    expect(ensureDefaultGym).toHaveBeenCalledTimes(1);
     expect(rebuildAllPersonalRecords).toHaveBeenCalledTimes(1);
 
     // Ordering: backup, then migrate, then discard, then seed, then default program, then rebuild.

@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { createCustomExercise, listExercises as listExercisesRepo } from '../../data/exerciseRepo';
+import { getActiveGym } from '../../data/gymRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
@@ -38,19 +39,39 @@ export function ExerciseList({ onSelect }: Props) {
   // is created, since listExercises is read fresh on every render.
   const [version, setVersion] = useState(0);
   const [formVisible, setFormVisible] = useState(false);
+  // Default to the active gym, with a way out: a user standing somewhere else
+  // must be able to reach an exercise the filter hides.
+  const [gymOnly, setGymOnly] = useState(true);
+  const gym = getActiveGym(db);
 
   // The library is static during a session, so re-query only as the search
   // changes. `version` is bumped after a custom exercise is created and is
   // otherwise unused — it forces this memo to re-run against the same search.
+  const availableEquipment = gymOnly && gym ? gym.equipment : null;
   const exercises = useMemo(
-    () => listExercisesRepo(db, { search: search.trim() || undefined }),
+    () => listExercisesRepo(db, { search: search.trim() || undefined, availableEquipment }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [search, version],
+    [search, version, gymOnly, gym?.id, gym?.equipment.length],
   );
 
   return (
     <View style={styles.container}>
       <SearchField value={search} onChangeText={setSearch} placeholder="Search exercises" />
+      {gym ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ checked: gymOnly }}
+          onPress={() => setGymOnly((v) => !v)}
+          style={styles.gymFilter}
+        >
+          <Text variant="caption" color={gymOnly ? 'accent' : 'textMuted'}>
+            {gymOnly ? `Showing what you can do at ${gym.name}` : 'Showing every exercise'}
+          </Text>
+          <Text variant="caption" color="textMuted">
+            {gymOnly ? 'Show all' : `Only ${gym.name}`}
+          </Text>
+        </Pressable>
+      ) : null}
       <View style={styles.newExerciseContainer}>
         <Button title="New exercise" variant="secondary" onPress={() => setFormVisible(true)} />
       </View>
@@ -60,7 +81,14 @@ export function ExerciseList({ onSelect }: Props) {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.emptyContent}
         ListEmptyComponent={
-          <EmptyState title="No exercises match" body="Try a different name or equipment." />
+          <EmptyState
+            title="No exercises match"
+            body={
+              gymOnly && gym
+                ? `Nothing here matches at ${gym.name}. Tap "Show all" to see every exercise.`
+                : 'Try a different name or equipment.'
+            }
+          />
         }
         renderItem={({ item }) => (
           <ListRow
@@ -194,6 +222,13 @@ function NewExerciseModal({ visible, onClose, onCreated }: NewExerciseModalProps
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
+  gymFilter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+  },
   newExerciseContainer: { paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.md },
   // Matches HistoryList/Screen: without flexGrow the EmptyState (itself
   // flex: 1) top-aligns instead of centering, since a FlatList's content

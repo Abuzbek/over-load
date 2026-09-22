@@ -9,7 +9,9 @@ Drizzle. Packages are scoped `@overload/*`; the app's bundle id is
 repeating cycle of days (`programs`, `program_days`); a **workout** is a named
 plan you can train (`workouts`, `workout_exercises`, `workout_sets`); a
 **session** is a workout you performed (`sessions`, `session_exercises`,
-`session_sets`); an **exercise** is a movement in the catalogue. There is no
+`session_sets`); an **exercise** is a movement in the catalogue; a **gym** is
+a place you train and the equipment in it (`gyms`), which filters that
+catalogue. There is no
 "routine" — migration 0008 removed the last of that name. Release 1 (the logging loop) is built and merged. The app shell and design
 system (four tabs, `src/ui/` component kit) is built on branch `app-shell`,
 not yet merged; see `docs/superpowers/2026-09-22-session-handoff.md` for full
