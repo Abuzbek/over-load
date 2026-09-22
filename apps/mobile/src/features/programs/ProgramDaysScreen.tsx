@@ -1,7 +1,12 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet } from 'react-native';
-import { addProgramDay, getProgramDays, setProgramDay } from '../../data/programRepo';
+import {
+  addProgramDay,
+  getProgramDays,
+  removeProgramDay,
+  setProgramDay,
+} from '../../data/programRepo';
 import { createRoutine, listRoutines } from '../../data/routineRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
@@ -26,6 +31,12 @@ export function ProgramDaysScreen({ programId, programName }: { programId: strin
 
   function assign(dayIndex: number, routineId: string | null) {
     setProgramDay(db, programId, dayIndex, routineId, Date.now());
+    setEditing(null);
+    setVersion((v) => v + 1);
+  }
+
+  function removeDay(dayIndex: number) {
+    removeProgramDay(db, programId, dayIndex, Date.now());
     setEditing(null);
     setVersion((v) => v + 1);
   }
@@ -96,6 +107,11 @@ export function ProgramDaysScreen({ programId, programName }: { programId: strin
           title="Rest"
           variant="ghost"
           onPress={() => editing !== null && assign(editing, null)}
+        />
+        <Button
+          title="Remove day"
+          variant="destructive"
+          onPress={() => editing !== null && removeDay(editing)}
         />
         <Button title="Cancel" variant="secondary" onPress={() => setEditing(null)} />
       </Sheet>

@@ -24,6 +24,12 @@ export const programDays = sqliteTable(
     programId: text('program_id').notNull().references(() => programs.id),
     dayIndex: integer('day_index').notNull(),
     routineId: text('routine_id').references(() => routines.id),
+    /**
+     * When this day was last ticked off. Set by finishing its workout or by
+     * ticking the box by hand, cleared by unticking. Nothing resets it when the
+     * cycle comes round again — see the note in programRepo.
+     */
+    completedAt: integer('completed_at'),
   },
   (table) => ({
     programIdx: index('program_days_program_idx').on(table.programId),

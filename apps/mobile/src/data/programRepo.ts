@@ -3,7 +3,7 @@ import { and, eq, inArray, isNull, max } from 'drizzle-orm';
 
 export type ProgramSummary = { program: Program; trainingDays: number; isActive: boolean };
 
-export type ProgramDay = { dayIndex: number; routine: Routine | null };
+export type ProgramDay = { dayIndex: number; routine: Routine | null; completedAt: number | null };
 
 /** A new program starts as a week's worth of days; the cycle is not fixed to it. */
 export const DEFAULT_DAY_COUNT = 7;
@@ -143,7 +143,81 @@ export function getProgramDays(db: Db, programId: string): ProgramDay[] {
   return days.map((day) => ({
     dayIndex: day.dayIndex,
     routine: day.routineId ? (routineById.get(day.routineId) ?? null) : null,
+    completedAt: day.completedAt,
   }));
+}
+
+/**
+ * Ticks a day off, or clears it.
+ *
+ * Nothing resets these when the cycle comes round again — there is no concept
+ * of a cycle iteration in the schema yet, so a finished cycle stays ticked
+ * until the user unticks it.
+ */
+export function setProgramDayCompleted(
+  db: Db,
+  programId: string,
+  dayIndex: number,
+  completed: boolean,
+  at: number,
+): void {
+  db.update(programDays)
+    .set({ completedAt: completed ? at : null, updatedAt: at })
+    .where(
+      and(
+        eq(programDays.programId, programId),
+        eq(programDays.dayIndex, dayIndex),
+        isNull(programDays.deletedAt),
+      ),
+    )
+    .run();
+}
+
+/**
+ * Called when a workout is finished: ticks off the first day of the active
+ * program that still needs this workout.
+ *
+ * The first, not all of them — the same workout sits on several days of a
+ * cycle, and finishing it once completes one of those days, not the lot.
+ */
+export function markDayDoneForRoutine(db: Db, routineId: string, at: number): void {
+  const program = getActiveProgram(db);
+  if (!program) return;
+
+  const day = db
+    .select({ id: programDays.id })
+    .from(programDays)
+    .where(
+      and(
+        eq(programDays.programId, program.id),
+        eq(programDays.routineId, routineId),
+        isNull(programDays.completedAt),
+        isNull(programDays.deletedAt),
+      ),
+    )
+    .orderBy(programDays.dayIndex)
+    .get();
+  if (!day) return;
+
+  db.update(programDays).set({ completedAt: at, updatedAt: at }).where(eq(programDays.id, day.id)).run();
+}
+
+/**
+ * Tombstones a day. Day numbers are positional, so removing day 2 renumbers
+ * everything after it — the stored dayIndex values keep their gaps, which is
+ * what stops addProgramDay reusing an index.
+ */
+export function removeProgramDay(db: Db, programId: string, dayIndex: number, at: number): void {
+  db.update(programDays)
+    .set({ deletedAt: at, updatedAt: at })
+    .where(
+      and(
+        eq(programDays.programId, programId),
+        eq(programDays.dayIndex, dayIndex),
+        isNull(programDays.deletedAt),
+      ),
+    )
+    .run();
 }
 
 /**

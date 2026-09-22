@@ -2,9 +2,11 @@ import { formatLastTrained } from '@overload/domain';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { getActiveProgram } from '../../data/programRepo';
+import { getActiveProgram, getProgramDays } from '../../data/programRepo';
 import { listRoutineSummaries, type RoutineSummary } from '../../data/routineRepo';
 import { db } from '../../db/client';
+import { ActiveProgramCard } from '../programs/ActiveProgramCard';
+import { useWorkoutStarter, WorkoutStartSheet } from '../session/useWorkoutStarter';
 import { Card } from '../../ui/Card';
 import { Collapsible } from '../../ui/Collapsible';
 import { ListRow } from '../../ui/ListRow';
@@ -46,30 +48,40 @@ export function TrainScreen() {
 
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
+  const starter = useWorkoutStarter();
   const summaries = listRoutineSummaries(db);
   const activeProgram = getActiveProgram(db);
+  const days = activeProgram ? getProgramDays(db, activeProgram.id) : [];
+  const summaryByRoutineId = new Map(summaries.map((s) => [s.routine.id, s]));
 
   return (
     <Screen scroll safeTop>
       <Text variant="display">Workout</Text>
 
-      <SectionLabel>Program</SectionLabel>
+      <SectionLabel>Active program</SectionLabel>
+      {activeProgram ? (
+        <ActiveProgramCard
+          programId={activeProgram.id}
+          programName={activeProgram.name}
+          days={days}
+          summaryByRoutineId={summaryByRoutineId}
+          starter={starter}
+          onChanged={() => setVersion((v) => v + 1)}
+        />
+      ) : (
+        <Card style={styles.programRows}>
+          <ListRow
+            title="No active program"
+            subtitle="Pick one from the program library"
+            onPress={() => router.push('/programs')}
+          />
+        </Card>
+      )}
+
       <Card style={styles.programRows}>
         <ListRow
-          title={activeProgram?.name ?? 'No active program'}
-          subtitle="Your day cycle"
-          onPress={() =>
-            activeProgram
-              ? router.push({
-                  pathname: '/programs/[id]',
-                  params: { id: activeProgram.id, name: activeProgram.name },
-                })
-              : router.push('/programs')
-          }
-        />
-        <ListRow
           title="Program library"
-          subtitle="Archived programs"
+          subtitle="Archived programs, and editing"
           onPress={() => router.push('/programs')}
         />
       </Card>
@@ -94,6 +106,8 @@ export function TrainScreen() {
           onPress={() => router.push('/exercises')}
         />
       </Card>
+
+      <WorkoutStartSheet starter={starter} />
     </Screen>
   );
 }

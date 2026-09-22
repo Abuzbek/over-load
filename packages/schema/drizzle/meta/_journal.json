@@ -50,6 +50,13 @@
       "when": 1790068938331,
       "tag": "0006_day_cycle",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1790073453991,
+      "tag": "0007_day_completion",
+      "breakpoints": true
     }
   ]
 }

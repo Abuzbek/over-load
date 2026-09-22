@@ -5,16 +5,15 @@ import { StyleSheet, View } from 'react-native';
 import type { RoutineDetailExercise } from '../../data/routineRepo';
 import { addRoutineSet, getRoutineDetail, reorderRoutineExercises } from '../../data/routineRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
-import { discardWorkout, getActiveWorkoutId, startWorkoutFromRoutine } from '../../data/sessionRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
 import { NumericField } from '../../ui/NumericField';
 import { Screen } from '../../ui/Screen';
-import { Sheet } from '../../ui/Sheet';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import { parseDecimalInput, parseIntegerInput } from '../session/setInputs';
+import { useWorkoutStarter, WorkoutStartSheet } from '../session/useWorkoutStarter';
 import {
   formatRoutineTarget,
   targetInputsFor,
@@ -117,45 +116,13 @@ export function RoutineBuilder({ routineId }: Props) {
   const detail = getRoutineDetail(db, routineId);
   const unit = getWeightUnit(db);
 
-  // The unfinished workout that blocks starting a new one. getActiveWorkoutId
-  // only ever returns the newest unfinished workout, so silently starting a
-  // second one strands the first: no endedAt keeps it out of history, and a
-  // newer sibling keeps it out of resume. Its sets then sit in SQLite,
-  // invisible to every screen, forever. Sheet renders a Modal underneath,
-  // never Alert — Alert.prompt is iOS-only and this app ships Android too.
-  const [blockingWorkoutId, setBlockingWorkoutId] = useState<string | null>(null);
+  const starter = useWorkoutStarter();
 
   useFocusEffect(
     useCallback(() => {
       setVersion((v) => v + 1);
     }, []),
   );
-
-  const startWorkout = useCallback(() => {
-    setBlockingWorkoutId(null);
-    const workoutId = startWorkoutFromRoutine(db, routineId, Date.now());
-    router.push(`/session/${workoutId}`);
-  }, [routineId]);
-
-  const onStartPressed = useCallback(() => {
-    const active = getActiveWorkoutId(db);
-    if (active) {
-      setBlockingWorkoutId(active);
-      return;
-    }
-    startWorkout();
-  }, [startWorkout]);
-
-  const onResume = useCallback(() => {
-    const active = blockingWorkoutId;
-    setBlockingWorkoutId(null);
-    if (active) router.push(`/session/${active}`);
-  }, [blockingWorkoutId]);
-
-  const onDiscardAndStart = useCallback(() => {
-    if (blockingWorkoutId) discardWorkout(db, blockingWorkoutId, Date.now());
-    startWorkout();
-  }, [blockingWorkoutId, startWorkout]);
 
   // Swaps the exercise at `index` with its neighbour in `direction` and
   // persists the full live order in one transaction. Reads the live list
@@ -212,20 +179,11 @@ export function RoutineBuilder({ routineId }: Props) {
         </Text>
       ) : null}
 
-      <Button title="Start workout" onPress={onStartPressed} />
+      <Button title="Start workout" onPress={() => starter.start(routineId)} />
 
       <Button title="Add exercise" onPress={() => router.push(`/routines/${routineId}/add-exercise`)} />
 
-      <Sheet
-        visible={blockingWorkoutId !== null}
-        onRequestClose={() => setBlockingWorkoutId(null)}
-        title="A workout is already in progress"
-        body="Resume it, or discard it and start this workout instead. Discarding keeps nothing from the unfinished workout."
-      >
-        <Button title="Resume it" onPress={onResume} />
-        <Button title="Discard it and start" variant="secondary" onPress={onDiscardAndStart} />
-        <Button title="Cancel" variant="secondary" onPress={() => setBlockingWorkoutId(null)} />
-      </Sheet>
+      <WorkoutStartSheet starter={starter} />
     </Screen>
   );
 }

@@ -193,6 +193,8 @@ export type RoutineSummary = {
   exerciseCount: number;
   lastTrainedAt: number | null;
   primaryMuscles: string[];
+  /** In order, for the one-line preview under a workout's name. */
+  exerciseNames: string[];
 };
 
 /**
@@ -211,6 +213,7 @@ export function listRoutineSummaries(db: Db): RoutineSummary[] {
       routineId: routineExercises.routineId,
       orderIndex: routineExercises.orderIndex,
       primaryMuscle: exercises.primaryMuscle,
+      name: exercises.name,
     })
     .from(routineExercises)
     .innerJoin(exercises, eq(routineExercises.exerciseId, exercises.id))
@@ -234,6 +237,7 @@ export function listRoutineSummaries(db: Db): RoutineSummary[] {
       exerciseCount: mine.length,
       lastTrainedAt: lastByRoutine.get(routine.id) ?? null,
       primaryMuscles: summariseMuscles(mine.map((e) => e.primaryMuscle), 3),
+      exerciseNames: mine.map((e) => e.name),
     };
   });
 }

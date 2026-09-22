@@ -3,6 +3,7 @@ import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { startBareWorkout } from './sessionTestFixtures';
+import { activateProgram, createProgram, getProgramDays, setProgramDay } from './programRepo';
 import { addExerciseToRoutine, addRoutineSet, createRoutine } from './routineRepo';
 import {
   discardWorkout,
@@ -168,5 +169,34 @@ describe('getActiveWorkout', () => {
     startBareWorkout(db, 'Older', now() - 10_000);
     const newer = startBareWorkout(db, 'Newer', now());
     expect(getActiveWorkout(db)?.id).toBe(newer);
+  });
+});
+
+describe('finishWorkout ticks off the program day', () => {
+  it('marks the active program day whose workout was just finished', () => {
+    const routine = createRoutine(db, 'Push');
+    addExerciseToRoutine(db, routine.id, bench.id);
+    const program = createProgram(db, { name: 'P' }, AT);
+    activateProgram(db, program.id, AT);
+    setProgramDay(db, program.id, 0, routine.id, AT);
+
+    const workoutId = startWorkoutFromRoutine(db, routine.id, AT);
+    finishWorkout(db, workoutId, AT + 60_000);
+
+    expect(getProgramDays(db, program.id)[0]!.completedAt).toBe(AT + 60_000);
+  });
+
+  it('leaves the cycle alone for a workout that is not in the program', () => {
+    const routine = createRoutine(db, 'Push');
+    addExerciseToRoutine(db, routine.id, bench.id);
+    const other = createRoutine(db, 'Unrelated');
+    addExerciseToRoutine(db, other.id, bench.id);
+    const program = createProgram(db, { name: 'P' }, AT);
+    activateProgram(db, program.id, AT);
+    setProgramDay(db, program.id, 0, routine.id, AT);
+
+    finishWorkout(db, startWorkoutFromRoutine(db, other.id, AT), AT + 60_000);
+
+    expect(getProgramDays(db, program.id)[0]!.completedAt).toBeNull();
   });
 });

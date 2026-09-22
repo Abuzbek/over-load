@@ -16,6 +16,7 @@ import {
   type WorkoutSet,
 } from '@overload/schema';
 import { and, asc, desc, eq, inArray, isNotNull, isNull, max } from 'drizzle-orm';
+import { markDayDoneForRoutine } from './programRepo';
 import { getRoutineDetail } from './routineRepo';
 
 export type WorkoutDetailExercise = {
@@ -399,6 +400,16 @@ export function rebuildAllPersonalRecords(db: Db): void {
 
 export function finishWorkout(db: Db, workoutId: string, at: number): void {
   db.update(workouts).set({ endedAt: at, updatedAt: at }).where(eq(workouts.id, workoutId)).run();
+
+  // Finishing a workout ticks off the program day it came from, so the user
+  // does not have to check the box by hand. An empty or ad-hoc workout has no
+  // routineId and ticks nothing.
+  const routineId = db
+    .select({ routineId: workouts.routineId })
+    .from(workouts)
+    .where(eq(workouts.id, workoutId))
+    .get()?.routineId;
+  if (routineId) markDayDoneForRoutine(db, routineId, at);
 
   const touched = db
     .selectDistinct({ exerciseId: workoutExercises.exerciseId })

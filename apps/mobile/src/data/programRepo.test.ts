@@ -10,6 +10,9 @@ import {
   getActiveProgram,
   addProgramDay,
   getProgramDays,
+  markDayDoneForRoutine,
+  removeProgramDay,
+  setProgramDayCompleted,
   MAX_DAY_COUNT,
   listPrograms,
   setProgramDay,
@@ -315,5 +318,78 @@ describe('addProgramDay', () => {
     setProgramDay(db, program.id, dayIndex, workout.id, now());
 
     expect(getProgramDays(db, program.id)[7]!.routine?.id).toBe(workout.id);
+  });
+});
+
+describe('day completion', () => {
+  it('starts unticked, ticks and unticks', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    const workout = createRoutine(db, 'Push');
+    setProgramDay(db, program.id, 0, workout.id, now());
+    expect(getProgramDays(db, program.id)[0]!.completedAt).toBeNull();
+
+    setProgramDayCompleted(db, program.id, 0, true, 111);
+    expect(getProgramDays(db, program.id)[0]!.completedAt).toBe(111);
+
+    setProgramDayCompleted(db, program.id, 0, false, 222);
+    expect(getProgramDays(db, program.id)[0]!.completedAt).toBeNull();
+  });
+
+  // The rule that matters: one finished session ticks ONE day, not every day
+  // the workout sits on. A 3-day-a-week workout would otherwise complete the
+  // whole cycle the first time it was performed.
+  it('ticks only the first outstanding day when a workout repeats in the cycle', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    activateProgram(db, program.id, now());
+    const workout = createRoutine(db, 'Full body');
+    setProgramDay(db, program.id, 0, workout.id, now());
+    setProgramDay(db, program.id, 2, workout.id, now());
+    setProgramDay(db, program.id, 4, workout.id, now());
+
+    markDayDoneForRoutine(db, workout.id, 500);
+
+    const days = getProgramDays(db, program.id);
+    expect(days.find((d) => d.dayIndex === 0)!.completedAt).toBe(500);
+    expect(days.find((d) => d.dayIndex === 2)!.completedAt).toBeNull();
+    expect(days.find((d) => d.dayIndex === 4)!.completedAt).toBeNull();
+
+    markDayDoneForRoutine(db, workout.id, 600);
+    expect(getProgramDays(db, program.id).find((d) => d.dayIndex === 2)!.completedAt).toBe(600);
+  });
+
+  it('ticks nothing when the program holding the workout is not the active one', () => {
+    const program = createProgram(db, { name: 'Archived' }, now());
+    const workout = createRoutine(db, 'Push');
+    setProgramDay(db, program.id, 0, workout.id, now());
+    // Never activated.
+
+    markDayDoneForRoutine(db, workout.id, 500);
+
+    expect(getProgramDays(db, program.id)[0]!.completedAt).toBeNull();
+  });
+});
+
+describe('removeProgramDay', () => {
+  it('tombstones the day rather than deleting the row', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    removeProgramDay(db, program.id, 3, 999);
+
+    const days = getProgramDays(db, program.id);
+    expect(days.map((d) => d.dayIndex)).toEqual([0, 1, 2, 4, 5, 6]);
+
+    const row = db
+      .select()
+      .from(programDays)
+      .where(and(eq(programDays.programId, program.id), eq(programDays.dayIndex, 3)))
+      .get();
+    expect(row?.deletedAt).toBe(999);
+  });
+
+  // The ordering invariant again: the removed index is still taken, so a new
+  // day must go past it rather than reusing it.
+  it('does not free the removed index for reuse', () => {
+    const program = createProgram(db, { name: 'A' }, now());
+    removeProgramDay(db, program.id, 6, now());
+    expect(addProgramDay(db, program.id, now())).toBe(7);
   });
 });
