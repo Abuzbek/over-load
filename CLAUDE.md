@@ -27,13 +27,12 @@ pnpm start          # Expo dev server — then press i (iOS) or a (Android)
 pnpm ios            # straight to the iOS simulator
 pnpm android        # straight to an Android emulator/device
 
-pnpm test           # full suite (394 tests, 31 files)
+pnpm test           # full suite (387 tests, 30 files)
 pnpm typecheck      # type gate; CI runs this too (.github/workflows/ci.yml)
 pnpm run ci         # everything CI runs, locally: install + typecheck + test + bundle
 pnpm bundle         # expo export — catches packaging breaks tests cannot see
 
 pnpm db:generate    # regenerate migrations after a schema change
-pnpm seed:build     # rebuild curated.json from the upstream dataset
 ```
 
 ## Layout
@@ -44,7 +43,8 @@ packages/schema/    Drizzle tables, generated migrations, test harnesses
 apps/mobile/src/data/    repository layer — the ONLY place SQL is written
 apps/mobile/src/db/      client, backup, bootstrap
 apps/mobile/src/features/ + src/ui/ + app/    screens; repository calls only
-tools/seed-exercises/    curated.json (743 exercises), committed
+apps/mobile/assets/app_file.json   the exercise catalogue (1213 exercises), seeded as-is
+tools/seed-equipment/    equipment.json: starting weights + gym presets, by item name
 ```
 
 ### Navigation (`apps/mobile/app/`)
@@ -93,7 +93,15 @@ consumed by the in-progress bar.
 - **Deletes are tombstones.** Set `deleted_at`; never `DELETE`. **Every read filters
   `deleted_at IS NULL` at EVERY joined level** — this was violated in five separate
   queries during the build. Check each join deliberately.
-- **`personal_records` is the one exemption** — a derived cache with no `deleted_at`,
+- **The catalogue tables are exempt too** — `lookups`, `exercise_links`, `exercise_muscles`,
+  `exercise_equipment`, `catalogue_meta` (`packages/schema/src/catalogue.ts`). Derived from
+  `app_file.json`, keyed by its ids, rebuilt with a real `DELETE` by `syncCatalogue`, and
+  only ever read through a tombstone-filtered `exercises` row. Do not add `deleted_at` to them.
+- **Bump `CATALOGUE_VERSION` (`seedRepo.ts`) when `app_file.json` or `equipment.json` changes.**
+  Launch compares it with `catalogue_meta` and parses the 3.7 MB file only on a mismatch; a
+  test pins its prefix to the file's `generatedAt`, but an `equipment.json` edit needs the
+  `#n` suffix bumped by hand.
+- **`personal_records` is the other exemption** — a derived cache with no `deleted_at`,
   rebuilt from `sets`. Its hard `DELETE` is correct; do not "fix" it.
 - **`packages/domain` imports nothing.** No React, no expo, no drizzle, no I/O. It has
   zero dependencies in its package.json and that is what enforces the boundary.

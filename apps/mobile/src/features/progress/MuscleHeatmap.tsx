@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
-import { aspectRatio, ATTRIBUTION, REGIONS, VIEW_BOXES } from './muscleRegions';
+import { aspectRatio, type Figure, REGIONS, viewBox } from './muscleRegions';
 
 function mix(from: string, to: string, t: number): string {
   const parse = (hex: string) => [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
@@ -32,6 +32,8 @@ type Props = {
   load: Map<string, number>;
   /** Sets that count as a fully trained muscle for this window. */
   target: number;
+  /** Which body to draw — the profile's gender, male when unset. */
+  figure: Figure;
 };
 
 /**
@@ -41,7 +43,7 @@ type Props = {
  * muscle in the window. Scaling to the maximum would paint a single-set week
  * as fully trained, which is exactly the week you want to look empty.
  */
-export function MuscleHeatmap({ load, target }: Props) {
+export function MuscleHeatmap({ load, target, figure }: Props) {
   const fillFor = (muscle: string | null) => {
     // Regions with no muscle — head, hands, feet, joints — stay flat.
     if (!muscle) return theme.colors.surfaceRaised;
@@ -56,11 +58,11 @@ export function MuscleHeatmap({ load, target }: Props) {
       <View style={styles.row}>
         {(['FRONT', 'BACK'] as const).map((view) => (
           <View key={view} style={styles.column}>
-            <Svg viewBox={VIEW_BOXES[view]} style={[styles.body, { aspectRatio: aspectRatio(view) }]}>
-              {REGIONS.filter((r) => r.view === view).map((region) =>
+            <Svg viewBox={viewBox(figure, view)} style={[styles.body, { aspectRatio: aspectRatio(figure, view) }]}>
+              {REGIONS.filter((r) => r.figure === figure && r.view === view).map((region, n) =>
                 region.paths.map((d, i) => (
                   <Path
-                    key={`${region.id}-${i}`}
+                    key={`${n}-${i}`}
                     d={d}
                     fill={region.backdrop ? theme.colors.surfaceRaised : fillFor(region.muscle)}
                     stroke={OUTLINE}
@@ -73,9 +75,6 @@ export function MuscleHeatmap({ load, target }: Props) {
           </View>
         ))}
       </View>
-      {/* The artwork's licence requires attribution wherever it is shown, so it
-          lives with the art rather than on the screen that happens to use it. */}
-      <Text variant="caption" color="textMuted" style={styles.credit}>{ATTRIBUTION}</Text>
     </View>
   );
 }
@@ -88,5 +87,4 @@ const styles = StyleSheet.create({
   // the two figures sit side by side instead of being two squares that do not
   // fit. Sizing by width instead made each body two and a half screens tall.
   body: { height: 320 },
-  credit: { textAlign: 'center' },
 });

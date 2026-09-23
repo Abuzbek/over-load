@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import curated from '../../../../../tools/seed-exercises/curated.json';
-import { aspectRatio, MAPPED_MUSCLES, REGIONS, UNDRAWN_MUSCLES, VIEW_BOXES } from './muscleRegions';
+import appFile from '../../../assets/app_file.json';
+import { aspectRatio, MAPPED_MUSCLES, REGIONS, UNDRAWN_MUSCLES, viewBox } from './muscleRegions';
 
+const FIGURES = ['male', 'female'] as const;
+const VIEWS = ['FRONT', 'BACK'] as const;
+
+// The muscle groups the heatmap aggregates by: exercise_muscles points at
+// these lookups, and muscleLoad returns their names.
 const CATALOGUE_MUSCLES = new Set(
-  (curated as { primaryMuscle: string }[]).map((e) => e.primaryMuscle),
+  Object.values(appFile.uuidIndex as Record<string, { type: string; name: unknown }>)
+    .filter((e) => e.type === 'featureMuscleGroup')
+    .map((e) => String(e.name)),
 );
 
 describe('muscle region map', () => {
@@ -16,12 +23,21 @@ describe('muscle region map', () => {
     expect(missing).toEqual([]);
   });
 
-  // Documents the known gap so that adding an adductor region, or losing
-  // another one, is a test change rather than a silent behaviour change.
-  it('has exactly one muscle the artwork cannot draw', () => {
-    expect(UNDRAWN_MUSCLES).toEqual(['adductors']);
+  // Documents the known gaps so that drawing one, or losing another, is a
+  // test change rather than a silent behaviour change.
+  it('has exactly the known muscles the artwork cannot draw', () => {
+    expect(UNDRAWN_MUSCLES).toEqual(['Hip flexors']);
     expect(UNDRAWN_MUSCLES.every((m) => CATALOGUE_MUSCLES.has(m))).toBe(true);
     expect(UNDRAWN_MUSCLES.every((m) => !MAPPED_MUSCLES.has(m))).toBe(true);
+  });
+
+  // Both bodies must light the same muscles, or switching gender in the
+  // profile would quietly drop one from the map.
+  it('draws the same muscles on both figures', () => {
+    const muscles = (figure: string) =>
+      [...new Set(REGIONS.filter((r) => r.figure === figure && r.muscle).map((r) => r.muscle))].sort();
+    expect(muscles('female')).toEqual(muscles('male'));
+    expect(muscles('male')).toEqual([...CATALOGUE_MUSCLES].filter((m) => !UNDRAWN_MUSCLES.includes(m)).sort());
   });
 
   it('maps no muscle the catalogue does not have', () => {
@@ -30,18 +46,21 @@ describe('muscle region map', () => {
 
   it('every mapped region carries at least one path', () => {
     const mapped = REGIONS.filter((r) => r.muscle !== null);
-    expect(mapped.length).toBeGreaterThan(35);
+    expect(mapped.length).toBeGreaterThan(100);
     expect(mapped.every((r) => r.paths.length > 0 && r.paths.every(Boolean))).toBe(true);
   });
 
-  it('keeps the silhouette as backdrop, never as a muscle', () => {
+  it('keeps the silhouette and joints as backdrop, never as a muscle', () => {
     const backdrops = REGIONS.filter((r) => r.backdrop);
-    expect(backdrops.length).toBe(4);
+    // One silhouette per figure and view, plus the back views' joints.
+    expect(backdrops.filter((r) => r.id === 'body').length).toBe(4);
     expect(backdrops.every((r) => r.muscle === null)).toBe(true);
+    expect(REGIONS.filter((r) => !r.backdrop).every((r) => r.muscle !== null)).toBe(true);
   });
 
-  it('has both views', () => {
-    expect(new Set(REGIONS.map((r) => r.view))).toEqual(new Set(['FRONT', 'BACK']));
+  it('has both views of both figures', () => {
+    const keys = new Set(REGIONS.map((r) => `${r.figure}-${r.view}`));
+    expect(keys).toEqual(new Set(FIGURES.flatMap((f) => VIEWS.map((v) => `${f}-${v}`))));
   });
 
   // build.py tightens each viewBox to the ink by walking the path data; its own
@@ -50,14 +69,14 @@ describe('muscle region map', () => {
   // cannot see a box that crops a limb, since only the opening move of each
   // path is absolute — that failure shows up on screen, not here.
   it('gives each view a tall box its paths start inside', () => {
-    for (const view of ['FRONT', 'BACK'] as const) {
-      const [x, y, width, height] = VIEW_BOXES[view].split(' ').map(Number) as number[];
+    for (const [figure, view] of FIGURES.flatMap((f) => VIEWS.map((v) => [f, v] as const))) {
+      const [x, y, width, height] = viewBox(figure, view).split(' ').map(Number) as number[];
       expect(width!).toBeGreaterThan(0);
       // A human figure is much taller than it is wide; a box near 1:1 means the
       // bounds collapsed back to the source artwork's square canvas.
-      expect(aspectRatio(view)).toBeLessThan(0.6);
+      expect(aspectRatio(figure, view)).toBeLessThan(0.6);
 
-      for (const region of REGIONS.filter((r) => r.view === view)) {
+      for (const region of REGIONS.filter((r) => r.figure === figure && r.view === view)) {
         for (const d of region.paths) {
           const move = /^M(-?[\d.]+)[ ,](-?[\d.]+)/.exec(d);
           expect(move).not.toBeNull();

@@ -1,4 +1,4 @@
-import { exercises, newId, now, sessionSets, sessionExercises, sessions, type Exercise } from '@overload/schema';
+import { exerciseMuscles, exercises, lookups, newId, now, sessionSets, sessionExercises, sessions, type Exercise } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -20,7 +20,6 @@ beforeEach(() => {
     name: 'Bench Press',
     trackingType: 'weight_reps' as const,
     primaryMuscle: 'chest',
-    secondaryMuscles: [],
     equipment: 'barbell',
   };
   db.insert(exercises).values(row).run();
@@ -34,7 +33,6 @@ beforeEach(() => {
     name: 'Plank',
     trackingType: 'duration' as const,
     primaryMuscle: 'core',
-    secondaryMuscles: [],
     equipment: 'bodyweight',
   };
   db.insert(exercises).values(plankRow).run();
@@ -221,12 +219,20 @@ describe('muscleLoad', () => {
     return { sessionId, se, set };
   }
 
+  // Muscles the way the seed stores them: a lookup per muscle group, and one
+  // exercise_muscles row per muscle with the larger of its weights.
   function exercise(primary: string, secondary: string[] = []) {
     const id = newId();
     db.insert(exercises).values({
       id, name: `X ${primary} ${secondary.join()}`, trackingType: 'weight_reps',
-      primaryMuscle: primary, secondaryMuscles: secondary, equipment: 'barbell',
+      primaryMuscle: primary, equipment: 'barbell',
     }).run();
+    const weights = new Map(secondary.map((m) => [m, 0.5]));
+    weights.set(primary, 1);
+    for (const [muscle, weight] of weights) {
+      db.insert(lookups).values({ id: muscle, type: 'featureMuscleGroup', name: muscle }).onConflictDoNothing().run();
+      db.insert(exerciseMuscles).values({ exerciseId: id, muscleId: muscle, weight }).run();
+    }
     return id;
   }
 

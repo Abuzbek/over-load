@@ -1,4 +1,4 @@
-import { appSettings, equipment, exercises as exercisesTable, gymEquipment, gyms, newId, now } from '@overload/schema';
+import { appSettings, equipment, gymEquipment, gyms, now } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -8,8 +8,6 @@ import {
   countOwnedEquipment,
   createGymFromPreset,
   duplicateGym,
-  availableExerciseEquipment,
-  canDoWithEquipment,
   createGym,
   ensureDefaultGym,
   getActiveGym,
@@ -20,24 +18,15 @@ import {
   setGymEquipmentOwned,
   setGymEquipmentOwnedBulk,
 } from './gymRepo';
-import { syncEquipmentCatalogue, type SeedEquipment } from './seedRepo';
+import { EQUIPMENT_SEED, INDEX, OWNABLE, fixtureFile } from './catalogueTestFixtures';
+import { syncCatalogue } from './seedRepo';
 
 let db: ReturnType<typeof createTestDb>['db'];
 let close: () => void;
 
-const SEED: SeedEquipment[] = [
-  { name: 'Barbell', category: 'loaded_bars', kind: 'list', satisfies: ['barbell'],
-    values: [{ kg: 20 }] },
-  { name: 'Dumbbells', category: 'free_weights', kind: 'list', satisfies: ['dumbbell'],
-    values: [{ kg: 10 }, { kg: 20 }] },
-  { name: 'Pin-Loaded Leg Press', category: 'pin_loaded_machines', kind: 'range',
-    satisfies: ['machine'], minKg: 0, maxKg: 250, incrementKg: 5 },
-  { name: 'Flat Bench', category: 'benches_racks', kind: 'none', satisfies: [] },
-];
-
 beforeEach(() => {
   ({ db, close } = createTestDb());
-  syncEquipmentCatalogue(db, SEED);
+  syncCatalogue(db, fixtureFile(), EQUIPMENT_SEED, now());
 });
 
 afterEach(() => close());
@@ -46,40 +35,37 @@ function equipmentId(name: string) {
   return db.select().from(equipment).where(eq(equipment.name, name)).get()!.id;
 }
 
-function insertExercise(name: string, equip: string) {
-  db.insert(exercisesTable).values({
-    id: newId(), name, trackingType: 'weight_reps', primaryMuscle: 'chest',
-    secondaryMuscles: [], equipment: equip,
-  }).run();
-}
+describe('the equipment catalogue', () => {
+  it('takes identity from the file and starting weights from equipment.json', () => {
+    const barbell = db.select().from(equipment).where(eq(equipment.id, 'barbell')).get()!;
+    expect(barbell).toMatchObject({ name: 'Barbell', category: 'loaded_bars', defaults: { kind: 'list', values: [{ kg: 20 }] } });
 
-describe('syncEquipmentCatalogue', () => {
-  it('splits the seed row into the config the gym screen edits', () => {
-    const barbell = db.select().from(equipment).where(eq(equipment.name, 'Barbell')).get()!;
-    expect(barbell.defaults).toEqual({ kind: 'list', values: [{ kg: 20 }] });
-
-    const press = db.select().from(equipment).where(eq(equipment.name, 'Pin-Loaded Leg Press')).get()!;
+    const press = db.select().from(equipment).where(eq(equipment.id, 'legPress')).get()!;
     expect(press.defaults).toEqual({ kind: 'range', minKg: 0, maxKg: 250, incrementKg: 5 });
   });
 
+  // A gym owns "Dumbbells"; the singular only exists for exercises to name.
+  it('lists only items a gym can own, never a plural’s singular', () => {
+    expect(db.select().from(equipment).all().map((e) => e.name).sort()).toEqual([...OWNABLE].sort());
+  });
+
   it('is idempotent: running it again changes nothing', () => {
-    expect(syncEquipmentCatalogue(db, SEED)).toEqual({ added: 0, changed: 0, retired: 0 });
-    expect(db.select().from(equipment).all()).toHaveLength(SEED.length);
+    const before = db.select().from(equipment).all();
+    syncCatalogue(db, fixtureFile(), EQUIPMENT_SEED, now() + 1000);
+    expect(db.select().from(equipment).all()).toEqual(before);
   });
 
   // The upgrade path for a catalogue correction: an item moves group, and every
   // install has to pick that up rather than only fresh ones.
   it('moves an item to its new group without losing the gyms that own it', () => {
     const gym = createGym(db, 'Home', now());
-    const id = equipmentId('Barbell');
-    setGymEquipmentOwned(db, gym.id, id, true, now());
+    setGymEquipmentOwned(db, gym.id, 'barbell', true, now());
 
-    const corrected = SEED.map((row) =>
-      row.name === 'Barbell' ? { ...row, category: 'other' as const, kind: 'none' as const } : row,
-    );
-    expect(syncEquipmentCatalogue(db, corrected).changed).toBe(1);
+    const index = { ...INDEX, barbell: { ...INDEX.barbell!, category: 'cat-other' } };
+    const seed = EQUIPMENT_SEED.map((row) => (row.name === 'Barbell' ? { ...row, kind: 'none' as const } : row));
+    syncCatalogue(db, fixtureFile({ uuidIndex: index }), seed, now());
 
-    const row = listGymEquipment(db, gym.id).find((r) => r.equipment.id === id)!;
+    const row = listGymEquipment(db, gym.id).find((r) => r.equipment.id === 'barbell')!;
     expect(row.equipment.category).toBe('other');
     expect(row.owned).toBe(true);
     // The kind changed, so the gym's saved weights are reset to the new shape
@@ -89,22 +75,20 @@ describe('syncEquipmentCatalogue', () => {
 
   it('keeps a gym’s edited weights when only the group moves', () => {
     const gym = createGym(db, 'Home', now());
-    const id = equipmentId('Dumbbells');
-    setGymEquipmentConfig(db, gym.id, id, { kind: 'list', values: [{ kg: 42 }] }, now());
+    setGymEquipmentConfig(db, gym.id, 'dumbbells', { kind: 'list', values: [{ kg: 42 }] }, now());
 
-    const corrected = SEED.map((row) =>
-      row.name === 'Dumbbells' ? { ...row, category: 'loaded_bars' as const } : row,
-    );
-    syncEquipmentCatalogue(db, corrected);
+    const index = { ...INDEX, dumbbells: { ...INDEX.dumbbells!, category: 'cat-bars' } };
+    syncCatalogue(db, fixtureFile({ uuidIndex: index }), EQUIPMENT_SEED, now());
 
-    expect(listGymEquipment(db, gym.id).find((r) => r.equipment.id === id)!.config)
+    expect(listGymEquipment(db, gym.id).find((r) => r.equipment.id === 'dumbbells')!.config)
       .toEqual({ kind: 'list', values: [{ kg: 42 }] });
   });
 
   it('tombstones an item that leaves the catalogue', () => {
-    const shorter = SEED.filter((row) => row.name !== 'Flat Bench');
-    expect(syncEquipmentCatalogue(db, shorter).retired).toBe(1);
-    expect(listGymEquipment(db, createGym(db, 'Home', now()).id)).toHaveLength(SEED.length - 1);
+    const { bench: _, ...index } = INDEX;
+    const exercises = fixtureFile().exercises.map((e) => ({ ...e, supportEquipmentGroupIds: [] }));
+    syncCatalogue(db, fixtureFile({ uuidIndex: index, exercises }), EQUIPMENT_SEED, now());
+    expect(listGymEquipment(db, createGym(db, 'Home', now()).id)).toHaveLength(OWNABLE.length - 1);
   });
 });
 
@@ -114,7 +98,7 @@ describe('ensureDefaultGym', () => {
   it('owns every catalogue item and is activated', () => {
     const gym = ensureDefaultGym(db, now());
     expect(getActiveGym(db)?.id).toBe(gym.id);
-    expect(listGymEquipment(db, gym.id).filter((r) => r.owned)).toHaveLength(SEED.length);
+    expect(listGymEquipment(db, gym.id).filter((r) => r.owned)).toHaveLength(OWNABLE.length);
   });
 
   it('is idempotent', () => {
@@ -195,38 +179,52 @@ describe('setGymEquipmentConfig', () => {
   });
 });
 
-describe('availableExerciseEquipment', () => {
-  it('is the union of what the owned equipment unlocks', () => {
-    const gym = createGym(db, 'Home', now());
-    setGymEquipmentOwned(db, gym.id, equipmentId('Dumbbells'), true, now());
-    setGymEquipmentOwned(db, gym.id, equipmentId('Flat Bench'), true, now());
+describe('listExercises at a gym', () => {
+  const doable = (gymId: string) => listExercises(db, { gymId }).map((e) => e.name).sort();
+  const own = (gymId: string, ...ids: string[]) => ids.forEach((id) => setGymEquipmentOwned(db, gymId, id, true, now()));
 
-    // The bench unlocks nothing on its own — owning one does not make an
-    // exercise possible.
-    expect(availableExerciseEquipment(db, gym.id)).toEqual(['dumbbell']);
+  it('offers bodyweight movements at a gym with nothing in it', () => {
+    expect(doable(createGym(db, 'Empty', now()).id)).toEqual(['Push-up']);
   });
 
-  it('drops equipment the gym has untickd', () => {
+  // "Dumbbell curl" names the singular; the gym owns the plural.
+  it('matches a singular need against the plural a gym owns', () => {
     const gym = createGym(db, 'Home', now());
-    const id = equipmentId('Barbell');
-    setGymEquipmentOwned(db, gym.id, id, true, now());
-    setGymEquipmentOwned(db, gym.id, id, false, now());
-
-    expect(availableExerciseEquipment(db, gym.id)).toEqual([]);
+    own(gym.id, 'dumbbells');
+    expect(doable(gym.id)).toEqual(['Dumbbell curl', 'Push-up']);
   });
 
-  it('feeds the exercise filter end to end', () => {
-    insertExercise('Bench Press', 'barbell');
-    insertExercise('Dumbbell Curl', 'dumbbell');
-    insertExercise('Push-Up', 'body only');
-
+  // "Barbell and weight plates" is one option of two items, and the bench
+  // press also needs its bench: a bar alone, or a bar and plates with no
+  // bench, is not enough.
+  it('needs every item of an option, and every need', () => {
     const gym = createGym(db, 'Home', now());
-    setGymEquipmentOwned(db, gym.id, equipmentId('Dumbbells'), true, now());
+    own(gym.id, 'barbell');
+    expect(doable(gym.id)).not.toContain('Bench press');
+    own(gym.id, 'plates');
+    expect(doable(gym.id)).not.toContain('Bench press');
+    own(gym.id, 'bench');
+    expect(doable(gym.id)).toContain('Bench press');
+  });
 
-    const names = listExercises(db, {
-      availableEquipment: availableExerciseEquipment(db, gym.id),
-    }).map((e) => e.name);
-    expect(names.sort()).toEqual(['Dumbbell Curl', 'Push-Up']);
+  it('drops an exercise when its equipment is unticked', () => {
+    const gym = createGym(db, 'Home', now());
+    own(gym.id, 'legPress');
+    expect(doable(gym.id)).toContain('Leg press');
+    setGymEquipmentOwned(db, gym.id, 'legPress', false, now());
+    expect(doable(gym.id)).not.toContain('Leg press');
+  });
+
+  // Two tombstone levels on the owned set: the gym_equipment row and the item.
+  it('ignores an owned item the catalogue has retired', () => {
+    const gym = createGym(db, 'Home', now());
+    own(gym.id, 'legPress');
+    db.update(equipment).set({ deletedAt: now() }).where(eq(equipment.id, 'legPress')).run();
+    expect(doable(gym.id)).not.toContain('Leg press');
+  });
+
+  it('with no gym, offers everything', () => {
+    expect(listExercises(db)).toHaveLength(4);
   });
 });
 
@@ -249,17 +247,6 @@ describe('removeGym', () => {
 
     expect(getActiveGym(db)).toBeUndefined();
     expect(db.select().from(appSettings).get()?.activeGymId).toBeNull();
-  });
-});
-
-describe('canDoWithEquipment', () => {
-  it('allows bodyweight movements at a gym with nothing in it', () => {
-    expect(canDoWithEquipment('body only', [])).toBe(true);
-    expect(canDoWithEquipment('none', [])).toBe(true);
-  });
-
-  it('requires everything else to be present', () => {
-    expect(canDoWithEquipment('barbell', ['dumbbell'])).toBe(false);
   });
 });
 
@@ -302,12 +289,12 @@ describe('setGymEquipmentOwnedBulk', () => {
 
   it('leaves equipment outside the group alone', () => {
     const gym = createGym(db, 'Home', now());
-    setGymEquipmentOwned(db, gym.id, equipmentId('Flat Bench'), true, now());
+    setGymEquipmentOwned(db, gym.id, equipmentId('Flat bench'), true, now());
 
     setGymEquipmentOwnedBulk(db, gym.id, [equipmentId('Barbell')], true, now());
 
     expect(listGymEquipment(db, gym.id).filter((r) => r.owned).map((r) => r.equipment.name).sort())
-      .toEqual(['Barbell', 'Flat Bench']);
+      .toEqual(['Barbell', 'Flat bench']);
   });
 
   it('does nothing for an empty group', () => {
@@ -319,9 +306,9 @@ describe('setGymEquipmentOwnedBulk', () => {
 
 describe('createGymFromPreset', () => {
   it('stocks the gym from the named list', () => {
-    const gym = createGymFromPreset(db, 'Home', 'house', ['Dumbbells', 'Flat Bench'], now());
+    const gym = createGymFromPreset(db, 'Home', 'house', ['Dumbbells', 'Flat bench'], now());
     expect(listGymEquipment(db, gym.id).filter((r) => r.owned).map((r) => r.equipment.name).sort())
-      .toEqual(['Dumbbells', 'Flat Bench']);
+      .toEqual(['Dumbbells', 'Flat bench']);
     expect(gym.icon).toBe('house');
   });
 
@@ -369,7 +356,7 @@ describe('duplicateGym', () => {
 describe('countOwnedEquipment', () => {
   it('counts per gym, ignoring unticked items', () => {
     const a = createGymFromPreset(db, 'A', 'house', ['Dumbbells', 'Barbell'], now());
-    const b = createGymFromPreset(db, 'B', 'house', ['Flat Bench'], now());
+    const b = createGymFromPreset(db, 'B', 'house', ['Flat bench'], now());
     setGymEquipmentOwned(db, a.id, equipmentId('Barbell'), false, now());
 
     const counts = countOwnedEquipment(db);

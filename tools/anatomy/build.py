@@ -1,22 +1,24 @@
-"""Turns the two Vecteezy anatomy SVGs into the region JSON the heatmap renders.
+"""Turns the four avatar SVGs (male/female x front/back) into the region JSON
+the heatmap renders.
 
-The art nests unnamed <path> elements inside named <g> groups, sometimes two
-deep (`front-forearms` > `front-forearm-left` > paths). Each path is attributed
-to its NEAREST named ancestor, so a wrapper group does not duplicate the
-children it contains.
+Each <path> carries its muscle as its own id (`chest`, `rearDelts`), repeated
+once per side. A path with no id inherits its nearest named ancestor's.
 
-Source: Vecteezy (free licence — commercial use permitted with attribution).
-Regenerate with: python3 tools/anatomy/build.py
+Sources live in apps/mobile/assets/body/ and stay out of the repo; only the
+extracted regions are committed. Regenerate with: python3 tools/anatomy/build.py
 """
 import json
 import re
 import xml.etree.ElementTree as ET
 
 NS = '{http://www.w3.org/2000/svg}'
-FILES = [('FRONT', 'muscleheatmap-front.svg'), ('BACK', 'muscleheatmap-back.svg')]
+FIGURES = ('male', 'female')
+VIEWS = ('FRONT', 'BACK')
+SOURCE = 'apps/mobile/assets/body/avatar_{figure}_{view}.svg'
 
-# The silhouette underneath the muscles. Drawn, but never lit.
-BACKDROP = {'front-darker-area', 'front-gray-area', 'back-darker-area', 'back-grey-area'}
+# The silhouette underneath the muscles, and the joints drawn over it. Drawn,
+# but never lit.
+BACKDROP = {'body', 'bone'}
 
 
 
@@ -91,14 +93,14 @@ def view_box(paths, pad=20.0):
     return f'{minx:.2f} {miny:.2f} {maxx - minx:.2f} {maxy - miny:.2f}'
 
 
-def collect(node, view, inherited_id, out):
+def collect(node, inherited_id, out):
     for child in node:
         tag = child.tag.replace(NS, '')
         own = child.get('id') or inherited_id
         if tag == 'path' and child.get('d'):
-            out.append({'region': own, 'view': view, 'path': child.get('d')})
+            out.append((own, child.get('d')))
         elif tag in ('g', 'svg'):
-            collect(child, view, own, out)
+            collect(child, own, out)
 
 
 def selfcheck():
@@ -113,46 +115,29 @@ def selfcheck():
 
 def main():
     selfcheck()
-    regions = []
-    for view, filename in FILES:
-        root = ET.parse(filename).getroot()
-        collect(root, view, root.get('id') or view.lower(), regions)
-
-    # One entry per named region, holding every path that belongs to it.
-    merged = {}
-    for item in regions:
-        key = (item['region'], item['view'])
-        merged.setdefault(key, {'id': item['region'], 'view': item['view'], 'paths': []})
-        merged[key]['paths'].append(item['path'])
-
-    # Document order, NOT sorted by id: SVG paints back to front, and the two
-    # backdrop silhouettes sit part-way up the stack. Sorting alphabetically
-    # moved them over the glutes and hamstrings, which then never lit up.
-    out = list(merged.values())
-    for region in out:
-        region['backdrop'] = region['id'] in BACKDROP
-
-    # Front and back get their own box: the two figures are not the same
-    # height in the source, and one shared box shrinks both to the larger.
-    view_boxes = {
-        view: view_box([d for r in out if r['view'] == view for d in r['paths']])
-        for view, _ in FILES
-    }
+    regions, view_boxes = [], {}
+    for figure in FIGURES:
+        for view in VIEWS:
+            root = ET.parse(SOURCE.format(figure=figure, view=view.lower())).getroot()
+            paths = []
+            collect(root, None, paths)
+            # One region per path, in document order, NOT merged by id: SVG
+            # paints back to front and the `bone` joints interleave with the
+            # calves, so grouping paths by id would reorder the painting.
+            regions += [
+                {'id': rid, 'figure': figure, 'view': view, 'paths': [d], 'backdrop': rid in BACKDROP}
+                for rid, d in paths
+            ]
+            # Each figure and view gets its own box: they are not the same size.
+            view_boxes[f'{figure}-{view}'] = view_box([d for _, d in paths])
 
     with open('tools/anatomy/regions.json', 'w', encoding='utf-8') as f:
-        json.dump({
-            'source': 'Vecteezy — free licence, commercial use with attribution',
-            'viewBoxes': view_boxes,
-            'regions': out,
-        }, f, indent=2)
+        json.dump({'viewBoxes': view_boxes, 'regions': regions}, f, indent=2)
         f.write('\n')
 
-    for view, box in view_boxes.items():
-        print(f'{view} viewBox: {box}')
-    total = sum(len(r['paths']) for r in out)
-    print(f'{len(out)} regions, {total} paths')
-    for r in out:
-        print(f"  {r['view']:5} {r['id']:30} {len(r['paths'])} path(s){' [backdrop]' if r['backdrop'] else ''}")
+    for key, box in view_boxes.items():
+        print(f'{key} viewBox: {box}')
+    print(f'{len(regions)} paths, ids: {sorted({r["id"] for r in regions})}')
 
 
 if __name__ == '__main__':

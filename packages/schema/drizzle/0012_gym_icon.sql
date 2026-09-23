@@ -1,1 +1,0 @@
-ALTER TABLE `gyms` ADD `icon` text DEFAULT 'dumbbell' NOT NULL;
