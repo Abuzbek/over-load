@@ -2,10 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
-import { REGIONS } from './muscleRegions';
-
-/** The coordinate space the body-muscles paths are drawn in. */
-const VIEW_BOX = { FRONT: '0 0 35 93', BACK: '37 0 35 93' } as const;
+import { aspectRatio, ATTRIBUTION, REGIONS, VIEW_BOXES } from './muscleRegions';
 
 function mix(from: string, to: string, t: number): string {
   const parse = (hex: string) => [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
@@ -55,31 +52,41 @@ export function MuscleHeatmap({ load, target }: Props) {
   };
 
   return (
-    <View style={styles.row}>
-      {(['FRONT', 'BACK'] as const).map((view) => (
-        <View key={view} style={styles.column}>
-          <Svg viewBox={VIEW_BOX[view]} style={styles.body}>
-            {REGIONS.filter((r) => r.view === view).map((region) => (
-              <Path
-                key={region.id}
-                d={region.path}
-                fill={fillFor(region.muscle)}
-                stroke={OUTLINE}
-                strokeWidth={0.25}
-              />
-            ))}
-          </Svg>
-          <Text variant="caption" color="textMuted">{view === 'FRONT' ? 'Front' : 'Back'}</Text>
-        </View>
-      ))}
+    <View style={styles.wrap}>
+      <View style={styles.row}>
+        {(['FRONT', 'BACK'] as const).map((view) => (
+          <View key={view} style={styles.column}>
+            <Svg viewBox={VIEW_BOXES[view]} style={[styles.body, { aspectRatio: aspectRatio(view) }]}>
+              {REGIONS.filter((r) => r.view === view).map((region) =>
+                region.paths.map((d, i) => (
+                  <Path
+                    key={`${region.id}-${i}`}
+                    d={d}
+                    fill={region.backdrop ? theme.colors.surfaceRaised : fillFor(region.muscle)}
+                    stroke={OUTLINE}
+                    strokeWidth={4}
+                  />
+                )),
+              )}
+            </Svg>
+            <Text variant="caption" color="textMuted">{view === 'FRONT' ? 'Front' : 'Back'}</Text>
+          </View>
+        ))}
+      </View>
+      {/* The artwork's licence requires attribution wherever it is shown, so it
+          lives with the art rather than on the screen that happens to use it. */}
+      <Text variant="caption" color="textMuted" style={styles.credit}>{ATTRIBUTION}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: { gap: theme.spacing.sm },
   row: { flexDirection: 'row', justifyContent: 'center', gap: theme.spacing.xl },
   column: { alignItems: 'center', gap: theme.spacing.xs },
-  // Height drives the size and the 35x93 path box gives the width. Sizing by
-  // width instead made each body two and a half screens tall.
-  body: { height: 300, aspectRatio: 35 / 93 },
+  // Height drives the size; the view's own aspect ratio supplies the width, so
+  // the two figures sit side by side instead of being two squares that do not
+  // fit. Sizing by width instead made each body two and a half screens tall.
+  body: { height: 320 },
+  credit: { textAlign: 'center' },
 });
