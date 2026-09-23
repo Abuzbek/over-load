@@ -18,3 +18,8 @@ apps/mobile/android/
 # they have arrived twice under different filenames.
 muscles_*-body.svg
 muscleheatmap-*.svg
+apps/mobile/assets/body
+apps/mobile/assets/equipment
+apps/mobile/assets/markdown
+apps/mobile/assets/muscle_groups
+apps/mobile/assets/app_file.json
