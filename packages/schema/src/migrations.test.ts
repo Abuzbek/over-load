@@ -224,4 +224,27 @@ describe('migrations', () => {
     expect(row!.distanceUnit).toBe('km');
     close();
   });
+
+  it('leaves an existing settings row with an empty profile', () => {
+    // 13 == through 0013, i.e. settings with units and an active gym but no
+    // profile columns. Raw SQL for the same reason as above.
+    const { db, close } = createDbAtMigration(13);
+    const id = newId();
+    db.run(sql`insert into app_settings (id, created_at, updated_at, weight_unit, distance_unit, height_unit) values (${id}, 1, 1, 'lb', 'mi', 'ft')`);
+
+    applyFullMigrations(db);
+
+    const row = db.select().from(appSettings).where(eq(appSettings.id, id)).get();
+    expect(row!.weightUnit).toBe('lb');
+    // Nullable throughout: an install that predates the profile has no profile,
+    // and nothing in the app may require one.
+    expect(row!.profileName).toBeNull();
+    expect(row!.birthDate).toBeNull();
+    expect(row!.gender).toBeNull();
+    expect(row!.bodyweightKg).toBeNull();
+    expect(row!.heightCm).toBeNull();
+    expect(row!.liftingExperience).toBeNull();
+    expect(row!.cardioExperience).toBeNull();
+    close();
+  });
 });

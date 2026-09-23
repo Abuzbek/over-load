@@ -4,6 +4,8 @@ import { eq, isNull } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   getDistanceUnit,
+  getProfile,
+  setProfile,
   getHeightUnit,
   getWeightUnit,
   setDistanceUnit,
@@ -165,5 +167,47 @@ describe('height unit', () => {
     expect(getWeightUnit(db)).toBe('lb');
     expect(getDistanceUnit(db)).toBe('mi');
     expect(db.select().from(appSettings).all()).toHaveLength(1);
+  });
+});
+
+describe('profile', () => {
+  it('starts empty', () => {
+    expect(getProfile(db)).toEqual({
+      name: null, birthDate: null, gender: null, bodyweightKg: null,
+      heightCm: null, liftingExperience: null, cardioExperience: null,
+    });
+  });
+
+  it('reads back what was written', () => {
+    setProfile(db, { name: 'Sam', birthDate: 764121600000, gender: 'other' }, 1000);
+    const profile = getProfile(db);
+    expect(profile.name).toBe('Sam');
+    expect(profile.birthDate).toBe(764121600000);
+    expect(profile.gender).toBe('other');
+  });
+
+  // The profile shares its row with the unit preferences, and a patch writes
+  // only the keys it carries — a whole-object write here would blank the rest.
+  it('leaves the fields a patch does not name alone', () => {
+    setProfile(db, { name: 'Sam', heightCm: 180, liftingExperience: 'advanced' }, 1000);
+
+    setProfile(db, { bodyweightKg: 82.5 }, 2000);
+
+    expect(getProfile(db)).toMatchObject({
+      name: 'Sam', heightCm: 180, liftingExperience: 'advanced', bodyweightKg: 82.5,
+    });
+    expect(db.select().from(appSettings).all()).toHaveLength(1);
+  });
+
+  it('clears a field asked to be null, rather than skipping it', () => {
+    setProfile(db, { name: 'Sam' }, 1000);
+    setProfile(db, { name: null }, 2000);
+    expect(getProfile(db).name).toBeNull();
+  });
+
+  it('does not disturb the unit preferences', () => {
+    setWeightUnit(db, 'lb', 1000);
+    setProfile(db, { bodyweightKg: 82.5 }, 2000);
+    expect(getWeightUnit(db)).toBe('lb');
   });
 });
