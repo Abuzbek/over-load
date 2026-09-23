@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { initializeDatabase } from '../src/db/bootstrap';
+import { startSync } from '../src/sync/syncService';
 import { FontsProvider } from '../src/ui/FontsContext';
 import { Text } from '../src/ui/Text';
 import { theme } from '../src/ui/theme';
@@ -16,7 +17,11 @@ export default function RootLayout() {
 
   useEffect(() => {
     initializeDatabase()
-      .then(() => setState({ ready: true }))
+      .then(() => {
+        // After the database, never before: the first sync reads and writes it.
+        startSync();
+        setState({ ready: true });
+      })
       .catch((error: BootstrapError) => setState({ ready: false, error }));
   }, []);
 

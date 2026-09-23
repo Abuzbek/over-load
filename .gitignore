@@ -23,3 +23,10 @@ apps/mobile/assets/equipment
 apps/mobile/assets/markdown
 apps/mobile/assets/muscle_groups
 apps/mobile/assets/app_file.json
+
+# Local config: commit the .example templates, never the real files.
+.env
+.env.*
+!.env.example
+apps/mobile/firebase/*/GoogleService-Info.plist
+apps/mobile/firebase/*/google-services.json

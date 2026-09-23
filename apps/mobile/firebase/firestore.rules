@@ -1,0 +1,11 @@
+rules_version = '2';
+
+// Each person reads and writes only their own tree: users/{uid}/{table}/{rowId}.
+// Deploy to all three projects: firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{table}/{rowId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

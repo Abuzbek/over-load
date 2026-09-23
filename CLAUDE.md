@@ -27,7 +27,7 @@ pnpm start          # Expo dev server — then press i (iOS) or a (Android)
 pnpm ios            # straight to the iOS simulator
 pnpm android        # straight to an Android emulator/device
 
-pnpm test           # full suite (387 tests, 30 files)
+pnpm test           # full suite (396 tests, 31 files)
 pnpm typecheck      # type gate; CI runs this too (.github/workflows/ci.yml)
 pnpm run ci         # everything CI runs, locally: install + typecheck + test + bundle
 pnpm bundle         # expo export — catches packaging breaks tests cannot see
@@ -111,6 +111,23 @@ consumed by the in-progress bar.
   never a count of live rows, which collides after a soft delete.
 - **`sets.completedAt IS NULL` means planned-but-not-performed.** This is the mechanism
   behind crash recovery; do not repurpose it.
+
+## Sync (Firebase) — `apps/mobile/src/sync/`
+
+SQLite is the only store screens read. Firebase (Auth: Apple, Google, phone; Firestore)
+holds a copy of the user's own rows at `users/{uid}/{table}/{rowId}`, one Firebase project
+per profile, config in `apps/mobile/firebase/<profile>/` — gitignored, like `.env`; the
+committed `*.example.*` templates show the shape. Without those files the build
+leaves Firebase out and the app runs local-only (`extra.firebase` in `app.config.js`).
+
+- **Triggers queue changes, not repositories.** `drizzle/0002_sync_outbox.sql` puts every
+  insert/update on a `SYNCED_TABLES` table (`syncState.ts`) into `sync_outbox`. A new user
+  table needs adding to that list AND its two triggers; the schema test counts them.
+- **Conflicts go to the newer `updatedAt`**, so every write must bump it.
+- **Never import `@react-native-firebase/*` at module top level** — go through
+  `loadFirebase()` / `firestoreReady()`; a build without Firebase has no native half.
+- `app_settings` has the fixed id `'settings'` (`SETTINGS_ID`) so devices share one row.
+- The catalogue, `equipment` and `personal_records` never sync.
 
 ## Things that bite in this codebase
 

@@ -1,5 +1,6 @@
 import { appSettings, newId, programDays, programs, workouts, type Db, type Program, type Workout } from '@overload/schema';
 import { and, eq, inArray, isNull, max, sql } from 'drizzle-orm';
+import { SETTINGS_ID } from './settingsRepo';
 
 export type ProgramSummary = { program: Program; trainingDays: number; isActive: boolean };
 
@@ -26,7 +27,7 @@ export function activateProgram(db: Db, programId: string, at: number): void {
     db.update(appSettings).set({ activeProgramId: programId, updatedAt: at }).where(eq(appSettings.id, row.id)).run();
     return;
   }
-  db.insert(appSettings).values({ id: newId(), activeProgramId: programId, createdAt: at, updatedAt: at }).run();
+  db.insert(appSettings).values({ id: SETTINGS_ID, activeProgramId: programId, createdAt: at, updatedAt: at }).run();
 }
 
 export function getActiveProgram(db: Db): Program | undefined {

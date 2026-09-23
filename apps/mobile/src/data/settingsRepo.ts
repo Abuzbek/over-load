@@ -1,7 +1,6 @@
 import type { DistanceUnit, Unit } from '@overload/domain';
 import {
   appSettings,
-  newId,
   now,
   type Db,
   type HeightUnit,
@@ -14,6 +13,12 @@ import { eq, isNull } from 'drizzle-orm';
  * `app_settings` is a single-row table, created empty by its migration, so the
  * very first read on every existing install hits an absent row.
  */
+/**
+ * The same id on every device, so an account's settings are one row that
+ * sync merges rather than one per install.
+ */
+export const SETTINGS_ID = 'settings';
+
 function currentRow(db: Db) {
   return db.select().from(appSettings).where(isNull(appSettings.deletedAt)).get();
 }
@@ -30,7 +35,7 @@ function upsertSettings(db: Db, patch: Partial<NewAppSettings>, at: number): voi
     db.update(appSettings).set({ ...patch, updatedAt: at }).where(eq(appSettings.id, row.id)).run();
     return;
   }
-  db.insert(appSettings).values({ id: newId(), createdAt: at, updatedAt: at, ...patch }).run();
+  db.insert(appSettings).values({ id: SETTINGS_ID, createdAt: at, updatedAt: at, ...patch }).run();
 }
 
 export function getWeightUnit(db: Db): Unit {
