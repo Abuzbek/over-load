@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   birthDateParts,
+  daysInMonth,
   cmToFeetInches,
   feetInchesToCm,
   formatBirthDate,
@@ -56,5 +57,16 @@ describe('birth dates', () => {
     expect(isRealDate(1, 13, 1994)).toBe(false);
     expect(isRealDate(1, 1, 1800)).toBe(false);
     expect(isRealDate(1.5, 1, 1994)).toBe(false);
+  });
+});
+
+describe('daysInMonth', () => {
+  it('knows the short months and the leap years', () => {
+    expect(daysInMonth(1, 2024)).toBe(31);
+    expect(daysInMonth(2, 2024)).toBe(29);
+    expect(daysInMonth(2, 2023)).toBe(28);
+    expect(daysInMonth(2, 1900)).toBe(28); // a century that is not a leap year
+    expect(daysInMonth(4, 2024)).toBe(30);
+    expect(daysInMonth(12, 2024)).toBe(31);
   });
 });

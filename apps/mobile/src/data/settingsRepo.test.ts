@@ -179,11 +179,11 @@ describe('profile', () => {
   });
 
   it('reads back what was written', () => {
-    setProfile(db, { name: 'Sam', birthDate: 764121600000, gender: 'other' }, 1000);
+    setProfile(db, { name: 'Sam', birthDate: 764121600000, gender: 'female' }, 1000);
     const profile = getProfile(db);
     expect(profile.name).toBe('Sam');
     expect(profile.birthDate).toBe(764121600000);
-    expect(profile.gender).toBe('other');
+    expect(profile.gender).toBe('female');
   });
 
   // The profile shares its row with the unit preferences, and a patch writes

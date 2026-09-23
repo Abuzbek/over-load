@@ -13,7 +13,7 @@ export type DistanceUnit = (typeof DISTANCE_UNITS)[number];
 export const HEIGHT_UNITS = ['cm', 'ft'] as const;
 export type HeightUnit = (typeof HEIGHT_UNITS)[number];
 
-export const GENDERS = ['male', 'female', 'other'] as const;
+export const GENDERS = ['male', 'female'] as const;
 export type Gender = (typeof GENDERS)[number];
 
 export const EXPERIENCE_LEVELS = ['beginner', 'intermediate', 'advanced'] as const;

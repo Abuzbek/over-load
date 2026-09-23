@@ -1,16 +1,18 @@
 import {
+  birthDateParts,
   cmToFeetInches,
+  daysInMonth,
   feetInchesToCm,
   formatBirthDate,
   formatHeight,
   formatWeight,
-  isRealDate,
   kgToLb,
+  MONTHS,
   toBirthDate,
   toStorageKg,
-  birthDateParts,
 } from '@overload/domain';
 import type { ExperienceLevel, Gender, Profile } from '@overload/schema';
+import { Lucide } from '@react-native-vector-icons/lucide';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
@@ -25,6 +27,7 @@ import { SectionLabel } from '../../ui/SectionLabel';
 import { Sheet } from '../../ui/Sheet';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
+import { Wheel, WheelWindow } from '../../ui/Wheel';
 
 /** Which field's editor is open. */
 type Field = 'name' | 'birthDate' | 'gender' | 'bodyweightKg' | 'heightCm'
@@ -40,20 +43,59 @@ const TITLES: Record<Field, string> = {
   cardioExperience: 'Cardio experience',
 };
 
-const GENDER_OPTIONS: { value: Gender; label: string }[] = [
+const GENDER_OPTIONS: Option<Gender>[] = [
   { value: 'male', label: 'Male' },
   { value: 'female', label: 'Female' },
-  { value: 'other', label: 'Other' },
 ];
 
-const EXPERIENCE_OPTIONS: { value: ExperienceLevel; label: string }[] = [
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Intermediate' },
-  { value: 'advanced', label: 'Advanced' },
-];
+/**
+ * `null` is the "None" row, not an unanswered question: someone who does no
+ * cardio at all has answered, and the column simply has nothing to store.
+ */
+function experienceOptions(activity: string): Option<ExperienceLevel | null>[] {
+  // The activity opens three of the four sentences and ends the fourth, so it
+  // is lower-cased there rather than kept in two spellings.
+  const lower = activity.charAt(0).toLowerCase() + activity.slice(1);
+  return [
+    { value: null, label: 'None', detail: `Currently not ${lower}`, icon: 'signal-zero' },
+    { value: 'beginner', label: 'Beginner', detail: `${activity} for the past year or less`, icon: 'signal-low' },
+    {
+      value: 'intermediate',
+      label: 'Intermediate',
+      detail: `${activity} for more than the past year, but less than 4 years`,
+      icon: 'signal-medium',
+    },
+    { value: 'advanced', label: 'Advanced', detail: `${activity} for the past 4 years or more`, icon: 'signal-high' },
+  ];
+}
+
+const LIFTING_OPTIONS = experienceOptions('Lifting');
+const CARDIO_OPTIONS = experienceOptions('Doing cardio');
+
+const YEARS = (() => {
+  const thisYear = new Date().getUTCFullYear();
+  // Oldest first, so the wheel scrolls the way a date does.
+  return Array.from({ length: thisYear - 1900 + 1 }, (_, i) => 1900 + i);
+})();
+
+/** The default a wheel opens on when nothing is stored yet. */
+const DEFAULT_BIRTH_YEAR = 2000;
+const DEFAULT_HEIGHT_CM = 175;
+
+const CM_RANGE = Array.from({ length: 151 }, (_, i) => 100 + i);
+// 3'0" to 8'0", as total inches — one wheel, because a height is one value.
+const INCH_RANGE = Array.from({ length: 61 }, (_, i) => 36 + i);
 
 function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function closestIndex(values: number[], target: number): number {
+  let best = 0;
+  for (let i = 1; i < values.length; i += 1) {
+    if (Math.abs(values[i]! - target) < Math.abs(values[best]! - target)) best = i;
+  }
+  return best;
 }
 
 export function AccountScreen() {
@@ -65,12 +107,16 @@ export function AccountScreen() {
   const heightUnit = getHeightUnit(db);
 
   const [editing, setEditing] = useState<Field | null>(null);
-  // One draft per shape of editor: text, a number, and the three date boxes.
   const [text, setText] = useState('');
-  const [second, setSecond] = useState('');
-  const [third, setThird] = useState('');
+  const [date, setDate] = useState({ day: 1, month: 1, year: DEFAULT_BIRTH_YEAR });
+  const [heightIndex, setHeightIndex] = useState(0);
 
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
+
+  const heightValues = heightUnit === 'ft' ? INCH_RANGE : CM_RANGE;
+  const heightLabels = heightUnit === 'ft'
+    ? INCH_RANGE.map((inches) => `${Math.floor(inches / 12)}'${inches % 12}"`)
+    : CM_RANGE.map((cm) => `${cm} cm`);
 
   function save(patch: Partial<Profile>) {
     setProfile(db, patch, Date.now());
@@ -79,7 +125,7 @@ export function AccountScreen() {
   }
 
   function open(field: Field) {
-    // Pre-fill with what is stored, in the unit it will be typed in.
+    // Pre-fill with what is stored, in the unit it will be shown in.
     if (field === 'name') setText(profile.name ?? '');
     if (field === 'bodyweightKg') {
       const shown = profile.bodyweightKg === null
@@ -88,22 +134,16 @@ export function AccountScreen() {
       setText(shown === null ? '' : String(Number(shown.toFixed(1))));
     }
     if (field === 'heightCm') {
-      if (profile.heightCm === null) {
-        setText('');
-        setSecond('');
-      } else if (heightUnit === 'ft') {
-        const { feet, inches } = cmToFeetInches(profile.heightCm);
-        setText(String(feet));
-        setSecond(String(inches));
-      } else {
-        setText(String(Math.round(profile.heightCm)));
-      }
+      const cm = profile.heightCm ?? DEFAULT_HEIGHT_CM;
+      const target = heightUnit === 'ft'
+        ? cmToFeetInches(cm).feet * 12 + cmToFeetInches(cm).inches
+        : cm;
+      setHeightIndex(closestIndex(heightValues, target));
     }
     if (field === 'birthDate') {
-      const parts = profile.birthDate === null ? null : birthDateParts(profile.birthDate);
-      setText(parts ? String(parts.day) : '');
-      setSecond(parts ? String(parts.month) : '');
-      setThird(parts ? String(parts.year) : '');
+      setDate(profile.birthDate === null
+        ? { day: 1, month: 1, year: DEFAULT_BIRTH_YEAR }
+        : birthDateParts(profile.birthDate));
     }
     setEditing(field);
   }
@@ -114,41 +154,27 @@ export function AccountScreen() {
   }
 
   function saveBodyweight() {
-    const entered = Number(text.replace(',', '.'));
     if (text.trim() === '') return save({ bodyweightKg: null });
+    const entered = Number(text.replace(',', '.'));
     if (!Number.isFinite(entered) || entered <= 0) return;
     save({ bodyweightKg: toStorageKg(entered, weightUnit) });
   }
 
   function saveHeight() {
-    if (text.trim() === '' && second.trim() === '') return save({ heightCm: null });
-    if (heightUnit === 'ft') {
-      const feet = Number(text);
-      const inches = second.trim() === '' ? 0 : Number(second);
-      if (!Number.isFinite(feet) || !Number.isFinite(inches) || feet <= 0) return;
-      return save({ heightCm: feetInchesToCm(feet, inches) });
-    }
-    const cm = Number(text.replace(',', '.'));
-    if (!Number.isFinite(cm) || cm <= 0) return;
-    save({ heightCm: cm });
+    const value = heightValues[heightIndex]!;
+    save({ heightCm: heightUnit === 'ft' ? feetInchesToCm(0, value) : value });
   }
 
   function saveBirthDate() {
-    if (text.trim() === '' && second.trim() === '' && third.trim() === '') {
-      return save({ birthDate: null });
-    }
-    const day = Number(text);
-    const month = Number(second);
-    const year = Number(third);
-    // A silent no-op beats storing 31 February as 3 March. The Save button is
-    // disabled for the same reason; this guards the submit-on-return path.
-    if (!isRealDate(day, month, year)) return;
-    save({ birthDate: toBirthDate(day, month, year) });
+    save({ birthDate: toBirthDate(date.day, date.month, date.year) });
   }
 
-  const dateIsValid = text.trim() === '' && second.trim() === '' && third.trim() === ''
-    ? true
-    : isRealDate(Number(text), Number(second), Number(third));
+  /** February cannot hold the 31st, so a month or year change clamps the day. */
+  function setDatePart(part: Partial<typeof date>) {
+    const next = { ...date, ...part };
+    next.day = Math.min(next.day, daysInMonth(next.month, next.year));
+    setDate(next);
+  }
 
   return (
     <Screen scroll>
@@ -178,12 +204,12 @@ export function AccountScreen() {
           />
           <ValueRow
             title="Lifting experience"
-            value={profile.liftingExperience ? titleCase(profile.liftingExperience) : '—'}
+            value={profile.liftingExperience ? titleCase(profile.liftingExperience) : 'None'}
             onPress={() => open('liftingExperience')}
           />
           <ValueRow
             title="Cardio experience"
-            value={profile.cardioExperience ? titleCase(profile.cardioExperience) : '—'}
+            value={profile.cardioExperience ? titleCase(profile.cardioExperience) : 'None'}
             onPress={() => open('cardioExperience')}
           />
         </Card>
@@ -246,52 +272,44 @@ export function AccountScreen() {
 
         {editing === 'heightCm' ? (
           <>
-            <View style={styles.fields}>
-              <NumericField
-                value={text}
-                onChangeText={setText}
-                placeholder="0"
-                keyboard={heightUnit === 'ft' ? 'number-pad' : 'decimal-pad'}
-                accessibilityLabel={heightUnit === 'ft' ? 'Feet' : 'Height in centimetres'}
+            <WheelWindow>
+              <Wheel
+                options={heightLabels}
+                index={heightIndex}
+                onChange={setHeightIndex}
+                accessibilityLabel="Height"
               />
-              <Text variant="body" color="textMuted">{heightUnit === 'ft' ? 'ft' : 'cm'}</Text>
-              {heightUnit === 'ft' ? (
-                <>
-                  <NumericField
-                    value={second}
-                    onChangeText={setSecond}
-                    placeholder="0"
-                    keyboard="number-pad"
-                    accessibilityLabel="Inches"
-                  />
-                  <Text variant="body" color="textMuted">in</Text>
-                </>
-              ) : null}
-            </View>
+            </WheelWindow>
             <Button title="Save" onPress={saveHeight} />
           </>
         ) : null}
 
         {editing === 'birthDate' ? (
           <>
-            <View style={styles.fields}>
-              <NumericField
-                value={text} onChangeText={setText} placeholder="DD"
-                keyboard="number-pad" accessibilityLabel="Day"
+            <WheelWindow>
+              <Wheel
+                options={MONTHS}
+                index={date.month - 1}
+                onChange={(i) => setDatePart({ month: i + 1 })}
+                accessibilityLabel="Month"
               />
-              <NumericField
-                value={second} onChangeText={setSecond} placeholder="MM"
-                keyboard="number-pad" accessibilityLabel="Month"
+              <Wheel
+                options={Array.from(
+                  { length: daysInMonth(date.month, date.year) },
+                  (_, i) => String(i + 1),
+                )}
+                index={date.day - 1}
+                onChange={(i) => setDatePart({ day: i + 1 })}
+                accessibilityLabel="Day"
               />
-              <NumericField
-                value={third} onChangeText={setThird} placeholder="YYYY"
-                keyboard="number-pad" accessibilityLabel="Year"
+              <Wheel
+                options={YEARS.map(String)}
+                index={YEARS.indexOf(date.year)}
+                onChange={(i) => setDatePart({ year: YEARS[i]! })}
+                accessibilityLabel="Year"
               />
-            </View>
-            {dateIsValid ? null : (
-              <Text variant="caption" color="textMuted">That is not a real date.</Text>
-            )}
-            <Button title="Save" disabled={!dateIsValid} onPress={saveBirthDate} />
+            </WheelWindow>
+            <Button title="Save" onPress={saveBirthDate} />
           </>
         ) : null}
 
@@ -299,13 +317,14 @@ export function AccountScreen() {
           <Options
             options={GENDER_OPTIONS}
             selected={profile.gender}
+            clearable
             onSelect={(value) => save({ gender: value })}
           />
         ) : null}
 
         {editing === 'liftingExperience' ? (
           <Options
-            options={EXPERIENCE_OPTIONS}
+            options={LIFTING_OPTIONS}
             selected={profile.liftingExperience}
             onSelect={(value) => save({ liftingExperience: value })}
           />
@@ -313,7 +332,7 @@ export function AccountScreen() {
 
         {editing === 'cardioExperience' ? (
           <Options
-            options={EXPERIENCE_OPTIONS}
+            options={CARDIO_OPTIONS}
             selected={profile.cardioExperience}
             onSelect={(value) => save({ cardioExperience: value })}
           />
@@ -333,31 +352,42 @@ function ValueRow({ title, value, onPress }: { title: string; value: string; onP
   return <ListRow title={title} right={<Muted>{value}</Muted>} onPress={onPress} />;
 }
 
+type Option<T> = {
+  value: T;
+  label: string;
+  detail?: string;
+  icon?: 'signal-zero' | 'signal-low' | 'signal-medium' | 'signal-high';
+};
+
 /**
  * A radio list that saves on tap — one fewer press than picking then saving.
- * "Not set" is a real choice: without it a field is one-way once answered, and
- * these are questions someone may well want to take back.
+ * `clearable` adds a "Not set" row for the fields where no answer is different
+ * from an answer; without it, gender would be permanent once chosen.
  */
-function Options<T extends string>({ options, selected, onSelect }: {
-  options: { value: T; label: string }[];
+function Options<T extends string | null>({ options, selected, onSelect, clearable = false }: {
+  options: Option<T>[];
   selected: T | null;
   onSelect: (value: T | null) => void;
+  clearable?: boolean;
 }) {
+  const rows: Option<T | null>[] = clearable
+    ? [{ value: null, label: 'Not set' }, ...options]
+    : options;
+
   return (
     <View style={styles.optionRows}>
-      <ListRow
-        title="Not set"
-        right={
-          <View style={[styles.radio, selected === null && styles.radioOn]}>
-            {selected === null ? <View style={styles.radioDot} /> : null}
-          </View>
-        }
-        onPress={() => onSelect(null)}
-      />
-      {options.map((option) => (
+      {rows.map((option) => (
         <ListRow
-          key={option.value}
+          key={option.label}
           title={option.label}
+          subtitle={option.detail}
+          leading={
+            option.icon ? (
+              <View style={styles.optionIcon}>
+                <Lucide name={option.icon} size={16} color={theme.colors.background} />
+              </View>
+            ) : undefined
+          }
           right={
             <View style={[styles.radio, selected === option.value && styles.radioOn]}>
               {selected === option.value ? <View style={styles.radioDot} /> : null}
@@ -381,6 +411,14 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     borderRadius: theme.radius.sm,
     paddingHorizontal: theme.spacing.md,
+  },
+  optionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.text,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   radio: {
     width: 22,

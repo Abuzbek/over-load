@@ -25,7 +25,12 @@ export function cmToFeetInches(cm: number): { feet: number; inches: number } {
   return { feet: Math.floor(totalInches / 12), inches: totalInches % 12 };
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** 1-based month, so February 2024 is (2, 2024). Day 0 of the next month. */
+export function daysInMonth(month: number, year: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
 
 /**
  * A birthday is a calendar date held as epoch milliseconds at UTC midnight, so

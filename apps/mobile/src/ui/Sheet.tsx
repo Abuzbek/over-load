@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { Modal, StyleSheet, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from './Text';
 import { theme } from './theme';
@@ -24,6 +24,15 @@ type Props = {
 // are iOS-shaped. This app ships Android too (R19).
 export function Sheet({ visible, onRequestClose, title, body, anchor = 'center', onShow, children }: Props) {
   const insets = useSafeAreaInsets();
+  // The tap that opens a sheet ends on the backdrop that has just mounted
+  // underneath the finger, which dismissed the sheet in the same gesture that
+  // asked for it. The backdrop only listens once the modal has finished
+  // presenting; no real tap can arrive before that.
+  const [presented, setPresented] = useState(false);
+
+  useEffect(() => {
+    if (!visible) setPresented(false);
+  }, [visible]);
 
   // A bottom-anchored card sits on the screen edge, so it owns the home
   // indicator gap — nothing else reserves it. Added to the card's own padding,
@@ -33,14 +42,35 @@ export function Sheet({ visible, onRequestClose, title, body, anchor = 'center',
     anchor === 'bottom' ? { paddingBottom: insets.bottom + theme.spacing.lg } : undefined;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onRequestClose} onShow={onShow}>
-      <View style={[styles.backdrop, anchor === 'bottom' && styles.backdropBottom]}>
-        <View style={[styles.card, anchor === 'bottom' && styles.cardBottom, bottomInset]}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onRequestClose}
+      onShow={() => {
+        setPresented(true);
+        onShow?.();
+      }}
+    >
+      {/* Tapping outside dismisses, the way every other sheet on both
+          platforms does. The card claims the touch itself (it is not a
+          Pressable — a nested one would swallow its children's presses), so a
+          tap on a button inside never reaches the backdrop. */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+        onPress={() => presented && onRequestClose()}
+        style={[styles.backdrop, anchor === 'bottom' && styles.backdropBottom]}
+      >
+        <View
+          onStartShouldSetResponder={() => true}
+          style={[styles.card, anchor === 'bottom' && styles.cardBottom, bottomInset]}
+        >
           <Text variant="title">{title}</Text>
           {body ? <Text color="textMuted">{body}</Text> : null}
           {children}
         </View>
-      </View>
+      </Pressable>
     </Modal>
   );
 }
