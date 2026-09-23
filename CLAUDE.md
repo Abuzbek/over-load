@@ -27,7 +27,7 @@ pnpm start          # Expo dev server — then press i (iOS) or a (Android)
 pnpm ios            # straight to the iOS simulator
 pnpm android        # straight to an Android emulator/device
 
-pnpm test           # full suite (254 tests, 26 files)
+pnpm test           # full suite (394 tests, 31 files)
 pnpm typecheck      # type gate; CI runs this too (.github/workflows/ci.yml)
 pnpm run ci         # everything CI runs, locally: install + typecheck + test + bundle
 pnpm bundle         # expo export — catches packaging breaks tests cannot see
