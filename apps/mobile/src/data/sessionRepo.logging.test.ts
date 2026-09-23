@@ -39,7 +39,6 @@ beforeEach(() => {
     name: 'Bench Press',
     trackingType: 'weight_reps' as const,
     primaryMuscle: 'chest',
-    secondaryMuscles: [],
     equipment: 'barbell',
   };
   db.insert(exercises).values(row).run();
@@ -50,7 +49,6 @@ beforeEach(() => {
     name: 'Plank',
     trackingType: 'duration' as const,
     primaryMuscle: 'core',
-    secondaryMuscles: [],
     equipment: 'bodyweight',
   };
   db.insert(exercises).values(plank).run();
@@ -61,7 +59,6 @@ beforeEach(() => {
     name: 'Run',
     trackingType: 'distance_duration' as const,
     primaryMuscle: 'legs',
-    secondaryMuscles: [],
     equipment: 'none',
   };
   db.insert(exercises).values(run).run();

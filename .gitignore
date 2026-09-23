@@ -12,3 +12,16 @@ apps/mobile/android/
 
 # Superpowers brainstorming companion (local mockups)
 .superpowers/
+
+# Third-party anatomy art dropped in for evaluation — not ours to ship.
+# MuscleMap-Demo's bodies, All Rights Reserved. Matched by content, not name:
+# they have arrived twice under different filenames.
+muscles_*-body.svg
+muscleheatmap-*.svg
+
+# Local config: commit the .example templates, never the real files.
+.env
+.env.*
+!.env.example
+apps/mobile/firebase/*/GoogleService-Info.plist
+apps/mobile/firebase/*/google-services.json

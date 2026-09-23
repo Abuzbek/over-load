@@ -1,1 +1,0 @@
-ALTER TABLE `app_settings` ADD `distance_unit` text DEFAULT 'km' NOT NULL;

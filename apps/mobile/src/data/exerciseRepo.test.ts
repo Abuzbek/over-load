@@ -10,9 +10,9 @@ let close: () => void;
 beforeEach(() => {
   ({ db, close } = createTestDb());
   db.insert(exercises).values([
-    { id: newId(), name: 'Barbell Bench Press', trackingType: 'weight_reps', primaryMuscle: 'chest', secondaryMuscles: [], equipment: 'barbell' },
-    { id: newId(), name: 'Incline Dumbbell Press', trackingType: 'weight_reps', primaryMuscle: 'chest', secondaryMuscles: [], equipment: 'dumbbell' },
-    { id: newId(), name: 'Back Squat', trackingType: 'weight_reps', primaryMuscle: 'quads', secondaryMuscles: [], equipment: 'barbell' },
+    { id: newId(), name: 'Barbell Bench Press', trackingType: 'weight_reps', primaryMuscle: 'chest', equipment: 'barbell' },
+    { id: newId(), name: 'Incline Dumbbell Press', trackingType: 'weight_reps', primaryMuscle: 'chest', equipment: 'dumbbell' },
+    { id: newId(), name: 'Back Squat', trackingType: 'weight_reps', primaryMuscle: 'quads', equipment: 'barbell' },
   ]).run();
 });
 

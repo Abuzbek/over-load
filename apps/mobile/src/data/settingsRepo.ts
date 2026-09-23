@@ -1,11 +1,11 @@
 import type { DistanceUnit, Unit } from '@overload/domain';
 import {
   appSettings,
-  newId,
   now,
   type Db,
   type HeightUnit,
   type NewAppSettings,
+  type Profile,
 } from '@overload/schema';
 import { eq, isNull } from 'drizzle-orm';
 
@@ -13,6 +13,12 @@ import { eq, isNull } from 'drizzle-orm';
  * `app_settings` is a single-row table, created empty by its migration, so the
  * very first read on every existing install hits an absent row.
  */
+/**
+ * The same id on every device, so an account's settings are one row that
+ * sync merges rather than one per install.
+ */
+export const SETTINGS_ID = 'settings';
+
 function currentRow(db: Db) {
   return db.select().from(appSettings).where(isNull(appSettings.deletedAt)).get();
 }
@@ -29,7 +35,7 @@ function upsertSettings(db: Db, patch: Partial<NewAppSettings>, at: number): voi
     db.update(appSettings).set({ ...patch, updatedAt: at }).where(eq(appSettings.id, row.id)).run();
     return;
   }
-  db.insert(appSettings).values({ id: newId(), createdAt: at, updatedAt: at, ...patch }).run();
+  db.insert(appSettings).values({ id: SETTINGS_ID, createdAt: at, updatedAt: at, ...patch }).run();
 }
 
 export function getWeightUnit(db: Db): Unit {
@@ -54,11 +60,7 @@ export function setDistanceUnit(db: Db, unit: DistanceUnit, at: number): void {
   upsertSettings(db, { distanceUnit: unit }, at);
 }
 
-/**
- * Display only, like the other two. Nothing stores a height yet — the profile
- * fields are still placeholders — so this currently changes no reading; it is
- * the preference those fields will be shown in.
- */
+/** Display only, like the other two. The profile's height is stored in cm. */
 export function getHeightUnit(db: Db): HeightUnit {
   const row = currentRow(db);
   if (row) return row.heightUnit;
@@ -68,4 +70,53 @@ export function getHeightUnit(db: Db): HeightUnit {
 
 export function setHeightUnit(db: Db, unit: HeightUnit, at: number): void {
   upsertSettings(db, { heightUnit: unit }, at);
+}
+
+/**
+ * Every field is optional and starts empty. Nothing in the app reads a profile
+ * to work — it is the user's own record of themselves — so a half-filled one
+ * is a normal state, not a migration to finish later.
+ */
+export function getProfile(db: Db): Profile {
+  const row = currentRow(db);
+  if (!row) {
+    upsertSettings(db, {}, now());
+    return EMPTY_PROFILE;
+  }
+  return {
+    name: row.profileName,
+    birthDate: row.birthDate,
+    gender: row.gender,
+    bodyweightKg: row.bodyweightKg,
+    heightCm: row.heightCm,
+    liftingExperience: row.liftingExperience,
+    cardioExperience: row.cardioExperience,
+  };
+}
+
+const EMPTY_PROFILE: Profile = {
+  name: null,
+  birthDate: null,
+  gender: null,
+  bodyweightKg: null,
+  heightCm: null,
+  liftingExperience: null,
+  cardioExperience: null,
+};
+
+/**
+ * A patch, not a whole profile: the screen edits one field at a time, and
+ * writing the rest back would turn a stale read into silent data loss.
+ * `null` clears a field, which is why this checks for the key's presence.
+ */
+export function setProfile(db: Db, patch: Partial<Profile>, at: number): void {
+  const columns: Partial<NewAppSettings> = {};
+  if ('name' in patch) columns.profileName = patch.name;
+  if ('birthDate' in patch) columns.birthDate = patch.birthDate;
+  if ('gender' in patch) columns.gender = patch.gender;
+  if ('bodyweightKg' in patch) columns.bodyweightKg = patch.bodyweightKg;
+  if ('heightCm' in patch) columns.heightCm = patch.heightCm;
+  if ('liftingExperience' in patch) columns.liftingExperience = patch.liftingExperience;
+  if ('cardioExperience' in patch) columns.cardioExperience = patch.cardioExperience;
+  upsertSettings(db, columns, at);
 }

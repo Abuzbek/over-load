@@ -2,6 +2,9 @@ const LB_PER_KG = 2.20462262185;
 
 export type Unit = 'kg' | 'lb';
 
+/** 'ft' means feet and inches together — 5'11", never 5.9 feet. */
+export type HeightUnit = 'cm' | 'ft';
+
 export function kgToLb(kg: number): number {
   return kg * LB_PER_KG;
 }

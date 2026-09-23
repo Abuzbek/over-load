@@ -1,13 +1,15 @@
 import { totalVolumeKg, type CompletedSet } from '@overload/domain';
 import {
+  exerciseMuscles,
   exercises,
+  lookups,
   sessionSets,
   sessionExercises,
   sessions,
   type Db,
   type Session,
 } from '@overload/schema';
-import { and, count, countDistinct, desc, eq, gte, isNotNull, isNull, lte } from 'drizzle-orm';
+import { and, asc, count, countDistinct, desc, eq, gte, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { toCompletedSet } from './sessionRepo';
 
 export type WorkoutSummary = {
@@ -93,4 +95,49 @@ export function periodTotals(db: Db, sinceMs: number, untilMs: number): PeriodTo
     .get();
 
   return row ?? { sets: 0, exercises: 0, muscles: 0 };
+}
+
+export type MuscleLoad = { muscle: string; sets: number };
+
+/**
+ * Sets per muscle in a window, for the heatmap.
+ *
+ * **Sets, not kilograms.** Volume in kg is only defined for weight_reps; a
+ * plank and a 5 km row would both score zero and the heatmap would call your
+ * core and your legs untrained. Fractional set counting works across every
+ * tracking type.
+ *
+ * A secondary muscle counts half. Ignoring them entirely makes a squat look
+ * like a quads-only movement, and counting them fully makes every compound
+ * light up the whole body.
+ *
+ * Four joined levels, four tombstone filters — sets, session_exercises,
+ * exercises and sessions — the same four periodTotals guards.
+ */
+export function muscleLoad(db: Db, sinceMs: number, untilMs: number): MuscleLoad[] {
+  const sets = sql<number>`sum(${exerciseMuscles.weight})`;
+  return db
+    .select({ muscle: lookups.name, sets })
+    .from(sessionSets)
+    .innerJoin(sessionExercises, eq(sessionExercises.id, sessionSets.sessionExerciseId))
+    .innerJoin(exercises, eq(exercises.id, sessionExercises.exerciseId))
+    .innerJoin(sessions, eq(sessions.id, sessionExercises.sessionId))
+    // No tombstone on these two: exercise_muscles and lookups are derived
+    // catalogue tables, reached only through the live exercise above.
+    .innerJoin(exerciseMuscles, eq(exerciseMuscles.exerciseId, exercises.id))
+    .innerJoin(lookups, eq(lookups.id, exerciseMuscles.muscleId))
+    .where(
+      and(
+        isNotNull(sessionSets.completedAt),
+        gte(sessionSets.completedAt, sinceMs),
+        lte(sessionSets.completedAt, untilMs),
+        isNull(sessionSets.deletedAt),
+        isNull(sessionExercises.deletedAt),
+        isNull(exercises.deletedAt),
+        isNull(sessions.deletedAt),
+      ),
+    )
+    .groupBy(lookups.id)
+    .orderBy(desc(sets), asc(lookups.name))
+    .all();
 }

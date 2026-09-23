@@ -18,7 +18,6 @@ function benchPress() {
     name: 'Barbell Bench Press',
     trackingType: 'weight_reps' as const,
     primaryMuscle: 'chest',
-    secondaryMuscles: ['triceps', 'front delts'],
     equipment: 'barbell',
     instructions: 'Lower to the chest, press to lockout.',
   };
@@ -35,12 +34,6 @@ describe('exercises table', () => {
     expect(row?.updatedAt).toBeGreaterThan(0);
     expect(row?.deletedAt).toBeNull();
     expect(row?.isCustom).toBe(false);
-  });
-
-  it('preserves secondaryMuscles as a JSON array', () => {
-    db.insert(exercises).values(benchPress()).run();
-    const [row] = db.select().from(exercises).all();
-    expect(row?.secondaryMuscles).toEqual(['triceps', 'front delts']);
   });
 
   it('soft-deletes via a tombstone rather than removing the row', () => {

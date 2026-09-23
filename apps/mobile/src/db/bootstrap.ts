@@ -2,15 +2,15 @@ import { now } from '@overload/schema';
 import migrations from '@overload/schema/migrations';
 import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
 import equipmentSeed from '../../../../tools/seed-equipment/equipment.json';
-import curated from '../../../../tools/seed-exercises/curated.json';
 import { ensureDefaultGym } from '../data/gymRepo';
 import { ensureDefaultProgram } from '../data/programRepo';
 import { rebuildAllPersonalRecords } from '../data/sessionRepo';
 import {
-  syncEquipmentCatalogue,
-  seedExercisesIfEmpty,
+  CATALOGUE_VERSION,
+  getCatalogueVersion,
+  syncCatalogue,
+  type AppFile,
   type SeedEquipment,
-  type SeedExercise,
 } from '../data/seedRepo';
 import { backupDatabase, discardBackup, restoreDatabase } from './backup';
 import { db } from './client';
@@ -33,9 +33,13 @@ export async function initializeDatabase(): Promise<void> {
   }
 
   await discardBackup();
-  seedExercisesIfEmpty(db, curated as SeedExercise[]);
   // Before ensureDefaultGym, which gives the first gym every catalogue item.
-  syncEquipmentCatalogue(db, equipmentSeed.items as SeedEquipment[]);
+  // The file is 3.7 MB: imported lazily, and only when the seeded catalogue is
+  // out of date, so an ordinary launch never parses it.
+  if (getCatalogueVersion(db) !== CATALOGUE_VERSION) {
+    const { default: file } = await import('../../assets/app_file.json');
+    syncCatalogue(db, file as unknown as AppFile, equipmentSeed.items as SeedEquipment[], now());
+  }
   ensureDefaultProgram(db, now());
   ensureDefaultGym(db, now());
 

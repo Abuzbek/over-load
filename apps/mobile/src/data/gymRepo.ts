@@ -9,14 +9,8 @@ import {
   type Db,
   type Gym,
 } from '@overload/schema';
-import { and, eq, inArray, isNull, max } from 'drizzle-orm';
-
-/**
- * Equipment values that mean "nothing needed". They are available at every gym
- * and are deliberately not tickable — a gym with no kit still lets you do
- * push-ups.
- */
-export const NO_EQUIPMENT_NEEDED = ['body only', 'none'];
+import { and, eq, inArray, isNull, max, sql } from 'drizzle-orm';
+import { SETTINGS_ID } from './settingsRepo';
 
 export type GymSummary = { gym: Gym; isActive: boolean };
 
@@ -51,7 +45,7 @@ export function activateGym(db: Db, gymId: string, at: number): void {
     db.update(appSettings).set({ activeGymId: gymId, updatedAt: at }).where(eq(appSettings.id, row.id)).run();
     return;
   }
-  db.insert(appSettings).values({ id: newId(), activeGymId: gymId, createdAt: at, updatedAt: at }).run();
+  db.insert(appSettings).values({ id: SETTINGS_ID, activeGymId: gymId, createdAt: at, updatedAt: at }).run();
 }
 
 export function createGym(db: Db, name: string, at: number, icon = 'dumbbell'): Gym {
@@ -63,8 +57,6 @@ export function createGym(db: Db, name: string, at: number, icon = 'dumbbell'): 
     deletedAt: null,
     name,
     icon,
-    // Dead column, kept because dropping it would rebuild a referenced table.
-    equipment: [],
     // max + 1 over ALL rows including tombstoned, per the ordering invariant.
     orderIndex: (highest?.maxIndex ?? -1) + 1,
   };
@@ -197,28 +189,6 @@ export function setGymEquipmentConfig(
     .run();
 }
 
-/**
- * The coarse equipment values the gym unlocks, for filtering the exercise
- * catalogue. Two levels of tombstone: the gym_equipment row and the catalogue
- * item itself.
- */
-export function availableExerciseEquipment(db: Db, gymId: string): string[] {
-  const rows = db
-    .select({ satisfies: equipment.satisfies })
-    .from(gymEquipment)
-    .innerJoin(equipment, eq(equipment.id, gymEquipment.equipmentId))
-    .where(
-      and(
-        eq(gymEquipment.gymId, gymId),
-        isNull(gymEquipment.deletedAt),
-        isNull(equipment.deletedAt),
-      ),
-    )
-    .all();
-
-  return [...new Set(rows.flatMap((r) => r.satisfies))];
-}
-
 export function setGymIcon(db: Db, gymId: string, icon: string, at: number): void {
   db.update(gyms).set({ icon, updatedAt: at }).where(eq(gyms.id, gymId)).run();
 }
@@ -253,8 +223,8 @@ export function removeGym(db: Db, gymId: string, at: number): void {
 /**
  * Creates a gym already stocked from a named preset.
  *
- * The preset is a list of equipment NAMES, not ids: the seed has no stable ids,
- * and matching by name is what survives the catalogue being re-seeded.
+ * The preset is a list of equipment names from equipment.json, matched
+ * case-insensitively: that file capitalises every word, app_file.json does not.
  */
 export function createGymFromPreset(
   db: Db,
@@ -269,7 +239,7 @@ export function createGymFromPreset(
   const items = db
     .select()
     .from(equipment)
-    .where(and(inArray(equipment.name, equipmentNames), isNull(equipment.deletedAt)))
+    .where(and(inArray(sql`lower(${equipment.name})`, equipmentNames.map((n) => n.toLowerCase())), isNull(equipment.deletedAt)))
     .all();
   if (items.length === 0) return gym;
 
@@ -359,10 +329,4 @@ export function ensureDefaultGym(db: Db, at: number): Gym {
       .run();
   }
   return gym;
-}
-
-/** `body only` and `none` are doable anywhere; everything else must be present. */
-export function canDoWithEquipment(exerciseEquipment: string, available: string[]): boolean {
-  if (NO_EQUIPMENT_NEEDED.includes(exerciseEquipment)) return true;
-  return available.includes(exerciseEquipment);
 }

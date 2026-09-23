@@ -22,9 +22,9 @@ let row: Exercise;
 beforeEach(() => {
   ({ db, close } = createTestDb());
   const rows = [
-    { id: newId(), name: 'Bench Press', trackingType: 'weight_reps' as const, primaryMuscle: 'chest', secondaryMuscles: [], equipment: 'barbell' },
-    { id: newId(), name: 'Back Squat', trackingType: 'weight_reps' as const, primaryMuscle: 'quads', secondaryMuscles: [], equipment: 'barbell' },
-    { id: newId(), name: 'Barbell Row', trackingType: 'weight_reps' as const, primaryMuscle: 'back', secondaryMuscles: [], equipment: 'barbell' },
+    { id: newId(), name: 'Bench Press', trackingType: 'weight_reps' as const, primaryMuscle: 'chest', equipment: 'barbell' },
+    { id: newId(), name: 'Back Squat', trackingType: 'weight_reps' as const, primaryMuscle: 'quads', equipment: 'barbell' },
+    { id: newId(), name: 'Barbell Row', trackingType: 'weight_reps' as const, primaryMuscle: 'back', equipment: 'barbell' },
   ];
   db.insert(exercises).values(rows).run();
   [bench, squat, row] = rows as unknown as [Exercise, Exercise, Exercise];

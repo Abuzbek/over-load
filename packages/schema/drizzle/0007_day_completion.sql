@@ -1,1 +1,0 @@
-ALTER TABLE `program_days` ADD `completed_at` integer;

@@ -1,10 +1,10 @@
-import { exercises, newId, now, sessionSets, sessionExercises, sessions, type Exercise } from '@overload/schema';
+import { exerciseMuscles, exercises, lookups, newId, now, sessionSets, sessionExercises, sessions, type Exercise } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { startBareSession } from './sessionTestFixtures';
-import { listFinishedWorkouts, periodTotals } from './historyRepo';
-import { addExerciseToSession, addSet, completeSet, finishSession } from './sessionRepo';
+import { listFinishedWorkouts, muscleLoad, periodTotals } from './historyRepo';
+import { addExerciseToSession, addSet, completeSet, discardSession, finishSession } from './sessionRepo';
 
 const AT = 1_700_000_000_000;
 
@@ -20,7 +20,6 @@ beforeEach(() => {
     name: 'Bench Press',
     trackingType: 'weight_reps' as const,
     primaryMuscle: 'chest',
-    secondaryMuscles: [],
     equipment: 'barbell',
   };
   db.insert(exercises).values(row).run();
@@ -34,7 +33,6 @@ beforeEach(() => {
     name: 'Plank',
     trackingType: 'duration' as const,
     primaryMuscle: 'core',
-    secondaryMuscles: [],
     equipment: 'bodyweight',
   };
   db.insert(exercises).values(plankRow).run();
@@ -209,5 +207,103 @@ describe('periodTotals tombstone filtering', () => {
     db.update(sessions).set({ deletedAt: now() }).where(eq(sessions.id, sessionId)).run();
 
     expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 0, exercises: 0, muscles: 0 });
+  });
+});
+
+describe('muscleLoad', () => {
+  function logSet(exerciseId: string, at: number) {
+    const sessionId = startBareSession(db, 'S', at);
+    const se = addExerciseToSession(db, sessionId, exerciseId, at);
+    const set = addSet(db, se.id, at);
+    completeSet(db, set.id, { weightKg: 50, reps: 5 }, at);
+    return { sessionId, se, set };
+  }
+
+  // Muscles the way the seed stores them: a lookup per muscle group, and one
+  // exercise_muscles row per muscle with the larger of its weights.
+  function exercise(primary: string, secondary: string[] = []) {
+    const id = newId();
+    db.insert(exercises).values({
+      id, name: `X ${primary} ${secondary.join()}`, trackingType: 'weight_reps',
+      primaryMuscle: primary, equipment: 'barbell',
+    }).run();
+    const weights = new Map(secondary.map((m) => [m, 0.5]));
+    weights.set(primary, 1);
+    for (const [muscle, weight] of weights) {
+      db.insert(lookups).values({ id: muscle, type: 'featureMuscleGroup', name: muscle }).onConflictDoNothing().run();
+      db.insert(exerciseMuscles).values({ exerciseId: id, muscleId: muscle, weight }).run();
+    }
+    return id;
+  }
+
+  it('counts a primary muscle one set at a time', () => {
+    const bench = exercise('chest');
+    logSet(bench, AT);
+    logSet(bench, AT);
+
+    expect(muscleLoad(db, AT - 1000, AT + 1000)).toEqual([{ muscle: 'chest', sets: 2 }]);
+  });
+
+  // Ignoring secondaries makes a squat look like a quads-only movement;
+  // counting them fully makes every compound light up the whole body.
+  it('counts a secondary muscle as half a set', () => {
+    logSet(exercise('quadriceps', ['glutes', 'hamstrings']), AT);
+
+    expect(muscleLoad(db, AT - 1000, AT + 1000)).toEqual([
+      { muscle: 'quadriceps', sets: 1 },
+      { muscle: 'glutes', sets: 0.5 },
+      { muscle: 'hamstrings', sets: 0.5 },
+    ]);
+  });
+
+  it('never counts a muscle twice for one set', () => {
+    logSet(exercise('chest', ['chest', 'triceps']), AT);
+
+    expect(muscleLoad(db, AT - 1000, AT + 1000)).toEqual([
+      { muscle: 'chest', sets: 1 },
+      { muscle: 'triceps', sets: 0.5 },
+    ]);
+  });
+
+  it('ignores sets outside the window', () => {
+    const bench = exercise('chest');
+    logSet(bench, AT);
+    logSet(bench, AT + 100_000);
+
+    expect(muscleLoad(db, AT - 1000, AT + 1000)).toEqual([{ muscle: 'chest', sets: 1 }]);
+  });
+
+  it('ignores a planned set that was never performed', () => {
+    const bench = exercise('chest');
+    const sessionId = startBareSession(db, 'S', AT);
+    const se = addExerciseToSession(db, sessionId, bench, AT);
+    addSet(db, se.id, AT); // no completeSet
+
+    expect(muscleLoad(db, AT - 1000, AT + 1000)).toEqual([]);
+  });
+
+  it('excludes a set whose session is tombstoned', () => {
+    const bench = exercise('chest');
+    const { sessionId } = logSet(bench, AT);
+    discardSession(db, sessionId, AT);
+
+    expect(muscleLoad(db, AT - 1000, AT + 1000)).toEqual([]);
+  });
+
+  it('excludes a set whose exercise definition is tombstoned', () => {
+    const bench = exercise('chest');
+    logSet(bench, AT);
+    db.update(exercises).set({ deletedAt: AT }).where(eq(exercises.id, bench)).run();
+
+    expect(muscleLoad(db, AT - 1000, AT + 1000)).toEqual([]);
+  });
+
+  it('sorts hardest-worked first', () => {
+    logSet(exercise('chest'), AT);
+    const legs = exercise('quadriceps');
+    logSet(legs, AT);
+    logSet(legs, AT);
+
+    expect(muscleLoad(db, AT - 1000, AT + 1000).map((r) => r.muscle)).toEqual(['quadriceps', 'chest']);
   });
 });

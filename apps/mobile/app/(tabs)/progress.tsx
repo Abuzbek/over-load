@@ -1,5 +1,5 @@
-import { RecordsList } from '../../src/features/records/RecordsList';
+import { ProgressScreen } from '../../src/features/progress/ProgressScreen';
 
-export default function ProgressScreen() {
-  return <RecordsList />;
+export default function ProgressTab() {
+  return <ProgressScreen />;
 }

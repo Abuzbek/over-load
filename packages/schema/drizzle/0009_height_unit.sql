@@ -1,1 +1,0 @@
-ALTER TABLE `app_settings` ADD `height_unit` text DEFAULT 'cm' NOT NULL;
