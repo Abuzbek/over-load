@@ -108,9 +108,6 @@ importers:
       babel-preset-expo:
         specifier: ~12.0.0
         version: 12.0.12(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))
-      body-muscles:
-        specifier: ^1.0.0
-        version: 1.0.0
 
   packages/domain: {}
 
@@ -1517,7 +1514,7 @@ packages:
 
   '@expo/bunyan@4.0.1':
     resolution: {integrity: sha512-+Lla7nYSiHZirgK+U/uYzsLv/X+HaJienbD5AKX1UQZHYfWaP+9uuQluRB4GrEVWF0GZ7vEVp/jzaOT9k/SQlg==}
-    engines: {node: '>=0.10.0'}
+    engines: {'0': node >=0.10.0}
 
   '@expo/cli@0.22.28':
     resolution: {integrity: sha512-lvt72KNitGuixYD2l3SZmRKVu2G4zJpmg5V7WfUBNpmUU5oODBw/6qmiJ6kSLAlfDozscUk+BBGknBBzxUrwrA==}
@@ -2336,10 +2333,6 @@ packages:
 
   bl@4.1.0:
     resolution: {integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==}
-
-  body-muscles@1.0.0:
-    resolution: {integrity: sha512-vaYkR9gyaVbqncbA4sGfFuZKwvWiAE6JZYpHR4Stt/jfzYfLPymCE63bba7LEAUi1X8h2wsguP5qYOxmZ2f1ZA==}
-    engines: {node: '>=16'}
 
   boolbase@1.0.0:
     resolution: {integrity: sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww==}
@@ -7699,8 +7692,6 @@ snapshots:
       buffer: 5.7.1
       inherits: 2.0.4
       readable-stream: 3.6.2
-
-  body-muscles@1.0.0: {}
 
   boolbase@1.0.0: {}
 
