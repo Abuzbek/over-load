@@ -1,203 +1,385 @@
-import { toStorageKg, type Unit } from '@overload/domain';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { DEFAULT_REST_SECONDS, toStorageKg, type Unit } from '@overload/domain';
+import { Lucide } from '@react-native-vector-icons/lucide';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getExerciseDetail } from '../../data/exerciseRepo';
+import { getProfile, getWeightUnit } from '../../data/settingsRepo';
 import type { WorkoutDetailExercise } from '../../data/workoutRepo';
 import { addWorkoutSet, getWorkoutDetail, reorderWorkoutExercises } from '../../data/workoutRepo';
-import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
+import { BottomSheet } from '../../ui/BottomSheet';
 import { Button } from '../../ui/Button';
-import { Card } from '../../ui/Card';
-import { NumericField } from '../../ui/NumericField';
-import { Screen } from '../../ui/Screen';
+import { EmptyState } from '../../ui/EmptyState';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
+import { textStyle } from '../../ui/typography';
+import { ExerciseInfoSheet } from '../library/ExerciseInfoSheet';
+import { MuscleThumb } from '../library/MuscleThumb';
 import { parseDecimalInput, parseIntegerInput } from '../session/setInputs';
 import { useWorkoutStarter, WorkoutStartSheet } from '../session/useWorkoutStarter';
 import {
+  estimateWorkoutMinutes,
   formatWorkoutTarget,
   targetInputsFor,
+  targetMuscles,
   type WorkoutTargetField,
 } from './workoutTargets';
 
 type Props = { workoutId: string };
 
-type ExerciseCardProps = {
-  entry: WorkoutDetailExercise;
-  unit: Unit;
-  onSetAdded: () => void;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
-};
-
 const EMPTY_DRAFT: Record<WorkoutTargetField, string> = { weightKg: '', reps: '' };
 
-function ExerciseCard({ entry, unit, onSetAdded, onMoveUp, onMoveDown }: ExerciseCardProps) {
-  const trackingType = entry.exercise.trackingType;
-  // A duration/distance_duration exercise gets [] here — workout_sets has no
-  // column for a target duration or distance, so rendering a box for it would
-  // silently discard whatever the user typed. Keep this empty rather than
-  // inventing a weight/reps pair for every tracking type.
-  const inputs = targetInputsFor(trackingType, unit);
+type Muscle = { id: string; name: string; primary: boolean };
+
+function ExerciseRow({ entry, muscles, highlight, unit, onInfo, onMenu }: {
+  entry: WorkoutDetailExercise;
+  muscles: Muscle[];
+  /** The muscle picked under Target Muscles: its tag is lit on every row. */
+  highlight: string | null;
+  unit: Unit;
+  onInfo: () => void;
+  onMenu: () => void;
+}) {
+  return (
+    <View style={styles.row}>
+      {/* Placeholder until the catalogue ships exercise images. */}
+      <Pressable accessibilityRole="button" accessibilityLabel={`${entry.exercise.name} info`} onPress={onInfo} style={styles.thumb}>
+        <Lucide name="image" size={22} color={theme.colors.textMuted} />
+      </Pressable>
+      <Pressable accessibilityRole="button" onPress={onInfo} style={styles.rowMain}>
+        <Text variant="heading">{entry.exercise.name}</Text>
+        {entry.sessionSets.map((set, index) => {
+          // null: this tracking type has no target to show, so the number stands alone.
+          const target = formatWorkoutTarget(entry.exercise.trackingType, set, unit);
+          return (
+            <View key={set.id} style={styles.setLine}>
+              <View style={styles.setNumber}>
+                <Text variant="caption">{index + 1}</Text>
+              </View>
+              <Text color="textMuted" style={styles.flex}>{target ?? 'Set'}</Text>
+              {set.targetRpe !== null ? (
+                <View style={styles.rpe}>
+                  <Text variant="caption" color="onAccent">{set.targetRpe}</Text>
+                </View>
+              ) : null}
+            </View>
+          );
+        })}
+        {muscles.length > 0 ? (
+          <View style={styles.tags}>
+            {muscles.map((m) => {
+              const lit = m.id === highlight;
+              return (
+                <View
+                  key={m.id}
+                  style={[styles.tag, m.primary ? styles.tagPrimary : styles.tagSecondary, lit && styles.tagLit]}
+                >
+                  <Text variant="caption" color={lit ? 'onAccent' : 'text'}>{m.name}</Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${entry.exercise.name} options`} hitSlop={10} onPress={onMenu}>
+        <Lucide name="ellipsis-vertical" size={22} color={theme.colors.text} />
+      </Pressable>
+    </View>
+  );
+}
+
+/**
+ * One exercise's edits: add a set with its targets, or move it. Opened from
+ * the row's ⋮ so the overview reads as a plan, not a form.
+ */
+function ExerciseMenu({ entry, unit, onClose, onChanged, onMove }: {
+  entry: WorkoutDetailExercise | null;
+  unit: Unit;
+  onClose: () => void;
+  onChanged: () => void;
+  onMove: (direction: -1 | 1) => void;
+}) {
   const [draft, setDraft] = useState(EMPTY_DRAFT);
+  const insets = useSafeAreaInsets();
+  // A duration exercise gets no inputs: workout_sets has no column for a target
+  // duration or distance, so a box for one would discard what was typed.
+  const inputs = entry ? targetInputsFor(entry.exercise.trackingType, unit) : [];
+
+  const addSet = () => {
+    if (!entry) return;
+    const offers = (field: WorkoutTargetField) => inputs.some((i) => i.field === field);
+    // Only a field this tracking type offers gets a target; reps default to 8.
+    const weight = offers('weightKg') && draft.weightKg ? parseDecimalInput(draft.weightKg) : undefined;
+    const reps = offers('reps') ? (draft.reps ? parseIntegerInput(draft.reps) : null) ?? 8 : undefined;
+    addWorkoutSet(db, entry.workoutExercise.id, {
+      targetReps: reps,
+      targetWeightKg: weight != null ? toStorageKg(weight, unit) : undefined,
+    });
+    setDraft(EMPTY_DRAFT);
+    onChanged();
+  };
 
   return (
-    <Card>
-      <View style={styles.cardHeader}>
-        <Text variant="title" style={styles.cardTitle}>
-          {entry.exercise.name}
-        </Text>
-        <View style={styles.reorderControls}>
-          {onMoveUp ? <Button title="Move up" variant="secondary" onPress={onMoveUp} /> : null}
-          {onMoveDown ? <Button title="Move down" variant="secondary" onPress={onMoveDown} /> : null}
-        </View>
-      </View>
-      {entry.sessionSets.map((set, index) => {
-        // null is the signal to render the bare set number — a plank does not
-        // get an invented "— × 8".
-        const target = formatWorkoutTarget(trackingType, set, unit);
-        return (
-          <Text key={set.id} color="textMuted">
-            {target === null ? `Set ${index + 1}` : `Set ${index + 1}: ${target}`}
-          </Text>
-        );
-      })}
-      <View style={styles.addSetContainer}>
+    <BottomSheet
+      visible={entry !== null}
+      onClose={() => {
+        setDraft(EMPTY_DRAFT);
+        onClose();
+      }}
+      title={entry?.exercise.name ?? ''}
+    >
+      <View style={[styles.menu, { paddingBottom: insets.bottom + theme.spacing.lg }]}>
         {inputs.length > 0 ? (
-          <View style={styles.inputsRow}>
+          <View style={styles.inputs}>
             {inputs.map((input) => (
-              <NumericField
+              <BottomSheetTextInput
                 key={input.field}
                 value={draft[input.field]}
-                onChangeText={(text) => setDraft((current) => ({ ...current, [input.field]: text }))}
+                onChangeText={(text) => setDraft((d) => ({ ...d, [input.field]: text }))}
                 placeholder={input.placeholder}
-                keyboard={input.keyboard}
+                placeholderTextColor={theme.colors.textMuted}
+                keyboardType={input.keyboard}
                 accessibilityLabel={input.placeholder}
+                style={styles.input}
               />
             ))}
           </View>
         ) : null}
-        <Button
-          title="Add set"
-          variant="secondary"
-          onPress={() => {
-            const offers = (field: WorkoutTargetField) => inputs.some((i) => i.field === field);
-
-            // Only send a target for a field this tracking type actually
-            // offers. The old unconditional `?? 8` gave a plank a rep target.
-            const weightValue =
-              offers('weightKg') && draft.weightKg ? parseDecimalInput(draft.weightKg) : undefined;
-            const repsValue = offers('reps')
-              ? (draft.reps ? parseIntegerInput(draft.reps) : null) ?? 8
-              : undefined;
-
-            addWorkoutSet(db, entry.workoutExercise.id, {
-              targetReps: repsValue,
-              targetWeightKg: weightValue != null ? toStorageKg(weightValue, unit) : undefined,
-            });
-            setDraft(EMPTY_DRAFT);
-            onSetAdded();
-          }}
-        />
+        <Button title="Add set" onPress={addSet} />
+        <View style={styles.moveRow}>
+          <View style={styles.flex}>
+            <Button title="Move up" variant="secondary" onPress={() => onMove(-1)} />
+          </View>
+          <View style={styles.flex}>
+            <Button title="Move down" variant="secondary" onPress={() => onMove(1)} />
+          </View>
+        </View>
       </View>
-    </Card>
+    </BottomSheet>
   );
 }
 
+/**
+ * A workout's overview: what it holds and roughly how long it takes, with
+ * Start Workout pinned to the bottom. Opening a workout never starts it —
+ * only that button does, through useWorkoutStarter's in-progress guard.
+ */
 export function WorkoutBuilder({ workoutId }: Props) {
-  // A local counter is the refresh signal: bumping it forces a re-read of
-  // getWorkoutDetail. "Add set" bumps it directly; useFocusEffect bumps it
-  // whenever this screen regains focus, since other screens (e.g.
-  // add-exercise) mutate this workout and navigate back via router.back(),
-  // leaving this screen mounted underneath rather than remounting it.
-  // Do NOT switch this to key={version} — that remounts and resets scroll
-  // (6b249e9's failure mode).
+  // Bumped to re-read getWorkoutDetail: by an edit here, and on focus, since
+  // add-exercise mutates this workout and navigates back to a still-mounted
+  // screen. Do NOT switch this to key={version} — that remounts and resets
+  // scroll (6b249e9's failure mode).
   const [, setVersion] = useState(0);
+  const refresh = () => setVersion((v) => v + 1);
+  useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
+
+  const insets = useSafeAreaInsets();
+  const starter = useWorkoutStarter();
+  const [infoId, setInfoId] = useState<string | null>(null);
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [focusMuscle, setFocusMuscle] = useState<string | null>(null);
   const detail = getWorkoutDetail(db, workoutId);
   const unit = getWeightUnit(db);
-
-  const starter = useWorkoutStarter();
-
-  useFocusEffect(
-    useCallback(() => {
-      setVersion((v) => v + 1);
-    }, []),
-  );
-
-  // Swaps the exercise at `index` with its neighbour in `direction` and
-  // persists the full live order in one transaction. Reads the live list
-  // fresh off `detail` each time rather than tracking local state, since
-  // `detail` is already the source of truth this screen renders from.
-  const moveExercise = useCallback(
-    (index: number, direction: -1 | 1) => {
-      if (!detail) return;
-      const targetIndex = index + direction;
-      if (targetIndex < 0 || targetIndex >= detail.exercises.length) return;
-
-      const ids = detail.exercises.map((entry) => entry.workoutExercise.id);
-      const moved = ids[index];
-      if (moved === undefined) return;
-      ids.splice(index, 1);
-      ids.splice(targetIndex, 0, moved);
-
-      reorderWorkoutExercises(db, workoutId, ids, Date.now());
-      setVersion((v) => v + 1);
-    },
-    [detail, workoutId],
-  );
+  const figure = getProfile(db).gender === 'female' ? 'female' : 'male';
 
   if (!detail) {
-    return (
-      <Screen>
-        <Text color="textMuted" style={styles.empty}>
-          Workout not found.
-        </Text>
-      </Screen>
-    );
+    return <EmptyState title="Workout not found" body="It may have been deleted." />;
   }
 
+  const count = detail.exercises.length;
+  const minutes = estimateWorkoutMinutes(
+    detail.exercises.map((e) => ({ sets: e.sessionSets.length, restSeconds: e.workoutExercise.restSeconds })),
+    DEFAULT_REST_SECONDS,
+  );
+  const musclesOf = detail.exercises.map((e) => getExerciseDetail(db, e.exercise.id)?.muscles ?? []);
+  const volumes = targetMuscles(detail.exercises.map((e, i) => ({ sets: e.sessionSets.length, muscles: musclesOf[i]! })));
+  const menuIndex = detail.exercises.findIndex((e) => e.workoutExercise.id === menuId);
+
+  // Swaps the exercise with its neighbour and persists the whole live order.
+  const move = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= count) return;
+    const ids = detail.exercises.map((e) => e.workoutExercise.id);
+    [ids[index], ids[target]] = [ids[target]!, ids[index]!];
+    reorderWorkoutExercises(db, workoutId, ids, Date.now());
+    refresh();
+  };
+
   return (
-    <Screen scroll>
-      {/* The workout's own name, not a generic "Edit workout": a day's inline
-          workout is created as "<program> · Day N" and the header is the only
-          thing that says which one you are in. */}
+    <View style={styles.container}>
+      {/* The workout's own name: a program day's workout is "<program> · Day N",
+          and the header is the only thing that says which one this is. */}
       <Stack.Screen options={{ title: detail.workout.name }} />
-      {detail.exercises.map((entry, index) => (
-        <ExerciseCard
-          key={entry.workoutExercise.id}
-          entry={entry}
-          unit={unit}
-          onSetAdded={() => setVersion((v) => v + 1)}
-          onMoveUp={index > 0 ? () => moveExercise(index, -1) : undefined}
-          onMoveDown={index < detail.exercises.length - 1 ? () => moveExercise(index, 1) : undefined}
-        />
-      ))}
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
+        {volumes.length > 0 ? (
+          <View style={styles.targets}>
+            <Text variant="title">Target Muscles</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.targetCards}>
+              {volumes.map((v) => (
+                <Pressable
+                  key={v.id}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: v.id === focusMuscle }}
+                  onPress={() => setFocusMuscle((m) => (m === v.id ? null : v.id))}
+                  style={[styles.targetCard, v.id === focusMuscle && styles.targetCardOn]}
+                >
+                  <MuscleThumb figure={figure} muscle={v.name} size={80} />
+                  <View style={styles.targetText}>
+                    <Text variant="heading">{v.name}</Text>
+                    <Text variant="caption" color="textMuted">
+                      {v.exercises} {v.exercises === 1 ? 'exercise' : 'exercises'}
+                    </Text>
+                    <Text variant="caption" color="textMuted">
+                      {v.sets} {v.sets === 1 ? 'set' : 'sets'}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
 
-      {detail.exercises.length === 0 ? (
-        <Text color="textMuted" style={styles.empty}>
-          No exercises yet. Add one to get started.
-        </Text>
-      ) : null}
+        <View style={styles.summary}>
+          <View style={styles.flex}>
+            <Text variant="title">
+              {count} {count === 1 ? 'Exercise' : 'Exercises'}
+            </Text>
+            {minutes > 0 ? (
+              <Text color="textMuted">Estimated workout time is {minutes} min</Text>
+            ) : null}
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add exercises"
+            onPress={() => router.push(`/workouts/${workoutId}/add-exercise`)}
+            style={styles.addButton}
+          >
+            <Lucide name="plus" size={24} color={theme.colors.text} />
+          </Pressable>
+        </View>
 
-      <Button title="Start workout" onPress={() => starter.start(workoutId)} />
+        {count === 0 ? (
+          <EmptyState title="No exercises yet" body="Add some with the + button." />
+        ) : (
+          detail.exercises.map((entry, i) => (
+            <ExerciseRow
+              key={entry.workoutExercise.id}
+              entry={entry}
+              muscles={musclesOf[i]!}
+              highlight={focusMuscle}
+              unit={unit}
+              onInfo={() => setInfoId(entry.exercise.id)}
+              onMenu={() => setMenuId(entry.workoutExercise.id)}
+            />
+          ))
+        )}
+      </ScrollView>
 
-      <Button title="Add exercise" onPress={() => router.push(`/workouts/${workoutId}/add-exercise`)} />
+      <View style={[styles.startBar, { paddingBottom: insets.bottom + theme.spacing.md }]}>
+        <Button title="Start Workout" onPress={() => starter.start(workoutId)} disabled={count === 0} />
+      </View>
 
+      <ExerciseMenu
+        entry={detail.exercises[menuIndex] ?? null}
+        unit={unit}
+        onClose={() => setMenuId(null)}
+        onChanged={refresh}
+        onMove={(direction) => move(menuIndex, direction)}
+      />
+      <ExerciseInfoSheet exerciseId={infoId} figure={figure} onClose={() => setInfoId(null)} />
       <WorkoutStartSheet starter={starter} />
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  cardHeader: {
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  content: { padding: theme.spacing.lg },
+  flex: { flex: 1 },
+  targets: { gap: theme.spacing.md, paddingBottom: theme.spacing.xl },
+  targetCards: { gap: theme.spacing.md },
+  targetCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: theme.spacing.lg,
+    paddingRight: theme.spacing.xl,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    overflow: 'hidden',
   },
-  cardTitle: { flexShrink: 1 },
-  reorderControls: { flexDirection: 'row', gap: theme.spacing.sm },
-  addSetContainer: { gap: theme.spacing.sm, marginTop: theme.spacing.sm },
-  inputsRow: { flexDirection: 'row', gap: theme.spacing.sm },
-  empty: { textAlign: 'center' },
+  targetCardOn: { borderColor: theme.colors.text, borderWidth: 2 },
+  targetText: { gap: 2 },
+  summary: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, paddingBottom: theme.spacing.lg },
+  addButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surfaceRaised,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.lg,
+    paddingVertical: theme.spacing.xl,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border,
+  },
+  thumb: {
+    width: 64,
+    height: 80,
+    borderRadius: theme.radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surfaceRaised,
+  },
+  rowMain: { flex: 1, gap: theme.spacing.xs },
+  setLine: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md },
+  setNumber: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surfaceRaised,
+  },
+  rpe: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.accent,
+  },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.xs, marginTop: theme.spacing.xs },
+  tag: { borderRadius: theme.radius.sm, paddingHorizontal: theme.spacing.sm, paddingVertical: 3, borderWidth: 1 },
+  tagPrimary: { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.surfaceRaised },
+  tagSecondary: { borderColor: theme.colors.border },
+  tagLit: { backgroundColor: theme.colors.text, borderColor: theme.colors.text },
+  startBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    backgroundColor: theme.colors.background,
+  },
+  menu: { padding: theme.spacing.lg, gap: theme.spacing.md },
+  inputs: { flexDirection: 'row', gap: theme.spacing.md },
+  input: {
+    ...textStyle('numeric', true),
+    flex: 1,
+    minHeight: 48,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.surfaceRaised,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  moveRow: { flexDirection: 'row', gap: theme.spacing.md },
 });
