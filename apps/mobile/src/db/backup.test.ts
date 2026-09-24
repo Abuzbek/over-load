@@ -4,7 +4,7 @@ const DOCUMENT_DIR = 'file:///doc/';
 const DB_PATH = `${DOCUMENT_DIR}SQLite/workouts.db`;
 const BACKUP_PATH = `${DB_PATH}.backup`;
 
-vi.mock('expo-file-system', () => ({
+vi.mock('expo-file-system/legacy', () => ({
   documentDirectory: DOCUMENT_DIR,
   getInfoAsync: vi.fn(),
   copyAsync: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock('./client', () => ({
   expoDb: { execSync: vi.fn(), closeSync: vi.fn() },
 }));
 
-const FileSystem = await import('expo-file-system');
+const FileSystem = await import('expo-file-system/legacy');
 const { expoDb } = await import('./client');
 const { backupDatabase, restoreDatabase, discardBackup } = await import('./backup');
 

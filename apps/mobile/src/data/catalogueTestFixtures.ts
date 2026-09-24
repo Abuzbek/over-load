@@ -29,6 +29,11 @@ export const INDEX: Record<string, AppFileEntry> = {
   weight: { type: 'exerciseMetric', name: 'Weight' },
   reps: { type: 'exerciseMetric', name: 'Reps' },
   compound: { type: 'exerciseType', name: 'Multi-joint (compound)' },
+  isolation: { type: 'exerciseType', name: 'Single joint (isolation)' },
+  upperBody: { type: 'regionTrained', name: 'Upper body' },
+  lowerBody: { type: 'regionTrained', name: 'Lower body' },
+  bilateral: { type: 'laterality', name: 'Bilateral' },
+  unilateral: { type: 'laterality', name: 'Unilateral' },
   horizontalPush: { type: 'movementPattern', name: 'Horizontal Push' },
   rom4: { type: 'rom', name: 4 },
   stab5: { type: 'stability', name: '5' },
@@ -58,12 +63,19 @@ export const EXERCISES: AppFileExercise[] = [
     rom: 'rom4',
     stability: 'stab5',
     bodyweight: 0.076,
+    regionTrained: 'upperBody',
+    laterality: ['bilateral'],
     resistanceEquipmentGroupIds: ['barbellAndPlates'],
     supportEquipmentGroupIds: ['bench'],
   }),
-  fixtureExercise('Dumbbell curl', { resistanceEquipmentGroupIds: ['dumbbell'] }),
+  fixtureExercise('Dumbbell curl', {
+    exerciseType: 'isolation',
+    regionTrained: 'upperBody',
+    laterality: ['unilateral'],
+    resistanceEquipmentGroupIds: ['dumbbell'],
+  }),
   fixtureExercise('Push-up', { exerciseMetrics: ['reps'], resistanceEquipmentGroupIds: ['bodyweight'] }),
-  fixtureExercise('Leg press', { primaryFeatureMuscle: ['quads'], resistanceEquipmentGroupIds: ['legPress'] }),
+  fixtureExercise('Leg press', { primaryFeatureMuscle: ['quads'], regionTrained: 'lowerBody', resistanceEquipmentGroupIds: ['legPress'] }),
 ];
 
 export function fixtureFile(overrides: Partial<AppFile> = {}): AppFile {

@@ -1,5 +1,9 @@
 import { Lucide } from '@react-native-vector-icons/lucide';
-import { BottomTabBar } from '@react-navigation/bottom-tabs';
+// expo-router bundles its own React Navigation since SDK 57, and a custom
+// `tabBar` receives props typed by that copy. The stock bar lives only at this
+// deep path (the package has no exports map); @react-navigation/bottom-tabs
+// would be a second, mismatched copy.
+import { BottomTabBar } from 'expo-router/build/react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';

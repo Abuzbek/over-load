@@ -1,13 +1,23 @@
 import { Newsreader_600SemiBold } from '@expo-google-fonts/newsreader/600SemiBold';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initializeDatabase } from '../src/db/bootstrap';
+import { expoDb } from '../src/db/client';
 import { startSync } from '../src/sync/syncService';
 import { FontsProvider } from '../src/ui/FontsContext';
 import { Text } from '../src/ui/Text';
 import { theme } from '../src/ui/theme';
+
+/** Drizzle Studio on the device's database: press shift+m in `expo start`. */
+function DrizzleStudio() {
+  useDrizzleStudio(expoDb);
+  return null;
+}
 
 type BootstrapError = Error & { restored?: boolean };
 
@@ -53,7 +63,12 @@ export default function RootLayout() {
   }
 
   return (
+    // Gesture root and sheet provider wrap everything: a BottomSheetModal
+    // presents above whichever screen asked for it.
+    <GestureHandlerRootView style={styles.root}>
+    <BottomSheetModalProvider>
     <FontsProvider serifLoaded={fontsLoaded && !fontError}>
+      {__DEV__ && <DrizzleStudio />}
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: theme.colors.surface },
@@ -67,12 +82,19 @@ export default function RootLayout() {
             then the tab title) — seen on both iOS and Android. No test or bundle
             check catches this; it only shows up in a screenshot. */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        {/* Presentation is fixed when a native screen mounts, so it is declared
+            here: set from inside the screen, the options were dropped whole. */}
+        <Stack.Screen name="session/[id]/add-exercise" options={{ presentation: 'modal', title: 'Add exercises' }} />
+        <Stack.Screen name="workouts/[id]/add-exercise" options={{ presentation: 'modal', title: 'Add exercises' }} />
       </Stack>
     </FontsProvider>
+    </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   center: {
     flex: 1,
     alignItems: 'center',

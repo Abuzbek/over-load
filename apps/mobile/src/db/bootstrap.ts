@@ -37,8 +37,11 @@ export async function initializeDatabase(): Promise<void> {
   // The file is 3.7 MB: imported lazily, and only when the seeded catalogue is
   // out of date, so an ordinary launch never parses it.
   if (getCatalogueVersion(db) !== CATALOGUE_VERSION) {
-    const { default: file } = await import('../../assets/app_file.json');
-    syncCatalogue(db, file as unknown as AppFile, equipmentSeed.items as SeedEquipment[], now());
+    const [{ default: file }, { default: instructions }] = await Promise.all([
+      import('../../assets/app_file.json'),
+      import('../../assets/instructions.json'),
+    ]);
+    syncCatalogue(db, file as unknown as AppFile, equipmentSeed.items as SeedEquipment[], now(), instructions);
   }
   ensureDefaultProgram(db, now());
   ensureDefaultGym(db, now());

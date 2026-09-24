@@ -43,7 +43,7 @@ export async function firestoreRemote(uid: string): Promise<Remote> {
       const rows: SyncRow[] = [];
       let cursor = since;
       const from = fs.Timestamp.fromMillis(Math.max(0, since - OVERLAP_MS));
-      let last: import('@react-native-firebase/firestore').FirebaseFirestoreTypes.QueryDocumentSnapshot | undefined;
+      let last: import('@react-native-firebase/firestore').QueryDocumentSnapshot | undefined;
 
       for (;;) {
         const q = last
