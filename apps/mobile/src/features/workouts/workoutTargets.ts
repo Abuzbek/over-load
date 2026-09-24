@@ -55,6 +55,8 @@ export function formatWorkoutTarget(
 ): string | null {
   switch (trackingType) {
     case 'weight_reps':
+      // No target weight yet: the reps are the plan, so say only that.
+      if (values.targetWeightKg === null) return `${values.targetReps ?? '—'} reps`;
       return `${formatWeight(values.targetWeightKg, unit)} × ${values.targetReps ?? '—'}`;
     case 'reps':
       return `${values.targetReps ?? '—'} reps`;
@@ -62,4 +64,49 @@ export function formatWorkoutTarget(
     case 'distance_duration':
       return null;
   }
+}
+
+/** Seconds a working set takes, and the changeover between exercises. */
+const SET_SECONDS = 45;
+const CHANGEOVER_SECONDS = 60;
+
+/**
+ * "Estimated workout time is 32 min": every set's work, the rest between an
+ * exercise's sets (its own rest, else the timer's default), and a changeover
+ * per exercise. Rounded up, so a short workout never reads 0 min.
+ */
+export function estimateWorkoutMinutes(
+  exercises: { sets: number; restSeconds: number | null }[],
+  defaultRestSeconds: number,
+): number {
+  const seconds = exercises.reduce(
+    (total, { sets, restSeconds }) =>
+      sets === 0
+        ? total
+        : total + sets * SET_SECONDS + (sets - 1) * (restSeconds ?? defaultRestSeconds) + CHANGEOVER_SECONDS,
+    0,
+  );
+  return Math.ceil(seconds / 60);
+}
+
+export type MuscleVolume = { id: string; name: string; exercises: number; sets: number };
+
+/**
+ * The overview's Target Muscles: per muscle group, how many exercises train it
+ * and how many sets it gets — a full set as a primary, half as a secondary,
+ * the heatmap's weighting. Most sets first.
+ */
+export function targetMuscles(
+  exercises: { sets: number; muscles: { id: string; name: string; primary: boolean }[] }[],
+): MuscleVolume[] {
+  const byId = new Map<string, MuscleVolume>();
+  for (const { sets, muscles } of exercises) {
+    for (const m of muscles) {
+      const v = byId.get(m.id) ?? { id: m.id, name: m.name, exercises: 0, sets: 0 };
+      v.exercises += 1;
+      v.sets += m.primary ? sets : sets / 2;
+      byId.set(m.id, v);
+    }
+  }
+  return [...byId.values()].sort((a, b) => b.sets - a.sets || a.name.localeCompare(b.name));
 }

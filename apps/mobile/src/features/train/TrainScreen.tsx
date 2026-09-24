@@ -6,7 +6,6 @@ import { getActiveProgram, getProgramDays } from '../../data/programRepo';
 import { listWorkoutSummaries, type WorkoutSummary } from '../../data/workoutRepo';
 import { db } from '../../db/client';
 import { ActiveProgramCard } from '../programs/ActiveProgramCard';
-import { useWorkoutStarter, WorkoutStartSheet } from '../session/useWorkoutStarter';
 import { Card } from '../../ui/Card';
 import { Collapsible } from '../../ui/Collapsible';
 import { ListRow } from '../../ui/ListRow';
@@ -48,7 +47,6 @@ export function TrainScreen() {
 
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
-  const starter = useWorkoutStarter();
   const summaries = listWorkoutSummaries(db);
   const activeProgram = getActiveProgram(db);
   const days = activeProgram ? getProgramDays(db, activeProgram.id) : [];
@@ -66,7 +64,6 @@ export function TrainScreen() {
           cycleNumber={activeProgram.cycleNumber}
           days={days}
           summaryByWorkoutId={summaryByWorkoutId}
-          starter={starter}
           onChanged={() => setVersion((v) => v + 1)}
         />
       ) : (
@@ -108,7 +105,6 @@ export function TrainScreen() {
         />
       </Card>
 
-      <WorkoutStartSheet starter={starter} />
     </Screen>
   );
 }

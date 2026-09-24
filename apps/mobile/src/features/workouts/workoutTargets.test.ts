@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatWorkoutTarget, targetInputsFor } from './workoutTargets';
+import { estimateWorkoutMinutes, formatWorkoutTarget, targetInputsFor, targetMuscles } from './workoutTargets';
 
 describe('targetInputsFor', () => {
   it('gives weight and reps for weight_reps', () => {
@@ -40,9 +40,9 @@ describe('formatWorkoutTarget', () => {
     );
   });
 
-  it('shows an em dash for a weight_reps set with no target weight', () => {
+  it('shows only the reps for a weight_reps set with no target weight', () => {
     expect(formatWorkoutTarget('weight_reps', { targetWeightKg: null, targetReps: 8 }, 'kg')).toBe(
-      '— × 8',
+      '8 reps',
     );
   });
 
@@ -68,5 +68,33 @@ describe('formatWorkoutTarget', () => {
     expect(formatWorkoutTarget('weight_reps', { targetWeightKg: 60, targetReps: 5 }, 'lb')).toBe(
       '132.3 lb × 5',
     );
+  });
+});
+
+describe('estimateWorkoutMinutes', () => {
+  it('counts work, rest between sets and a changeover per exercise', () => {
+    // 4 sets: 4×45 + 3×120 + 60 = 600 s; 3 sets at 90 s rest: 3×45 + 2×90 + 60 = 375 s.
+    expect(estimateWorkoutMinutes([{ sets: 4, restSeconds: null }, { sets: 3, restSeconds: 90 }], 120)).toBe(17);
+  });
+
+  it('ignores an exercise with no sets and never rounds a real workout to zero', () => {
+    expect(estimateWorkoutMinutes([{ sets: 0, restSeconds: null }], 120)).toBe(0);
+    expect(estimateWorkoutMinutes([{ sets: 1, restSeconds: null }], 120)).toBe(2);
+  });
+});
+
+describe('targetMuscles', () => {
+  it('counts exercises and weights secondary sets at half', () => {
+    const chest = { id: 'c', name: 'Chest', primary: true };
+    const triceps = { id: 't', name: 'Triceps', primary: false };
+    expect(
+      targetMuscles([
+        { sets: 4, muscles: [chest, triceps] },
+        { sets: 3, muscles: [{ ...triceps, primary: true }] },
+      ]),
+    ).toEqual([
+      { id: 't', name: 'Triceps', exercises: 2, sets: 5 },
+      { id: 'c', name: 'Chest', exercises: 1, sets: 4 },
+    ]);
   });
 });
