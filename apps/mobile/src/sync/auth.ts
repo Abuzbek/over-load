@@ -1,7 +1,17 @@
 import * as Crypto from 'expo-crypto';
 import { googleWebClientId, loadFirebase } from './firebase';
 
-export type Account = { uid: string; label: string };
+export type Account = {
+  uid: string;
+  /** The phone number, else email, else name: one line that says who this is. */
+  label: string;
+  email: string | null;
+  name: string | null;
+  /** How they signed in: 'Apple', 'Google' or 'Phone'. */
+  provider: string | null;
+};
+
+const PROVIDERS: Record<string, string> = { 'apple.com': 'Apple', 'google.com': 'Google', phone: 'Phone' };
 
 type AuthModule = ReturnType<typeof loadFirebase>['auth'];
 type User = import('@react-native-firebase/auth').User;
@@ -15,7 +25,16 @@ function auth(): { m: AuthModule; instance: ReturnType<AuthModule['getAuth']> } 
 /** What the account row shows: the phone number, else email, else name. */
 function toAccount(user: User | null): Account | null {
   if (!user) return null;
-  return { uid: user.uid, label: user.phoneNumber ?? user.email ?? user.displayName ?? 'Signed in' };
+  const providerId = user.providerData[0]?.providerId;
+  return {
+    uid: user.uid,
+    label: user.phoneNumber ?? user.email ?? user.displayName ?? 'Signed in',
+    // Apple hides the address behind a relay unless the user shares it; either is the one to show.
+    email: user.email ?? user.providerData.find((p) => p.email)?.email ?? null,
+    name: user.displayName ?? user.providerData.find((p) => p.displayName)?.displayName ?? null,
+    // A Telegram code signs in with a custom token: no provider, but a phone number.
+    provider: providerId ? (PROVIDERS[providerId] ?? providerId) : user.phoneNumber ? 'Phone' : null,
+  };
 }
 
 export function currentAccount(): Account | null {
