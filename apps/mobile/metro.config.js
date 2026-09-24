@@ -11,7 +11,9 @@ config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(workspaceRoot, 'node_modules'),
 ];
-config.resolver.sourceExts.push('sql');
+config.resolver.sourceExts.push('sql', 'svg');
+// SVGs are inlined as strings by babel (see babel.config.js), never shipped as assets.
+config.resolver.assetExts = config.resolver.assetExts.filter((ext) => ext !== 'svg');
 
 // Package exports are on by default since SDK 57 (`unstable_enablePackageExports`).
 // Under SDK 52 turning them on broke expo-router's entry ("App entry not found");

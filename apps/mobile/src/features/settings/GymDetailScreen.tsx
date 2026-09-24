@@ -34,7 +34,7 @@ import { theme } from '../../ui/theme';
 import { EquipmentEditor } from './EquipmentEditor';
 import { GYM_ICONS } from './GymProfilesScreen';
 
-const CATEGORY_LABELS: Record<EquipmentCategory, string> = {
+export const CATEGORY_LABELS: Record<EquipmentCategory, string> = {
   free_weights: 'Free weights',
   loaded_bars: 'Loaded bars',
   fixed_weight_bars: 'Fixed weight bars',

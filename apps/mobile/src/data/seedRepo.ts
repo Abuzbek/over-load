@@ -20,11 +20,11 @@ import { and, eq, inArray, notInArray, sql } from 'drizzle-orm';
 
 /**
  * Which catalogue is seeded. Bump the suffix whenever tools/seed-equipment/
- * equipment.json changes; a new app_file.json changes the prefix. Launch
+ * equipment.json or instructions.json changes; a new app_file.json changes the prefix. Launch
  * compares this with catalogue_meta and only parses the 3.7 MB file on a
  * mismatch — a test pins the prefix to the file's own generatedAt.
  */
-export const CATALOGUE_VERSION = '2026-05-05T21:00:52Z#1';
+export const CATALOGUE_VERSION = '2026-05-05T21:00:52Z#2';
 
 export type AppFileEntry = { type: string; name: string | number } & Record<string, unknown>;
 export type AppFileExercise = { id: string; name: string } & Record<string, unknown>;
@@ -95,7 +95,14 @@ export function inferTrackingType(metrics: string[]): TrackingType {
  * derived data and are rebuilt outright (a real DELETE, like
  * personal_records). Custom exercises are left alone.
  */
-export function syncCatalogue(db: Db, file: AppFile, equipmentSeed: SeedEquipment[], at: number) {
+export function syncCatalogue(
+  db: Db,
+  file: AppFile,
+  equipmentSeed: SeedEquipment[],
+  at: number,
+  /** Exercise id → how-to markdown (assets/instructions.json). */
+  instructions: Record<string, string> = {},
+) {
   const index = file.uuidIndex;
   const name = (id: string) => String(index[id]?.name ?? '');
 
@@ -158,7 +165,7 @@ export function syncCatalogue(db: Db, file: AppFile, equipmentSeed: SeedEquipmen
       trackingType: inferTrackingType(list('exerciseMetrics').map(name)),
       primaryMuscle: featureMuscles[0] ? name(featureMuscles[0]) : 'Other',
       equipment: resistance ? name(resistance) : 'None',
-      instructions: null,
+      instructions: instructions[row.id] ?? null,
       isCustom: false,
       exerciseTypeId: scalar('exerciseType'),
       regionId: scalar('regionTrained'),
@@ -191,7 +198,7 @@ export function syncCatalogue(db: Db, file: AppFile, equipmentSeed: SeedEquipmen
             ...excluded([
               'name', 'tracking_type', 'primary_muscle', 'equipment', 'exercise_type_id', 'region_id',
               'rom', 'stability', 'bodyweight', 'recommendation_strength', 'recommendation_hypertrophy',
-              'search_boost', 'search_text', 'updated_at',
+              'search_boost', 'search_text', 'instructions', 'updated_at',
             ]),
             deletedAt: null,
           },

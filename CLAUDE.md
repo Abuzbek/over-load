@@ -97,7 +97,9 @@ consumed by the in-progress bar.
   `exercise_equipment`, `catalogue_meta` (`packages/schema/src/catalogue.ts`). Derived from
   `app_file.json`, keyed by its ids, rebuilt with a real `DELETE` by `syncCatalogue`, and
   only ever read through a tombstone-filtered `exercises` row. Do not add `deleted_at` to them.
-- **Bump `CATALOGUE_VERSION` (`seedRepo.ts`) when `app_file.json` or `equipment.json` changes.**
+- **Bump `CATALOGUE_VERSION` (`seedRepo.ts`) when `app_file.json`, `equipment.json` or
+  `instructions.json` changes.** `instructions.json` is generated from `assets/markdown/` by
+  `tools/catalogue/build_instructions.py` and seeded into `exercises.instructions`.
   Launch compares it with `catalogue_meta` and parses the 3.7 MB file only on a mismatch; a
   test pins its prefix to the file's `generatedAt`, but an `equipment.json` edit needs the
   `#n` suffix bumped by hand.
@@ -151,6 +153,13 @@ leaves Firebase out and the app runs local-only (`extra.firebase` in `app.config
   `@react-native-firebase/app` (`app.config.js`). After a dependency upgrade, kill
   any old `expo start`: a stale Metro serves the previous tree ("Unable to resolve
   module drizzle-orm").
+- **Sheets are `src/ui/BottomSheet.tsx`** (@gorhom/bottom-sheet, driven by a `visible`
+  prop). Inside one, scroll with `BottomSheetScrollView`/`BottomSheetFlatList` and type in
+  `BottomSheetTextInput`, or dragging and the keyboard misbehave. The older `Sheet` (a
+  Modal) still backs the confirm dialogs.
+- **`.svg` files import as markup strings** (babel `inline-import`, like `.sql`), for
+  `SvgXml`. The muscle thumbnails in `assets/muscle_groups/` come in this way — and that
+  folder, like `assets/markdown/`, is gitignored, so a clean checkout cannot bundle.
 - **A screen reading the DB in its render body will show stale data** when another
   screen mutates it — the stack keeps it mounted. Use `useFocusEffect` to bump a
   version counter. Do not use `key={version}`; it remounts and resets scroll.
