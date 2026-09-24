@@ -1,13 +1,21 @@
 import { Newsreader_600SemiBold } from '@expo-google-fonts/newsreader/600SemiBold';
+import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { initializeDatabase } from '../src/db/bootstrap';
+import { expoDb } from '../src/db/client';
 import { startSync } from '../src/sync/syncService';
 import { FontsProvider } from '../src/ui/FontsContext';
 import { Text } from '../src/ui/Text';
 import { theme } from '../src/ui/theme';
+
+/** Drizzle Studio on the device's database: press shift+m in `expo start`. */
+function DrizzleStudio() {
+  useDrizzleStudio(expoDb);
+  return null;
+}
 
 type BootstrapError = Error & { restored?: boolean };
 
@@ -54,6 +62,7 @@ export default function RootLayout() {
 
   return (
     <FontsProvider serifLoaded={fontsLoaded && !fontError}>
+      {__DEV__ && <DrizzleStudio />}
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: theme.colors.surface },

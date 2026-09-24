@@ -4,8 +4,8 @@ import { googleWebClientId, loadFirebase } from './firebase';
 export type Account = { uid: string; label: string };
 
 type AuthModule = ReturnType<typeof loadFirebase>['auth'];
-type User = import('@react-native-firebase/auth').FirebaseAuthTypes.User;
-type Confirmation = import('@react-native-firebase/auth').FirebaseAuthTypes.ConfirmationResult;
+type User = import('@react-native-firebase/auth').User;
+type Confirmation = import('@react-native-firebase/auth').ConfirmationResult;
 
 function auth(): { m: AuthModule; instance: ReturnType<AuthModule['getAuth']> } {
   const m = loadFirebase().auth;

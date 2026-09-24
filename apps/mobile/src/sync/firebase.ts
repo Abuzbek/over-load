@@ -23,7 +23,7 @@ type Firebase = {
 };
 
 let loaded: Firebase | null = null;
-let settingsApplied: Promise<unknown> | null = null;
+let settingsApplied: unknown = null;
 
 export function loadFirebase(): Firebase {
   if (!firebaseEnabled) throw new Error('Firebase is not configured for this build');
@@ -46,6 +46,8 @@ export function loadFirebase(): Firebase {
  */
 export async function firestoreReady() {
   const { firestore } = loadFirebase();
+  // Returns the instance as of RNFB 26 (it was a promise before); awaiting
+  // either shape is harmless.
   settingsApplied ??= firestore.initializeFirestore(firestore.getFirestore().app, { persistence: false });
   await settingsApplied;
   return firestore;

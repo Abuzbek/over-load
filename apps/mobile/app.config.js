@@ -62,18 +62,19 @@ module.exports = ({ config }) => {
     plugins: [
       'expo-router',
       'expo-font',
+      'expo-sqlite',
       [
         'expo-build-properties',
-        {
-          android: { kotlinVersion: '1.9.24' },
-          // React Native Firebase's iOS SDKs are Swift pods and need static frameworks.
-          ...(firebase ? { ios: { useFrameworks: 'static' } } : {}),
-        },
+        // React Native Firebase's iOS SDKs are Swift pods and need static frameworks.
+        firebase ? { ios: { useFrameworks: 'static' } } : {},
       ],
       '@react-native-vector-icons/lucide',
       ...(firebase
         ? [
-            '@react-native-firebase/app',
+            // RNFB 26 fetches the Firebase iOS SDK via Swift Package Manager by
+            // default, and those packages collide with static frameworks at
+            // link time (duplicate symbols). CocoaPods it is.
+            ['@react-native-firebase/app', { ios: { disableSPM: true } }],
             '@react-native-firebase/auth',
             'expo-apple-authentication',
             // Reads the reversed client id from the GoogleService-Info.plist.

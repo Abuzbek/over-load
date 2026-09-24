@@ -13,11 +13,7 @@ config.resolver.nodeModulesPaths = [
 ];
 config.resolver.sourceExts.push('sql');
 
-// NOTE: do NOT set `config.resolver.unstable_enablePackageExports = true` here.
-// It was added once to resolve `@overload/schema/migrations` and it silently
-// changed resolution across the entire dependency tree — Metro bundled 1205
-// modules instead of 1388, picking different builds of several packages, and
-// expo-router's entry chain stopped registering the "main" component. The app
-// booted to a red "App entry not found" screen with no error in any log.
-// The migrations subpath is handled by packages/schema/migrations.js instead.
+// Package exports are on by default since SDK 57 (`unstable_enablePackageExports`).
+// Under SDK 52 turning them on broke expo-router's entry ("App entry not found");
+// if that screen ever returns, check how a dependency's `exports` map resolves.
 module.exports = config;

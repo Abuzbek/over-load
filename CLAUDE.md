@@ -144,9 +144,13 @@ leaves Firebase out and the app runs local-only (`extra.firebase` in `app.config
   data from such a package to JSON at build time instead — the heatmap does this with
   `tools/anatomy/build.py`, which also keeps foreign React components out of the
   bundle. Tests passing is not evidence that Metro resolves a dependency.
-- **Metro needs `unstable_enablePackageExports`** (set in `apps/mobile/metro.config.js`)
-  because `@overload/schema` exposes `./migrations` and `./testing` only via its
-  `exports` map.
+- **Expo SDK 57 / RN 0.86.** Metro resolves package `exports` maps by default now.
+  Bottom tabs come from expo-router's bundled copy
+  (`expo-router/build/react-navigation/bottom-tabs`), not `@react-navigation/*`.
+  iOS with Firebase needs static frameworks and `ios.disableSPM` on
+  `@react-native-firebase/app` (`app.config.js`). After a dependency upgrade, kill
+  any old `expo start`: a stale Metro serves the previous tree ("Unable to resolve
+  module drizzle-orm").
 - **A screen reading the DB in its render body will show stale data** when another
   screen mutates it — the stack keeps it mounted. Use `useFocusEffect` to bump a
   version counter. Do not use `key={version}`; it remounts and resets scroll.

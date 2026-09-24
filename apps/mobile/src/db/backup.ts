@@ -1,4 +1,6 @@
-import * as FileSystem from 'expo-file-system';
+// The path-based API moved here in SDK 54; the object API that replaced it
+// buys nothing for copying three files.
+import * as FileSystem from 'expo-file-system/legacy';
 import { DB_NAME, expoDb } from './client';
 
 const DB_PATH = `${FileSystem.documentDirectory}SQLite/${DB_NAME}`;
