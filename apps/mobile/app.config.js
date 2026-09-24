@@ -28,13 +28,14 @@ function firebaseFiles(profile, bundleId) {
     throw new Error(`firebase/${profile}/GoogleService-Info.plist is for ${plistValue('BUNDLE_ID')}, not ${bundleId}`);
   }
 
-  // Google sign-in needs the project's OAuth *web* client (type 3) to mint an
-  // id token Firebase accepts, and on iOS the reversed client id as a URL
-  // scheme. Both appear only once Google is enabled under Authentication and
-  // the files are downloaded again; until then Google sign-in stays off.
+  // Google sign-in, per platform. iOS needs the project's iOS OAuth client
+  // (REVERSED_CLIENT_ID, also the URL scheme); Android needs the *web* client
+  // (type 3) to mint an id token Firebase accepts. Each appears in its file
+  // once Google is enabled under Authentication and the file is downloaded
+  // again; until then that platform's button stays hidden.
   const clients = JSON.parse(fs.readFileSync(android, 'utf8')).client?.flatMap((c) => c.oauth_client ?? []) ?? [];
   const googleWebClientId = clients.find((c) => c.client_type === 3)?.client_id;
-  const googleSignIn = Boolean(googleWebClientId && plistValue('REVERSED_CLIENT_ID'));
+  const googleSignIn = { ios: Boolean(plistValue('REVERSED_CLIENT_ID')), android: Boolean(googleWebClientId) };
 
   return {
     ios: `./firebase/${profile}/GoogleService-Info.plist`,
@@ -78,13 +79,15 @@ module.exports = ({ config }) => {
             '@react-native-firebase/auth',
             'expo-apple-authentication',
             // Reads the reversed client id from the GoogleService-Info.plist.
-            ...(firebase.googleSignIn ? ['@react-native-google-signin/google-signin'] : []),
+            ...(firebase.googleSignIn.ios || firebase.googleSignIn.android
+              ? ['@react-native-google-signin/google-signin']
+              : []),
           ]
         : []),
     ],
     extra: {
       firebase: firebase !== null,
-      googleSignIn: firebase?.googleSignIn ?? false,
+      googleSignIn: firebase?.googleSignIn ?? { ios: false, android: false },
       googleWebClientId: firebase?.googleWebClientId,
       profile,
     },

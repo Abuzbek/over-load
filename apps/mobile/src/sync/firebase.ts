@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 /**
  * Whether this build carries Firebase at all. app.config.js leaves the native
@@ -9,17 +10,21 @@ import Constants from 'expo-constants';
 export const firebaseEnabled: boolean = Constants.expoConfig?.extra?.firebase === true;
 
 /**
- * Google sign-in is built in only once the project has an OAuth client, which
- * appears after Google is enabled under Authentication (see app.config.js).
+ * Google sign-in, for this platform: on once its OAuth client is in the
+ * Firebase config file, which happens after Google is enabled under
+ * Authentication (see app.config.js).
  */
-export const googleSignInEnabled: boolean = Constants.expoConfig?.extra?.googleSignIn === true;
+export const googleSignInEnabled: boolean =
+  Constants.expoConfig?.extra?.googleSignIn?.[Platform.OS === 'ios' ? 'ios' : 'android'] === true;
 
-/** The OAuth web client id from google-services.json, for Google sign-in. */
+/** The OAuth web client id from google-services.json: Android's Google sign-in needs it; iOS uses the plist's own client. */
 export const googleWebClientId: string | undefined = Constants.expoConfig?.extra?.googleWebClientId;
 
 type Firebase = {
+  app: typeof import('@react-native-firebase/app');
   auth: typeof import('@react-native-firebase/auth');
   firestore: typeof import('@react-native-firebase/firestore');
+  functions: typeof import('@react-native-firebase/functions');
 };
 
 let loaded: Firebase | null = null;
@@ -30,8 +35,10 @@ export function loadFirebase(): Firebase {
   if (!loaded) {
     /* eslint-disable @typescript-eslint/no-require-imports -- lazy on purpose, see above */
     loaded = {
+      app: require('@react-native-firebase/app'),
       auth: require('@react-native-firebase/auth'),
       firestore: require('@react-native-firebase/firestore'),
+      functions: require('@react-native-firebase/functions'),
     };
     /* eslint-enable @typescript-eslint/no-require-imports */
   }

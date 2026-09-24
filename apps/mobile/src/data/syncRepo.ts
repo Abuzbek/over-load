@@ -1,8 +1,12 @@
 import {
   appSettings,
+  exerciseEquipment,
+  exerciseLinks,
+  exerciseMuscles,
   exercises,
   gymEquipment,
   gyms,
+  personalRecords,
   programDays,
   programs,
   sessionExercises,
@@ -14,6 +18,7 @@ import {
   workoutExercises,
   workouts,
   workoutSets,
+  SYNCED_TABLES,
   type Db,
   type SyncedTable,
 } from '@overload/schema';
@@ -131,9 +136,38 @@ export function setCursor(db: Db, table: SyncedTable, uid: string, cursor: numbe
     .run();
 }
 
-/** Signing out, or in as someone else: the next sync starts from nothing. */
-export function forgetCursors(db: Db): void {
-  db.delete(syncCursors).run();
+/** Whose account this device's user data is a copy of: the uid its cursors were written for. */
+export function localOwner(db: Db): string | null {
+  return db.select({ uid: syncCursors.uid }).from(syncCursors).limit(1).get()?.uid ?? null;
+}
+
+/**
+ * Signing out, or in as someone else: this phone's copy of the account goes,
+ * so the next person never sees it. The account itself lives in Firestore.
+ *
+ * A real DELETE, not tombstones — tombstones would sync, and this is not the
+ * user deleting anything, only the device letting go of a cached copy. The
+ * catalogue stays; only custom exercises are the account's. Callers recreate
+ * the first-launch defaults afterwards.
+ */
+export function clearAccountData(db: Db): void {
+  db.transaction((tx) => {
+    tx.run(sql`PRAGMA defer_foreign_keys = ON`);
+    tx.delete(personalRecords).run();
+    for (const table of [...SYNCED_TABLES].reverse()) {
+      if (table === 'exercises') {
+        // A custom exercise's muscle links go with it; the catalogue's stay.
+        const custom = sql`(select id from exercises where is_custom = 1)`;
+        for (const link of [exerciseMuscles, exerciseLinks, exerciseEquipment]) {
+          tx.delete(link).where(sql`${link.exerciseId} in ${custom}`).run();
+        }
+        tx.delete(exercises).where(eq(exercises.isCustom, true)).run();
+      }
+      else tx.delete(TABLES[table]).run();
+    }
+    tx.delete(syncOutbox).run();
+    tx.delete(syncCursors).run();
+  });
 }
 
 /**

@@ -58,6 +58,48 @@ export async function signInWithGoogle(): Promise<void> {
   await m.signInWithCredential(instance, m.GoogleAuthProvider.credential(idToken));
 }
 
+/** Where the Telegram functions run (functions/src/index.ts sets the same). */
+const FUNCTIONS_REGION = 'europe-west1';
+
+function callable<Req, Res>(name: string) {
+  const { app, functions } = loadFirebase();
+  return functions.httpsCallable<Req, Res>(functions.getFunctions(app.getApp(), FUNCTIONS_REGION), name);
+}
+
+/** The server's message, not the SDK's wrapper: "Too many codes. Try again in 40 s." */
+function serverMessage(e: unknown): Error {
+  const code = (e as { code?: string })?.code ?? '';
+  // Not deployed, or no network: nothing the user can fix here but SMS.
+  if (/not-found|unavailable|internal/.test(code)) return new Error('Telegram sign-in is not available right now. Use SMS instead.');
+  return new Error(e instanceof Error ? e.message.replace(/^\[[^\]]+\]\s*/, '') : String(e));
+}
+
+/**
+ * Sends a login code to the number's Telegram ("Verification Codes" chat),
+ * through the sendTelegramCode function. Throws if the number has no Telegram;
+ * the caller offers SMS instead. Returns the request to confirm.
+ */
+export async function sendTelegramCode(phoneNumber: string): Promise<string> {
+  try {
+    const { data } = await callable<{ phone: string }, { requestId: string }>('sendTelegramCode')({ phone: phoneNumber });
+    return data.requestId;
+  } catch (e) {
+    throw serverMessage(e);
+  }
+}
+
+/** Checks the code on the server, which answers with a Firebase token for that phone's account. */
+export async function confirmTelegramCode(requestId: string, code: string): Promise<void> {
+  let token: string;
+  try {
+    ({ data: { token } } = await callable<{ requestId: string; code: string }, { token: string }>('verifyTelegramCode')({ requestId, code }));
+  } catch (e) {
+    throw serverMessage(e);
+  }
+  const { m, instance } = auth();
+  await m.signInWithCustomToken(instance, token);
+}
+
 /** Sends the SMS. The number must be in international form: +998901234567. */
 export async function sendPhoneCode(phoneNumber: string): Promise<Confirmation> {
   const { m, instance } = auth();

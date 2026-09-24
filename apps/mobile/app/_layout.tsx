@@ -8,7 +8,8 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initializeDatabase } from '../src/db/bootstrap';
 import { expoDb } from '../src/db/client';
-import { startSync } from '../src/sync/syncService';
+import { SignInScreen } from '../src/features/auth/SignInScreen';
+import { startSync, useSyncStatus } from '../src/sync/syncService';
 import { FontsProvider } from '../src/ui/FontsContext';
 import { Text } from '../src/ui/Text';
 import { theme } from '../src/ui/theme';
@@ -24,6 +25,7 @@ type BootstrapError = Error & { restored?: boolean };
 export default function RootLayout() {
   const [state, setState] = useState<{ ready: boolean; error?: BootstrapError }>({ ready: false });
   const [fontsLoaded, fontError] = useFonts({ Newsreader_600SemiBold });
+  const sync = useSyncStatus();
 
   useEffect(() => {
     initializeDatabase()
@@ -54,11 +56,25 @@ export default function RootLayout() {
   // Hold the splash only until the font resolves OR fails. A font is cosmetic;
   // it must never be able to brick launch, for the same reason the personal-record
   // rebuild is wrapped — see bd63d5b.
-  if (!state.ready || (!fontsLoaded && !fontError)) {
+  // An account is required: with Firebase in the build, nothing shows until
+  // someone is signed in. Waiting on authResolved keeps a signed-in user from
+  // seeing the sign-in screen flash past on launch.
+  const needsAccount = sync.enabled && !sync.account;
+  if (!state.ready || (!fontsLoaded && !fontError) || (sync.enabled && !sync.authResolved)) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={theme.colors.text} />
       </View>
+    );
+  }
+
+  if (needsAccount) {
+    return (
+      <GestureHandlerRootView style={styles.root}>
+        <FontsProvider serifLoaded={fontsLoaded && !fontError}>
+          <SignInScreen />
+        </FontsProvider>
+      </GestureHandlerRootView>
     );
   }
 

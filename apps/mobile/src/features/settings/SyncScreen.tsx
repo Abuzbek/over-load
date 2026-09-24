@@ -1,14 +1,6 @@
 import { useState } from 'react';
-import { Platform, StyleSheet, TextInput, View } from 'react-native';
-import {
-  confirmPhoneCode,
-  sendPhoneCode,
-  signInWithApple,
-  signInWithGoogle,
-  signOutOfAccount,
-} from '../../sync/auth';
-import { googleSignInEnabled } from '../../sync/firebase';
-import { requestSync, useSyncStatus } from '../../sync/syncService';
+import { StyleSheet } from 'react-native';
+import { requestSync, signOut, useSyncStatus } from '../../sync/syncService';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
 import { Screen } from '../../ui/Screen';
@@ -17,112 +9,35 @@ import { Sheet } from '../../ui/Sheet';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 
-type Confirmation = Awaited<ReturnType<typeof sendPhoneCode>>;
-
 /**
- * Backup and sync. Everything the app shows is read from the phone; signing in
- * only adds a copy in the account, so a new phone can pick up where this one
- * left off. Signing out keeps the data here.
+ * The account this phone syncs with. Screens read the phone's copy; the
+ * account in Firestore is what survives the phone. Signing out removes the
+ * copy from this phone, after a last sync.
  */
 export function SyncScreen() {
   const status = useSyncStatus();
   const [error, setError] = useState<string | null>(null);
-  const [phoneOpen, setPhoneOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [unsynced, setUnsynced] = useState(0);
 
-  const attempt = (fn: () => Promise<void>) => async () => {
-    setError(null);
-    try {
-      await fn();
-    } catch (e) {
-      // Closing Apple's or Google's own sheet is not an error worth showing.
-      const message = e instanceof Error ? e.message : String(e);
-      if (!/cancel/i.test(message)) setError(message);
-    }
-  };
-
-  if (!status.enabled) {
+  if (!status.enabled || !status.account) {
     return (
       <Screen scroll>
         <Card>
           <Text variant="heading">Not set up in this build</Text>
           <Text color="textMuted">
-            Everything is saved on this phone. Backup and sync switch on once the app is built with its Firebase
-            configuration.
+            This build has no Firebase configuration, so everything stays on this phone.
           </Text>
         </Card>
       </Screen>
     );
   }
 
-  return (
-    <Screen scroll>
-      {status.account ? (
-        <>
-          <SectionLabel>Signed in</SectionLabel>
-          <Card style={styles.card}>
-            <Text variant="heading">{status.account.label}</Text>
-            <Text color={status.error ? 'danger' : 'textMuted'}>
-              {status.syncing
-                ? 'Syncing…'
-                : status.error
-                  ? `Last sync failed: ${status.error}`
-                  : status.lastSyncedAt
-                    ? `Synced at ${new Date(status.lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                    : 'Not synced yet'}
-            </Text>
-            <Button title="Sync now" variant="secondary" disabled={status.syncing} onPress={() => void requestSync()} />
-          </Card>
-          <Text variant="caption" color="textMuted">
-            Signing out keeps everything on this phone. It stops syncing until you sign in again.
-          </Text>
-          <Button title="Sign out" variant="destructive" onPress={attempt(signOutOfAccount)} />
-        </>
-      ) : (
-        <>
-          <Card style={styles.card}>
-            <Text variant="heading">Back up your training</Text>
-            <Text color="textMuted">
-              Sign in to keep a copy of your workouts, sessions and gyms in your account, and to pick them up on
-              another phone.
-            </Text>
-          </Card>
-          <View style={styles.buttons}>
-            {Platform.OS === 'ios' ? <Button title="Continue with Apple" onPress={attempt(signInWithApple)} /> : null}
-            {googleSignInEnabled ? (
-              <Button title="Continue with Google" variant="secondary" onPress={attempt(signInWithGoogle)} />
-            ) : null}
-            <Button title="Continue with phone number" variant="secondary" onPress={() => setPhoneOpen(true)} />
-          </View>
-        </>
-      )}
-
-      {error ? <Text color="danger">{error}</Text> : null}
-
-      <PhoneSheet visible={phoneOpen} onClose={() => setPhoneOpen(false)} />
-    </Screen>
-  );
-}
-
-/** Number, then the SMS code, in one sheet. */
-function PhoneSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const [phone, setPhone] = useState('+');
-  const [code, setCode] = useState('');
-  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const close = () => {
-    setConfirmation(null);
-    setCode('');
-    setError(null);
-    onClose();
-  };
-
-  const run = async (fn: () => Promise<void>) => {
+  const leave = async (force: boolean) => {
     setBusy(true);
     setError(null);
     try {
-      await fn();
+      setUnsynced((await signOut({ force })).unsynced);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -131,68 +46,41 @@ function PhoneSheet({ visible, onClose }: { visible: boolean; onClose: () => voi
   };
 
   return (
-    <Sheet
-      visible={visible}
-      onRequestClose={close}
-      anchor="bottom"
-      title={confirmation ? 'Enter the code' : 'Your phone number'}
-      body={confirmation ? `We sent a code to ${phone}.` : 'In international form, starting with +.'}
-    >
-      {confirmation ? (
-        <TextInput
-          value={code}
-          onChangeText={setCode}
-          placeholder="123456"
-          placeholderTextColor={theme.colors.textMuted}
-          keyboardType="number-pad"
-          textContentType="oneTimeCode"
-          autoComplete="sms-otp"
-          autoFocus
-          style={styles.input}
-        />
-      ) : (
-        <TextInput
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="+998 90 123 45 67"
-          placeholderTextColor={theme.colors.textMuted}
-          keyboardType="phone-pad"
-          textContentType="telephoneNumber"
-          autoComplete="tel"
-          autoFocus
-          style={styles.input}
-        />
-      )}
+    <Screen scroll>
+      <SectionLabel>Signed in</SectionLabel>
+      <Card style={styles.card}>
+        <Text variant="heading">{status.account.label}</Text>
+        <Text color={status.error ? 'danger' : 'textMuted'}>
+          {status.syncing
+            ? 'Syncing…'
+            : status.error
+              ? `Last sync failed: ${status.error}`
+              : status.lastSyncedAt
+                ? `Synced at ${new Date(status.lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : 'Not synced yet'}
+        </Text>
+        <Button title="Sync now" variant="secondary" disabled={status.syncing} onPress={() => void requestSync()} />
+      </Card>
+      <Text variant="caption" color="textMuted">
+        Signing out removes your training from this phone. It stays in your account and comes back when you sign in.
+      </Text>
+      <Button title="Sign out" variant="destructive" disabled={busy} onPress={() => void leave(false)} />
       {error ? <Text color="danger">{error}</Text> : null}
-      {confirmation ? (
-        <Button
-          title="Confirm"
-          disabled={busy || code.length < 6}
-          onPress={() => void run(async () => {
-            await confirmPhoneCode(confirmation, code);
-            close();
-          })}
-        />
-      ) : (
-        <Button
-          title="Send code"
-          disabled={busy || phone.replace(/\D/g, '').length < 8}
-          onPress={() => void run(async () => setConfirmation(await sendPhoneCode(phone.replace(/[^\d+]/g, ''))))}
-        />
-      )}
-      <Button title="Cancel" variant="ghost" onPress={close} />
-    </Sheet>
+
+      <Sheet
+        visible={unsynced > 0}
+        onRequestClose={() => setUnsynced(0)}
+        anchor="bottom"
+        title="Not everything is backed up"
+        body={`${unsynced} ${unsynced === 1 ? 'change has' : 'changes have'} not reached your account yet — probably no connection. Signing out now loses ${unsynced === 1 ? 'it' : 'them'}.`}
+      >
+        <Button title="Stay signed in" onPress={() => setUnsynced(0)} />
+        <Button title="Sign out anyway" variant="destructive" disabled={busy} onPress={() => void leave(true)} />
+      </Sheet>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   card: { gap: theme.spacing.md },
-  buttons: { gap: theme.spacing.sm },
-  input: {
-    minHeight: 44,
-    color: theme.colors.text,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radius.sm,
-    paddingHorizontal: theme.spacing.md,
-  },
 });

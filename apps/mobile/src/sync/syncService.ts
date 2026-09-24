@@ -1,14 +1,19 @@
 import { useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
-import { forgetCursors } from '../data/syncRepo';
+import { now } from '@overload/schema';
+import { ensureDefaultGym } from '../data/gymRepo';
+import { ensureDefaultProgram } from '../data/programRepo';
+import { clearAccountData, localOwner, outboxSize } from '../data/syncRepo';
 import { db } from '../db/client';
-import { onAccountChanged, type Account } from './auth';
+import { onAccountChanged, signOutOfAccount, type Account } from './auth';
 import { firebaseEnabled } from './firebase';
 import { firestoreRemote } from './firestoreRemote';
 import { syncNow } from './syncEngine';
 
 export type SyncStatus = {
   enabled: boolean;
+  /** Firebase has said who is signed in (or that nobody is). Until then, don't show sign-in. */
+  authResolved: boolean;
   account: Account | null;
   syncing: boolean;
   lastSyncedAt: number | null;
@@ -18,7 +23,7 @@ export type SyncStatus = {
 /** While the app is open, how often to sync without being asked. */
 const INTERVAL_MS = 2 * 60 * 1000;
 
-let status: SyncStatus = { enabled: firebaseEnabled, account: null, syncing: false, lastSyncedAt: null, error: null };
+let status: SyncStatus = { enabled: firebaseEnabled, authResolved: false, account: null, syncing: false, lastSyncedAt: null, error: null };
 const listeners = new Set<() => void>();
 
 function update(patch: Partial<SyncStatus>) {
@@ -65,9 +70,11 @@ export function startSync(): void {
   started = true;
 
   onAccountChanged((account) => {
-    // Signed out, or a different person signed in: their cursors are not ours.
-    if (account?.uid !== status.account?.uid) forgetCursors(db);
-    update({ account, lastSyncedAt: null, error: null });
+    // This phone holds another account's copy (a sign-out that never finished,
+    // or someone else signing in): let it go before this account syncs.
+    const owner = localOwner(db);
+    if (account && owner && owner !== account.uid) resetLocalCopy();
+    update({ account, authResolved: true, lastSyncedAt: null, error: null });
     void requestSync();
   });
 
@@ -77,4 +84,24 @@ export function startSync(): void {
   setInterval(() => {
     if (AppState.currentState === 'active') void requestSync();
   }, INTERVAL_MS);
+}
+
+/** This phone back to a fresh install: no account data, just the defaults. */
+function resetLocalCopy(): void {
+  clearAccountData(db);
+  ensureDefaultProgram(db, now());
+  ensureDefaultGym(db, now());
+}
+
+/**
+ * Signs out after a last sync. Changes the server never got would be lost with
+ * the local copy, so without `force` it stops and reports how many there are.
+ */
+export async function signOut({ force = false } = {}): Promise<{ unsynced: number }> {
+  await requestSync();
+  const unsynced = outboxSize(db);
+  if (unsynced > 0 && !force) return { unsynced };
+  resetLocalCopy();
+  await signOutOfAccount();
+  return { unsynced: 0 };
 }
