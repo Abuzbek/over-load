@@ -1,4 +1,5 @@
 import type { SyncedTable } from '@overload/schema';
+import { SETTINGS_ID } from '../data/settingsRepo';
 import type { OutgoingChange, SyncRow } from '../data/syncRepo';
 import { firestoreReady } from './firebase';
 import type { Remote } from './syncEngine';
@@ -67,6 +68,18 @@ export async function firestoreRemote(uid: string): Promise<Remote> {
       return !snap.empty;
     },
   };
+}
+
+/**
+ * When the account finished onboarding, read straight from Firestore: the
+ * settings row (fixed id, SETTINGS_ID) of users/{uid}. Null for an account
+ * that never did — a new sign-up. One document read; sync is not needed for it.
+ */
+export async function accountOnboardedAt(uid: string): Promise<number | null> {
+  const fs = await firestoreReady();
+  const snap = await fs.getDoc(fs.doc(fs.getFirestore(), 'users', uid, 'app_settings', SETTINGS_ID));
+  const onboardedAt = (snap.data()?.row as { onboardedAt?: unknown } | undefined)?.onboardedAt;
+  return typeof onboardedAt === 'number' ? onboardedAt : null;
 }
 
 /** Firestore rejects `undefined`; the rows use null for empty, but be sure. */

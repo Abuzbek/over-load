@@ -63,6 +63,7 @@ export function addExerciseToWorkout(
   db: Db,
   workoutId: string,
   exerciseId: string,
+  restSeconds: number | null = null,
 ): WorkoutExercise {
   const highest = db
     .select({ maxIndex: max(workoutExercises.orderIndex) })
@@ -80,7 +81,7 @@ export function addExerciseToWorkout(
     exerciseId,
     orderIndex: (highest?.maxIndex ?? -1) + 1,
     notes: null,
-    restSeconds: null,
+    restSeconds,
     supersetGroup: null,
   };
 
@@ -91,7 +92,7 @@ export function addExerciseToWorkout(
 export function addWorkoutSet(
   db: Db,
   workoutExerciseId: string,
-  values: { targetReps?: number; targetWeightKg?: number } = {},
+  values: { targetReps?: number; targetRepsMax?: number; targetWeightKg?: number; targetRir?: number } = {},
 ): WorkoutSet {
   const highest = db
     .select({ maxIndex: max(workoutSets.orderIndex) })
@@ -109,8 +110,10 @@ export function addWorkoutSet(
     orderIndex: (highest?.maxIndex ?? -1) + 1,
     setType: 'normal' as const,
     targetReps: values.targetReps ?? null,
+    targetRepsMax: values.targetRepsMax ?? null,
     targetWeightKg: values.targetWeightKg ?? null,
     targetRpe: null,
+    targetRir: values.targetRir ?? null,
   };
 
   db.insert(workoutSets).values(row).run();

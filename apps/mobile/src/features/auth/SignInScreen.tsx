@@ -51,7 +51,9 @@ export function SignInScreen() {
         {googleSignInEnabled ? (
           <Button title="Continue with Google" variant="secondary" onPress={attempt(signInWithGoogle)} />
         ) : null}
-        <Button title="Continue with phone number" variant="secondary" onPress={() => setPhoneOpen(true)} />
+        {/* Phone sign-in (SMS and Telegram codes) is hidden for now. The sheet,
+            the Cloud Functions and the auth calls stay; uncomment to bring it back. */}
+        {/* <Button title="Continue with phone number" variant="secondary" onPress={() => setPhoneOpen(true)} /> */}
         {error ? <Text color="danger">{error}</Text> : null}
       </View>
       <PhoneSheet visible={phoneOpen} onClose={() => setPhoneOpen(false)} />

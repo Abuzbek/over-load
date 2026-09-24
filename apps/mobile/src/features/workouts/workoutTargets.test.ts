@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estimateWorkoutMinutes, formatWorkoutTarget, targetInputsFor, targetMuscles } from './workoutTargets';
+import { formatWorkoutTarget, targetInputsFor, targetMuscles } from './workoutTargets';
 
 describe('targetInputsFor', () => {
   it('gives weight and reps for weight_reps', () => {
@@ -71,15 +71,10 @@ describe('formatWorkoutTarget', () => {
   });
 });
 
-describe('estimateWorkoutMinutes', () => {
-  it('counts work, rest between sets and a changeover per exercise', () => {
-    // 4 sets: 4×45 + 3×120 + 60 = 600 s; 3 sets at 90 s rest: 3×45 + 2×90 + 60 = 375 s.
-    expect(estimateWorkoutMinutes([{ sets: 4, restSeconds: null }, { sets: 3, restSeconds: 90 }], 120)).toBe(17);
-  });
-
-  it('ignores an exercise with no sets and never rounds a real workout to zero', () => {
-    expect(estimateWorkoutMinutes([{ sets: 0, restSeconds: null }], 120)).toBe(0);
-    expect(estimateWorkoutMinutes([{ sets: 1, restSeconds: null }], 120)).toBe(2);
+describe('formatWorkoutTarget ranges', () => {
+  it('shows a rep range when there is one', () => {
+    expect(formatWorkoutTarget('weight_reps', { targetWeightKg: null, targetReps: 7, targetRepsMax: 9 }, 'kg')).toBe('7–9 reps');
+    expect(formatWorkoutTarget('weight_reps', { targetWeightKg: 60, targetReps: 7, targetRepsMax: 9 }, 'kg')).toBe('60 kg × 7–9');
   });
 });
 

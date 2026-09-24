@@ -10,3 +10,4 @@ export * from './restTimer';
 export * from './trackingTypes';
 export * from './formatLastTrained';
 export * from './instructions';
+export * from './programPlan';

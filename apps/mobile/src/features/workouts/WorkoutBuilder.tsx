@@ -17,7 +17,6 @@ import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import { textStyle } from '../../ui/typography';
 import { ExerciseInfoSheet } from '../library/ExerciseInfoSheet';
-import { MuscleThumb } from '../library/MuscleThumb';
 import { parseDecimalInput, parseIntegerInput } from '../session/setInputs';
 import { useWorkoutStarter, WorkoutStartSheet } from '../session/useWorkoutStarter';
 import {
@@ -27,69 +26,11 @@ import {
   targetMuscles,
   type WorkoutTargetField,
 } from './workoutTargets';
+import { ExerciseSummaryRow, TargetMuscleCards, WorkoutHeading } from './WorkoutSummary';
 
 type Props = { workoutId: string };
 
 const EMPTY_DRAFT: Record<WorkoutTargetField, string> = { weightKg: '', reps: '' };
-
-type Muscle = { id: string; name: string; primary: boolean };
-
-function ExerciseRow({ entry, muscles, highlight, unit, onInfo, onMenu }: {
-  entry: WorkoutDetailExercise;
-  muscles: Muscle[];
-  /** The muscle picked under Target Muscles: its tag is lit on every row. */
-  highlight: string | null;
-  unit: Unit;
-  onInfo: () => void;
-  onMenu: () => void;
-}) {
-  return (
-    <View style={styles.row}>
-      {/* Placeholder until the catalogue ships exercise images. */}
-      <Pressable accessibilityRole="button" accessibilityLabel={`${entry.exercise.name} info`} onPress={onInfo} style={styles.thumb}>
-        <Lucide name="image" size={22} color={theme.colors.textMuted} />
-      </Pressable>
-      <Pressable accessibilityRole="button" onPress={onInfo} style={styles.rowMain}>
-        <Text variant="heading">{entry.exercise.name}</Text>
-        {entry.sessionSets.map((set, index) => {
-          // null: this tracking type has no target to show, so the number stands alone.
-          const target = formatWorkoutTarget(entry.exercise.trackingType, set, unit);
-          return (
-            <View key={set.id} style={styles.setLine}>
-              <View style={styles.setNumber}>
-                <Text variant="caption">{index + 1}</Text>
-              </View>
-              <Text color="textMuted" style={styles.flex}>{target ?? 'Set'}</Text>
-              {set.targetRpe !== null ? (
-                <View style={styles.rpe}>
-                  <Text variant="caption" color="onAccent">{set.targetRpe}</Text>
-                </View>
-              ) : null}
-            </View>
-          );
-        })}
-        {muscles.length > 0 ? (
-          <View style={styles.tags}>
-            {muscles.map((m) => {
-              const lit = m.id === highlight;
-              return (
-                <View
-                  key={m.id}
-                  style={[styles.tag, m.primary ? styles.tagPrimary : styles.tagSecondary, lit && styles.tagLit]}
-                >
-                  <Text variant="caption" color={lit ? 'onAccent' : 'text'}>{m.name}</Text>
-                </View>
-              );
-            })}
-          </View>
-        ) : null}
-      </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${entry.exercise.name} options`} hitSlop={10} onPress={onMenu}>
-        <Lucide name="ellipsis-vertical" size={22} color={theme.colors.text} />
-      </Pressable>
-    </View>
-  );
-}
 
 /**
  * One exercise's edits: add a set with its targets, or move it. Opened from
@@ -190,11 +131,16 @@ export function WorkoutBuilder({ workoutId }: Props) {
   }
 
   const count = detail.exercises.length;
+  const details = detail.exercises.map((e) => getExerciseDetail(db, e.exercise.id));
+  const musclesOf = details.map((d) => d?.muscles ?? []);
   const minutes = estimateWorkoutMinutes(
-    detail.exercises.map((e) => ({ sets: e.sessionSets.length, restSeconds: e.workoutExercise.restSeconds })),
+    detail.exercises.map((e, i) => ({
+      sets: e.sessionSets.length,
+      restSeconds: e.workoutExercise.restSeconds,
+      unilateral: details[i]?.links.laterality?.includes('Unilateral') ?? false,
+    })),
     DEFAULT_REST_SECONDS,
   );
-  const musclesOf = detail.exercises.map((e) => getExerciseDetail(db, e.exercise.id)?.muscles ?? []);
   const volumes = targetMuscles(detail.exercises.map((e, i) => ({ sets: e.sessionSets.length, muscles: musclesOf[i]! })));
   const menuIndex = detail.exercises.findIndex((e) => e.workoutExercise.id === menuId);
 
@@ -214,43 +160,10 @@ export function WorkoutBuilder({ workoutId }: Props) {
           and the header is the only thing that says which one this is. */}
       <Stack.Screen options={{ title: detail.workout.name }} />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
-        {volumes.length > 0 ? (
-          <View style={styles.targets}>
-            <Text variant="title">Target Muscles</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.targetCards}>
-              {volumes.map((v) => (
-                <Pressable
-                  key={v.id}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: v.id === focusMuscle }}
-                  onPress={() => setFocusMuscle((m) => (m === v.id ? null : v.id))}
-                  style={[styles.targetCard, v.id === focusMuscle && styles.targetCardOn]}
-                >
-                  <MuscleThumb figure={figure} muscle={v.name} size={80} />
-                  <View style={styles.targetText}>
-                    <Text variant="heading">{v.name}</Text>
-                    <Text variant="caption" color="textMuted">
-                      {v.exercises} {v.exercises === 1 ? 'exercise' : 'exercises'}
-                    </Text>
-                    <Text variant="caption" color="textMuted">
-                      {v.sets} {v.sets === 1 ? 'set' : 'sets'}
-                    </Text>
-                  </View>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        ) : null}
+        <TargetMuscleCards volumes={volumes} figure={figure} selected={focusMuscle} onSelect={setFocusMuscle} />
 
         <View style={styles.summary}>
-          <View style={styles.flex}>
-            <Text variant="title">
-              {count} {count === 1 ? 'Exercise' : 'Exercises'}
-            </Text>
-            {minutes > 0 ? (
-              <Text color="textMuted">Estimated workout time is {minutes} min</Text>
-            ) : null}
-          </View>
+          <WorkoutHeading count={count} minutes={minutes} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Add exercises"
@@ -265,13 +178,18 @@ export function WorkoutBuilder({ workoutId }: Props) {
           <EmptyState title="No exercises yet" body="Add some with the + button." />
         ) : (
           detail.exercises.map((entry, i) => (
-            <ExerciseRow
+            <ExerciseSummaryRow
               key={entry.workoutExercise.id}
-              entry={entry}
+              name={entry.exercise.name}
+              sets={entry.sessionSets.map((set) => ({
+                key: set.id,
+                // null: this tracking type has no target to show.
+                label: formatWorkoutTarget(entry.exercise.trackingType, set, unit) ?? 'Set',
+                rir: set.targetRir,
+              }))}
               muscles={musclesOf[i]!}
               highlight={focusMuscle}
-              unit={unit}
-              onInfo={() => setInfoId(entry.exercise.id)}
+              onPress={() => setInfoId(entry.exercise.id)}
               onMenu={() => setMenuId(entry.workoutExercise.id)}
             />
           ))

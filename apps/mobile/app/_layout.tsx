@@ -60,7 +60,11 @@ export default function RootLayout() {
   // someone is signed in. Waiting on authResolved keeps a signed-in user from
   // seeing the sign-in screen flash past on launch.
   const needsAccount = sync.enabled && !sync.account;
-  if (!state.ready || (!fontsLoaded && !fontError) || (sync.enabled && !sync.authResolved)) {
+  // Firebase decides whether this account still onboards (syncService); wait
+  // for that answer rather than flash the app or onboarding at it.
+  const onboard = state.ready && !needsAccount && sync.onboarding === 'needed';
+  const awaitingAccount = state.ready && !needsAccount && sync.onboarding === 'unknown';
+  if (!state.ready || (!fontsLoaded && !fontError) || (sync.enabled && !sync.authResolved) || awaitingAccount) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={theme.colors.text} />
@@ -97,11 +101,17 @@ export default function RootLayout() {
             own header above the Tabs navigator's, stacking two headers ("(tabs)"
             then the tab title) — seen on both iOS and Android. No test or bundle
             check catches this; it only shows up in a screenshot. */}
+        <Stack.Protected guard={!onboard}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         {/* Presentation is fixed when a native screen mounts, so it is declared
             here: set from inside the screen, the options were dropped whole. */}
         <Stack.Screen name="session/[id]/add-exercise" options={{ presentation: 'modal', title: 'Add exercises' }} />
         <Stack.Screen name="workouts/[id]/add-exercise" options={{ presentation: 'modal', title: 'Add exercises' }} />
+        </Stack.Protected>
+        {/* Until the account has onboarded, onboarding is the only way in. */}
+        <Stack.Protected guard={onboard}>
+          <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
+        </Stack.Protected>
       </Stack>
     </FontsProvider>
     </BottomSheetModalProvider>

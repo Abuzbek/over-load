@@ -59,9 +59,13 @@ export const workoutSets = sqliteTable(
     workoutExerciseId: text('workout_exercise_id').notNull().references(() => workoutExercises.id),
     orderIndex: integer('order_index').notNull(),
     setType: text('set_type', { enum: SET_TYPES }).notNull().default('normal'),
+    /** The rep target — or, with `targetRepsMax`, the bottom of a rep range ("7–9 reps"). */
     targetReps: integer('target_reps'),
+    targetRepsMax: integer('target_reps_max'),
     targetWeightKg: real('target_weight_kg'),
     targetRpe: real('target_rpe'),
+    /** Reps to leave in reserve: 0 is to failure. */
+    targetRir: integer('target_rir'),
   },
   (table) => ({
     parentIdx: index('workout_sets_parent_idx').on(table.workoutExerciseId),

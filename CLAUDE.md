@@ -138,6 +138,14 @@ leaves Firebase out and the app runs local-only (`extra.firebase` in `app.config
   sync), then fresh defaults. The one exception to the tombstone rule; the catalogue is
   kept. Sign-out syncs first and refuses to lose unsynced changes without `force`.
 - The catalogue, `equipment` and `personal_records` never sync.
+- **Onboarding** (`app/onboarding.tsx`, `src/features/onboarding/`) runs for an account
+  that `needsOnboarding`: no `app_settings.onboarded_at` (synced) and no data of its own.
+  The root layout guards it with `Stack.Protected`, and on a fresh phone waits for the
+  first sync (`firstSyncDone`) before deciding. It writes the profile as it goes, creates
+  the gym on the gym-type step (`setUpGym` replaces every other gym), and writes the
+  program only on finishing. The generator is `generatePlan` (`packages/domain/src/
+  programPlan.ts`, pure); `onboardingRepo.planCandidates` feeds it the gym's exercises
+  in popularity order — ties go to the earlier one, so keep that order.
 - **Telegram login codes go through Cloud Functions** (`functions/`, its own npm package,
   outside the pnpm workspace; `firebase.json` + `.firebaserc` at the root, aliases
   development/preview/production). `sendTelegramCode` throttles per number (codes cost

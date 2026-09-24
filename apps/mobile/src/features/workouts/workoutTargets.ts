@@ -11,7 +11,16 @@ export type WorkoutTargetInput = {
 export type WorkoutTargetValues = {
   targetWeightKg: number | null;
   targetReps: number | null;
+  /** With targetReps, a range: "7–9 reps". */
+  targetRepsMax?: number | null;
 };
+
+/** "8", or "7–9" for a range. */
+function reps(values: WorkoutTargetValues): string {
+  if (values.targetReps === null) return '—';
+  const max = values.targetRepsMax;
+  return max != null && max > values.targetReps ? `${values.targetReps}–${max}` : String(values.targetReps);
+}
 
 const REPS: WorkoutTargetInput = { field: 'reps', placeholder: 'Reps', keyboard: 'number-pad' };
 
@@ -56,38 +65,18 @@ export function formatWorkoutTarget(
   switch (trackingType) {
     case 'weight_reps':
       // No target weight yet: the reps are the plan, so say only that.
-      if (values.targetWeightKg === null) return `${values.targetReps ?? '—'} reps`;
-      return `${formatWeight(values.targetWeightKg, unit)} × ${values.targetReps ?? '—'}`;
+      if (values.targetWeightKg === null) return `${reps(values)} reps`;
+      return `${formatWeight(values.targetWeightKg, unit)} × ${reps(values)}`;
     case 'reps':
-      return `${values.targetReps ?? '—'} reps`;
+      return `${reps(values)} reps`;
     case 'duration':
     case 'distance_duration':
       return null;
   }
 }
 
-/** Seconds a working set takes, and the changeover between exercises. */
-const SET_SECONDS = 45;
-const CHANGEOVER_SECONDS = 60;
-
-/**
- * "Estimated workout time is 32 min": every set's work, the rest between an
- * exercise's sets (its own rest, else the timer's default), and a changeover
- * per exercise. Rounded up, so a short workout never reads 0 min.
- */
-export function estimateWorkoutMinutes(
-  exercises: { sets: number; restSeconds: number | null }[],
-  defaultRestSeconds: number,
-): number {
-  const seconds = exercises.reduce(
-    (total, { sets, restSeconds }) =>
-      sets === 0
-        ? total
-        : total + sets * SET_SECONDS + (sets - 1) * (restSeconds ?? defaultRestSeconds) + CHANGEOVER_SECONDS,
-    0,
-  );
-  return Math.ceil(seconds / 60);
-}
+/** One estimate for the app and the program generator: see programPlan in @overload/domain. */
+export { estimateWorkoutMinutes } from '@overload/domain';
 
 export type MuscleVolume = { id: string; name: string; exercises: number; sets: number };
 

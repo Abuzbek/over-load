@@ -6,6 +6,7 @@ import {
   type HeightUnit,
   type NewAppSettings,
   type Profile,
+  type TrainingPreferences,
 } from '@overload/schema';
 import { eq, isNull } from 'drizzle-orm';
 
@@ -91,7 +92,17 @@ export function getProfile(db: Db): Profile {
     heightCm: row.heightCm,
     liftingExperience: row.liftingExperience,
     cardioExperience: row.cardioExperience,
+    bodyFatPercent: row.bodyFatPercent,
   };
+}
+
+/** Whether this account has been through onboarding (on any device). */
+export function getOnboardedAt(db: Db): number | null {
+  return currentRow(db)?.onboardedAt ?? null;
+}
+
+export function setOnboarded(db: Db, preferences: TrainingPreferences, at: number): void {
+  upsertSettings(db, { onboardedAt: at, trainingPreferences: preferences }, at);
 }
 
 const EMPTY_PROFILE: Profile = {
@@ -102,6 +113,7 @@ const EMPTY_PROFILE: Profile = {
   heightCm: null,
   liftingExperience: null,
   cardioExperience: null,
+  bodyFatPercent: null,
 };
 
 /**
@@ -118,5 +130,6 @@ export function setProfile(db: Db, patch: Partial<Profile>, at: number): void {
   if ('heightCm' in patch) columns.heightCm = patch.heightCm;
   if ('liftingExperience' in patch) columns.liftingExperience = patch.liftingExperience;
   if ('cardioExperience' in patch) columns.cardioExperience = patch.cardioExperience;
+  if ('bodyFatPercent' in patch) columns.bodyFatPercent = patch.bodyFatPercent;
   upsertSettings(db, columns, at);
 }

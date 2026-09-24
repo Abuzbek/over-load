@@ -174,7 +174,7 @@ describe('profile', () => {
   it('starts empty', () => {
     expect(getProfile(db)).toEqual({
       name: null, birthDate: null, gender: null, bodyweightKg: null,
-      heightCm: null, liftingExperience: null, cardioExperience: null,
+      heightCm: null, liftingExperience: null, cardioExperience: null, bodyFatPercent: null,
     });
   });
 
