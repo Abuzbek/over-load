@@ -129,7 +129,31 @@ leaves Firebase out and the app runs local-only (`extra.firebase` in `app.config
 - **Never import `@react-native-firebase/*` at module top level** — go through
   `loadFirebase()` / `firestoreReady()`; a build without Firebase has no native half.
 - `app_settings` has the fixed id `'settings'` (`SETTINGS_ID`) so devices share one row.
+- **Sign-in is required** when the build has Firebase: `app/_layout.tsx` shows
+  `SignInScreen` until an account is signed in (and waits for `authResolved`, so a
+  signed-in user never sees it flash). A build without Firebase config runs local-only.
+- **The phone's user data is a copy of ONE account** (`localOwner` = the uid its sync
+  cursors carry). Signing out, or a different account signing in, runs
+  `clearAccountData` — a real `DELETE` of the user tables (not tombstones, which would
+  sync), then fresh defaults. The one exception to the tombstone rule; the catalogue is
+  kept. Sign-out syncs first and refuses to lose unsynced changes without `force`.
 - The catalogue, `equipment` and `personal_records` never sync.
+- **Onboarding** (`app/onboarding.tsx`, `src/features/onboarding/`) runs for an account
+  that `needsOnboarding`: no `app_settings.onboarded_at` (synced) and no data of its own.
+  The root layout guards it with `Stack.Protected`, and on a fresh phone waits for the
+  first sync (`firstSyncDone`) before deciding. It writes the profile as it goes, creates
+  the gym on the gym-type step (`setUpGym` replaces every other gym), and writes the
+  program only on finishing. The generator is `generatePlan` (`packages/domain/src/
+  programPlan.ts`, pure); `onboardingRepo.planCandidates` feeds it the gym's exercises
+  in popularity order — ties go to the earlier one, so keep that order.
+- **Telegram login codes go through Cloud Functions** (`functions/`, its own npm package,
+  outside the pnpm workspace; `firebase.json` + `.firebaserc` at the root, aliases
+  development/preview/production). `sendTelegramCode` throttles per number (codes cost
+  money) and calls Telegram Gateway; `verifyTelegramCode` trusts the phone *Telegram*
+  returns, reuses an existing user with that phone (one account across SMS and Telegram)
+  and returns a custom token for `signInWithCustomToken`. Region `europe-west1` on both
+  sides. Token: `firebase functions:secrets:set TELEGRAM_GATEWAY_TOKEN`. Tests:
+  `npm test` in `functions/` (not part of `pnpm test`).
 
 ## Things that bite in this codebase
 

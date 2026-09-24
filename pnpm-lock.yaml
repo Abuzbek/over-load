@@ -41,6 +41,9 @@ importers:
       '@overload/schema':
         specifier: workspace:*
         version: link:../../packages/schema
+      '@quidone/react-native-wheel-picker':
+        specifier: ^1.7.1
+        version: 1.7.1(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       '@react-native-firebase/app':
         specifier: 26.4.0
         version: 26.4.0(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -50,6 +53,9 @@ importers:
       '@react-native-firebase/firestore':
         specifier: 26.4.0
         version: 26.4.0(@react-native-firebase/app@26.4.0(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))
+      '@react-native-firebase/functions':
+        specifier: 26.4.0
+        version: 26.4.0(@react-native-firebase/app@26.4.0(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))
       '@react-native-google-signin/google-signin':
         specifier: ^16.1.5
         version: 16.1.5(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -1720,6 +1726,13 @@ packages:
   '@protobufjs/utf8@1.1.2':
     resolution: {integrity: sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug==}
 
+  '@quidone/react-native-wheel-picker@1.7.1':
+    resolution: {integrity: sha512-vvykuAvrIeC6qLicwjQvGwu82fGgpgi86+ckH/dRAM2U7aYx0e9GZW55RgCz/EtLNMoU5mSvZ+UG14WOKM32qA==}
+    engines: {node: '>= 16.0.0'}
+    peerDependencies:
+      react: '>=16.8'
+      react-native: '>=0.71.6'
+
   '@radix-ui/primitive@1.1.7':
     resolution: {integrity: sha512-rqWnm76nYT8HoNNqEjpgJ7Pw/DrBj5iBTrmEPo6HTX5+VJyBNOqTdv4g89G63HuR5g0AaENoAcH7Is5fF2kZ8Q==}
 
@@ -1960,6 +1973,11 @@ packages:
 
   '@react-native-firebase/firestore@26.4.0':
     resolution: {integrity: sha512-OdHSSk1iH/HcWPAr/THunf4FvQqiN9uVh4cyY2KJSYrPXKFT20Ia9Ls92wo/NXY3K5R45p4K3TGjfFiwZGDSRQ==}
+    peerDependencies:
+      '@react-native-firebase/app': 26.4.0
+
+  '@react-native-firebase/functions@26.4.0':
+    resolution: {integrity: sha512-9+y+0nDUqjCsAjmIAfRIKsce4V9Q7rl458nxLe41PVBwJVUtsVE29ska29qGwsVp4Sww3EHm387u9IMUrT6RHw==}
     peerDependencies:
       '@react-native-firebase/app': 26.4.0
 
@@ -2225,6 +2243,11 @@ packages:
     resolution: {integrity: sha512-+lIKX7O0+IGe7WuhATaAMMeT7B76vfhXH/l9wLQL+nvyhbw2ohYCKIdWL56JfDu75CWt5oKRP4QFH/jkMtBquA==}
     cpu: [x64]
     os: [win32]
+
+  '@rozhkov/react-useful-hooks@1.0.10':
+    resolution: {integrity: sha512-aEDZDiqkpPJX8WqLqcnPGjXzRpCFiZmbtdr5RVUOciNbbANhdNu+oIxJv3g7ezMcgsYhgWp2/XGxU+g/ClsBew==}
+    peerDependencies:
+      react: ^16.8 || ^17 || ^18 || ^19
 
   '@sinclair/typebox@0.27.12':
     resolution: {integrity: sha512-hhyNJ+nbR6ZR7pToHvllEFun9TL0sbL+tk/ON75lo+Xas054uez98qRbsuNt7MBCyZKK4+8Yli/OAGZhmfBZ/g==}
@@ -2644,6 +2667,9 @@ packages:
     resolution: {integrity: sha512-23XHcCF+coGYevirZceTVD7NdJOqVn+49IHyxgszm+JIiHLoB2TkmPtsYkNWT1pvRSGkc35L6NHs0yHkN2SumA==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
 
+  date-fns@4.4.0:
+    resolution: {integrity: sha512-+1UMbeh68lH1SegH83CGWwpb6OHHbpSgr3+s5Eww5M4CAgswBpoWS0AjTOfEJ33HiYKz1hdj/KTFprzXHmq/6w==}
+
   debug@2.6.9:
     resolution: {integrity: sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==}
     peerDependencies:
@@ -2691,6 +2717,9 @@ packages:
   deepmerge@4.3.1:
     resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
     engines: {node: '>=0.10.0'}
+
+  default-values@1.0.2:
+    resolution: {integrity: sha512-OaZEvojjexigvv1IT6N0rKUD5Af7fG11a0jg87jySv5xzjc2+IEW9oWNvqxWLHGhShRRZ0QopCGzGjJv/aY+mw==}
 
   defaults@1.0.4:
     resolution: {integrity: sha512-eFuaLoy/Rxalv2kr+lqMlUnrDWV+3j4pljOIJgLIhI058IQfWJ7vXhyEIHu+HtC738klGALYxOKDO0bQP3tg8A==}
@@ -6353,6 +6382,13 @@ snapshots:
 
   '@protobufjs/utf8@1.1.2': {}
 
+  '@quidone/react-native-wheel-picker@1.7.1(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      '@rozhkov/react-useful-hooks': 1.0.10(react@19.2.3)
+      date-fns: 4.4.0
+      react: 19.2.3
+      react-native: 0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
+
   '@radix-ui/primitive@1.1.7': {}
 
   '@radix-ui/react-collection@1.1.15(@types/react@19.2.18)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
@@ -6563,6 +6599,10 @@ snapshots:
       react-native-url-polyfill: 4.0.0(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))
     transitivePeerDependencies:
       - react-native
+
+  '@react-native-firebase/functions@26.4.0(@react-native-firebase/app@26.4.0(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))':
+    dependencies:
+      '@react-native-firebase/app': 26.4.0(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
 
   '@react-native-google-signin/google-signin@16.1.5(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -6834,6 +6874,11 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.63.3':
     optional: true
+
+  '@rozhkov/react-useful-hooks@1.0.10(react@19.2.3)':
+    dependencies:
+      default-values: 1.0.2
+      react: 19.2.3
 
   '@sinclair/typebox@0.27.12': {}
 
@@ -7323,6 +7368,8 @@ snapshots:
       - '@noble/hashes'
     optional: true
 
+  date-fns@4.4.0: {}
+
   debug@2.6.9:
     dependencies:
       ms: 2.0.0
@@ -7349,6 +7396,8 @@ snapshots:
   deep-extend@0.6.0: {}
 
   deepmerge@4.3.1: {}
+
+  default-values@1.0.2: {}
 
   defaults@1.0.4:
     dependencies:

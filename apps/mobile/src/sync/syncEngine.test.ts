@@ -9,7 +9,7 @@ import { ensureDefaultProgram } from '../data/programRepo';
 import { syncCatalogue } from '../data/seedRepo';
 import { addExerciseToSession, addSet, completeSet, finishSession, listAllPersonalRecords } from '../data/sessionRepo';
 import { getWeightUnit, setWeightUnit } from '../data/settingsRepo';
-import { applyRemote, outboxSize } from '../data/syncRepo';
+import { applyRemote, clearAccountData, localOwner, outboxSize } from '../data/syncRepo';
 import { startBareSession } from '../data/sessionTestFixtures';
 import { createWorkout, listWorkouts } from '../data/workoutRepo';
 import { syncNow, type Remote } from './syncEngine';
@@ -95,6 +95,29 @@ describe('the outbox', () => {
     db.delete(syncOutbox).run();
     applyRemote(db, 'gyms', [{ ...listGyms(db)[0]!.gym, name: 'From server', updatedAt: 99 }]);
     expect(outboxSize(db)).toBe(0);
+  });
+});
+
+describe('clearAccountData', () => {
+  it('drops the account’s rows and keeps the catalogue, so the next account starts clean', async () => {
+    const phone = device();
+    const remote = new FakeRemote();
+    createCustomExercise(phone, { name: 'Mine', trackingType: 'reps', primaryMuscle: 'Quads', equipment: 'None' });
+    logBench(phone, 10);
+    await syncNow(phone, remote, 'u1', 20);
+    expect(localOwner(phone)).toBe('u1');
+    const catalogue = listExercises(phone).length - 1;
+
+    clearAccountData(phone);
+
+    expect(localOwner(phone)).toBeNull();
+    expect(phone.select().from(sessions).all()).toHaveLength(0);
+    expect(listGyms(phone)).toHaveLength(0);
+    expect(listAllPersonalRecords(phone)).toHaveLength(0);
+    expect(listExercises(phone)).toHaveLength(catalogue);
+    expect(outboxSize(phone)).toBe(0);
+    // The account itself is untouched.
+    expect(remote.count('sessions')).toBe(1);
   });
 });
 
