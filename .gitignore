@@ -20,7 +20,6 @@ muscles_*-body.svg
 muscleheatmap-*.svg
 apps/mobile/assets/body
 apps/mobile/assets/equipment
-apps/mobile/assets/equipment_thumbs
 apps/mobile/assets/markdown
 
 # Local config: commit the .example templates, never the real files.
