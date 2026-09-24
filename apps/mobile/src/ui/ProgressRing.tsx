@@ -68,5 +68,5 @@ export function ProgressRing({ value, target, size, color, caption }: Props) {
 }
 
 const styles = StyleSheet.create({
-  centre: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  centre: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
 });

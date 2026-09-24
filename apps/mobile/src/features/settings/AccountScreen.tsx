@@ -18,6 +18,7 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { getHeightUnit, getProfile, getWeightUnit, setProfile } from '../../data/settingsRepo';
 import { db } from '../../db/client';
+import { requestSync, signOut, useSyncStatus } from '../../sync/syncService';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
 import { ListRow } from '../../ui/ListRow';
@@ -107,6 +108,27 @@ export function AccountScreen() {
   const heightUnit = getHeightUnit(db);
 
   const [editing, setEditing] = useState<Field | null>(null);
+  const sync = useSyncStatus();
+  // Changes the server has not received yet: logging out now would lose them.
+  const [unsynced, setUnsynced] = useState(0);
+  const [leaving, setLeaving] = useState(false);
+  const [logOutError, setLogOutError] = useState<string | null>(null);
+  // The profile's own name, else the one the sign-in provider knows. Shown,
+  // not stored: writing it here would make this phone's settings newer than
+  // the account's, and sync would keep the phone's.
+  const name = profile.name ?? sync.account?.name ?? null;
+
+  async function logOut(force: boolean) {
+    setLeaving(true);
+    setLogOutError(null);
+    try {
+      setUnsynced((await signOut({ force })).unsynced);
+    } catch (e) {
+      setLogOutError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLeaving(false);
+    }
+  }
   const [text, setText] = useState('');
   const [date, setDate] = useState({ day: 1, month: 1, year: DEFAULT_BIRTH_YEAR });
   const [heightIndex, setHeightIndex] = useState(0);
@@ -126,7 +148,7 @@ export function AccountScreen() {
 
   function open(field: Field) {
     // Pre-fill with what is stored, in the unit it will be shown in.
-    if (field === 'name') setText(profile.name ?? '');
+    if (field === 'name') setText(name ?? '');
     if (field === 'bodyweightKg') {
       const shown = profile.bodyweightKg === null
         ? null
@@ -181,7 +203,7 @@ export function AccountScreen() {
       <View style={styles.section}>
         <SectionLabel>Profile</SectionLabel>
         <Card style={styles.rows}>
-          <ValueRow title="Name" value={profile.name ?? '—'} onPress={() => open('name')} />
+          <ValueRow title="Name" value={name ?? '—'} onPress={() => open('name')} />
           <ValueRow
             title="Birthday"
             value={formatBirthDate(profile.birthDate)}
@@ -214,23 +236,40 @@ export function AccountScreen() {
           />
         </Card>
         <Text variant="caption" color="textMuted">
-          Yours alone — this stays on the phone and is never sent anywhere.
-          Weight and height follow the units set under Units.
+          Saved to your account, so it follows you to a new phone. Weight and
+          height follow the units set under Units.
         </Text>
       </View>
 
       <View style={styles.section}>
-        <SectionLabel>Security</SectionLabel>
+        <SectionLabel>Account</SectionLabel>
         <Card style={styles.rows}>
-          <ListRow title="Email" right={<Muted>—</Muted>} />
-          <ListRow title="Password" right={<Muted>••••••••</Muted>} />
+          <ListRow title="Email" right={<Muted>{sync.account?.email ?? '—'}</Muted>} />
+          <ListRow title="Signed in with" right={<Muted>{sync.account?.provider ?? '—'}</Muted>} />
+          <ListRow
+            title="Sync"
+            subtitle={
+              sync.syncing
+                ? 'Syncing…'
+                : sync.error
+                  ? `Last sync failed: ${sync.error}`
+                  : sync.lastSyncedAt
+                    ? `Synced at ${new Date(sync.lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    : 'Not synced yet'
+            }
+            right={
+              sync.account ? (
+                <Button title="Sync now" variant="secondary" disabled={sync.syncing} onPress={() => void requestSync()} />
+              ) : undefined
+            }
+          />
         </Card>
         <Text variant="caption" color="textMuted">
-          There are no accounts yet, so there is nothing to sign in or out of.
+          Your training is kept in your account and on this phone. Logging out removes it from this phone
+          only; it comes back when you sign in again.
         </Text>
-        {/* Disabled, not silently inert: a Log out that looks live and does
-            nothing is the worst version of this row. */}
-        <Button title="Log out" variant="destructive" disabled onPress={() => {}} />
+        <Button title="Log out" variant="destructive" disabled={!sync.account || leaving} onPress={() => void logOut(false)} />
+        {logOutError ? <Text color="danger">{logOutError}</Text> : null}
       </View>
 
       <Sheet
@@ -339,6 +378,16 @@ export function AccountScreen() {
         ) : null}
 
         <Button title="Cancel" variant="secondary" onPress={() => setEditing(null)} />
+      </Sheet>
+      <Sheet
+        visible={unsynced > 0}
+        onRequestClose={() => setUnsynced(0)}
+        anchor="bottom"
+        title="Not everything is backed up"
+        body={`${unsynced} ${unsynced === 1 ? 'change has' : 'changes have'} not reached your account yet — probably no connection. Logging out now loses ${unsynced === 1 ? 'it' : 'them'}.`}
+      >
+        <Button title="Stay logged in" onPress={() => setUnsynced(0)} />
+        <Button title="Log out anyway" variant="destructive" disabled={leaving} onPress={() => void logOut(true)} />
       </Sheet>
     </Screen>
   );

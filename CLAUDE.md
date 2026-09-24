@@ -27,13 +27,12 @@ pnpm start          # Expo dev server — then press i (iOS) or a (Android)
 pnpm ios            # straight to the iOS simulator
 pnpm android        # straight to an Android emulator/device
 
-pnpm test           # full suite (394 tests, 31 files)
+pnpm test           # full suite (396 tests, 31 files)
 pnpm typecheck      # type gate; CI runs this too (.github/workflows/ci.yml)
 pnpm run ci         # everything CI runs, locally: install + typecheck + test + bundle
 pnpm bundle         # expo export — catches packaging breaks tests cannot see
 
 pnpm db:generate    # regenerate migrations after a schema change
-pnpm seed:build     # rebuild curated.json from the upstream dataset
 ```
 
 ## Layout
@@ -44,7 +43,8 @@ packages/schema/    Drizzle tables, generated migrations, test harnesses
 apps/mobile/src/data/    repository layer — the ONLY place SQL is written
 apps/mobile/src/db/      client, backup, bootstrap
 apps/mobile/src/features/ + src/ui/ + app/    screens; repository calls only
-tools/seed-exercises/    curated.json (743 exercises), committed
+apps/mobile/assets/app_file.json   the exercise catalogue (1213 exercises), seeded as-is
+tools/seed-equipment/    equipment.json: starting weights + gym presets, by item name
 ```
 
 ### Navigation (`apps/mobile/app/`)
@@ -93,7 +93,17 @@ consumed by the in-progress bar.
 - **Deletes are tombstones.** Set `deleted_at`; never `DELETE`. **Every read filters
   `deleted_at IS NULL` at EVERY joined level** — this was violated in five separate
   queries during the build. Check each join deliberately.
-- **`personal_records` is the one exemption** — a derived cache with no `deleted_at`,
+- **The catalogue tables are exempt too** — `lookups`, `exercise_links`, `exercise_muscles`,
+  `exercise_equipment`, `catalogue_meta` (`packages/schema/src/catalogue.ts`). Derived from
+  `app_file.json`, keyed by its ids, rebuilt with a real `DELETE` by `syncCatalogue`, and
+  only ever read through a tombstone-filtered `exercises` row. Do not add `deleted_at` to them.
+- **Bump `CATALOGUE_VERSION` (`seedRepo.ts`) when `app_file.json`, `equipment.json` or
+  `instructions.json` changes.** `instructions.json` is generated from `assets/markdown/` by
+  `tools/catalogue/build_instructions.py` and seeded into `exercises.instructions`.
+  Launch compares it with `catalogue_meta` and parses the 3.7 MB file only on a mismatch; a
+  test pins its prefix to the file's `generatedAt`, but an `equipment.json` edit needs the
+  `#n` suffix bumped by hand.
+- **`personal_records` is the other exemption** — a derived cache with no `deleted_at`,
   rebuilt from `sets`. Its hard `DELETE` is correct; do not "fix" it.
 - **`packages/domain` imports nothing.** No React, no expo, no drizzle, no I/O. It has
   zero dependencies in its package.json and that is what enforces the boundary.
@@ -103,6 +113,47 @@ consumed by the in-progress bar.
   never a count of live rows, which collides after a soft delete.
 - **`sets.completedAt IS NULL` means planned-but-not-performed.** This is the mechanism
   behind crash recovery; do not repurpose it.
+
+## Sync (Firebase) — `apps/mobile/src/sync/`
+
+SQLite is the only store screens read. Firebase (Auth: Apple, Google, phone; Firestore)
+holds a copy of the user's own rows at `users/{uid}/{table}/{rowId}`, one Firebase project
+per profile, config in `apps/mobile/firebase/<profile>/` — gitignored, like `.env`; the
+committed `*.example.*` templates show the shape. Without those files the build
+leaves Firebase out and the app runs local-only (`extra.firebase` in `app.config.js`).
+
+- **Triggers queue changes, not repositories.** `drizzle/0002_sync_outbox.sql` puts every
+  insert/update on a `SYNCED_TABLES` table (`syncState.ts`) into `sync_outbox`. A new user
+  table needs adding to that list AND its two triggers; the schema test counts them.
+- **Conflicts go to the newer `updatedAt`**, so every write must bump it.
+- **Never import `@react-native-firebase/*` at module top level** — go through
+  `loadFirebase()` / `firestoreReady()`; a build without Firebase has no native half.
+- `app_settings` has the fixed id `'settings'` (`SETTINGS_ID`) so devices share one row.
+- **Sign-in is required** when the build has Firebase: `app/_layout.tsx` shows
+  `SignInScreen` until an account is signed in (and waits for `authResolved`, so a
+  signed-in user never sees it flash). A build without Firebase config runs local-only.
+- **The phone's user data is a copy of ONE account** (`localOwner` = the uid its sync
+  cursors carry). Signing out, or a different account signing in, runs
+  `clearAccountData` — a real `DELETE` of the user tables (not tombstones, which would
+  sync), then fresh defaults. The one exception to the tombstone rule; the catalogue is
+  kept. Sign-out syncs first and refuses to lose unsynced changes without `force`.
+- The catalogue, `equipment` and `personal_records` never sync.
+- **Onboarding** (`app/onboarding.tsx`, `src/features/onboarding/`) runs for an account
+  that `needsOnboarding`: no `app_settings.onboarded_at` (synced) and no data of its own.
+  The root layout guards it with `Stack.Protected`, and on a fresh phone waits for the
+  first sync (`firstSyncDone`) before deciding. It writes the profile as it goes, creates
+  the gym on the gym-type step (`setUpGym` replaces every other gym), and writes the
+  program only on finishing. The generator is `generatePlan` (`packages/domain/src/
+  programPlan.ts`, pure); `onboardingRepo.planCandidates` feeds it the gym's exercises
+  in popularity order — ties go to the earlier one, so keep that order.
+- **Telegram login codes go through Cloud Functions** (`functions/`, its own npm package,
+  outside the pnpm workspace; `firebase.json` + `.firebaserc` at the root, aliases
+  development/preview/production). `sendTelegramCode` throttles per number (codes cost
+  money) and calls Telegram Gateway; `verifyTelegramCode` trusts the phone *Telegram*
+  returns, reuses an existing user with that phone (one account across SMS and Telegram)
+  and returns a custom token for `signInWithCustomToken`. Region `europe-west1` on both
+  sides. Token: `firebase functions:secrets:set TELEGRAM_GATEWAY_TOKEN`. Tests:
+  `npm test` in `functions/` (not part of `pnpm test`).
 
 ## Things that bite in this codebase
 
@@ -119,9 +170,20 @@ consumed by the in-progress bar.
   data from such a package to JSON at build time instead — the heatmap does this with
   `tools/anatomy/build.py`, which also keeps foreign React components out of the
   bundle. Tests passing is not evidence that Metro resolves a dependency.
-- **Metro needs `unstable_enablePackageExports`** (set in `apps/mobile/metro.config.js`)
-  because `@overload/schema` exposes `./migrations` and `./testing` only via its
-  `exports` map.
+- **Expo SDK 57 / RN 0.86.** Metro resolves package `exports` maps by default now.
+  Bottom tabs come from expo-router's bundled copy
+  (`expo-router/build/react-navigation/bottom-tabs`), not `@react-navigation/*`.
+  iOS with Firebase needs static frameworks and `ios.disableSPM` on
+  `@react-native-firebase/app` (`app.config.js`). After a dependency upgrade, kill
+  any old `expo start`: a stale Metro serves the previous tree ("Unable to resolve
+  module drizzle-orm").
+- **Sheets are `src/ui/BottomSheet.tsx`** (@gorhom/bottom-sheet, driven by a `visible`
+  prop). Inside one, scroll with `BottomSheetScrollView`/`BottomSheetFlatList` and type in
+  `BottomSheetTextInput`, or dragging and the keyboard misbehave. The older `Sheet` (a
+  Modal) still backs the confirm dialogs.
+- **`.svg` files import as markup strings** (babel `inline-import`, like `.sql`), for
+  `SvgXml`. The muscle thumbnails in `assets/muscle_groups/` come in this way — and that
+  folder, like `assets/markdown/`, is gitignored, so a clean checkout cannot bundle.
 - **A screen reading the DB in its render body will show stale data** when another
   screen mutates it — the stack keeps it mounted. Use `useFocusEffect` to bump a
   version counter. Do not use `key={version}`; it remounts and resets scroll.

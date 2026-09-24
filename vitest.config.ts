@@ -8,5 +8,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    // Cloud Functions have their own runner (npm test in functions/).
+    exclude: ['**/node_modules/**', 'functions/**'],
   },
 });

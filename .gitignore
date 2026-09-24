@@ -18,3 +18,12 @@ apps/mobile/android/
 # they have arrived twice under different filenames.
 muscles_*-body.svg
 muscleheatmap-*.svg
+apps/mobile/assets/body
+apps/mobile/assets/markdown
+
+# Local config: commit the .example templates, never the real files.
+.env
+.env.*
+!.env.example
+apps/mobile/firebase/*/GoogleService-Info.plist
+apps/mobile/firebase/*/google-services.json

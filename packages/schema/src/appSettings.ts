@@ -19,6 +19,32 @@ export type Gender = (typeof GENDERS)[number];
 export const EXPERIENCE_LEVELS = ['beginner', 'intermediate', 'advanced'] as const;
 export type ExperienceLevel = (typeof EXPERIENCE_LEVELS)[number];
 
+export const TRAINING_GOALS = ['hypertrophy', 'strength', 'both'] as const;
+export type TrainingGoal = (typeof TRAINING_GOALS)[number];
+
+export const TRAINING_SPLITS = ['full_body', 'upper_lower'] as const;
+export type TrainingSplit = (typeof TRAINING_SPLITS)[number];
+
+/**
+ * What onboarding asked about training, kept so a program can be generated
+ * again later. Muscles are feature-muscle-group lookup ids.
+ */
+export type TrainingPreferences = {
+  goal: TrainingGoal;
+  /** Extra focus, muscle id → 1–2 points (5 points in all). */
+  focus: Record<string, number>;
+  deprioritized: string[];
+  daysPerWeek: number;
+  /** Upper bound of the chosen session length: 20, 40, 60, 90 or 120. */
+  sessionMinutes: number;
+  split: TrainingSplit;
+  deload: boolean;
+  /** Which of the "can you do…" checks were ticked (their keys). */
+  skills: string[];
+  smartProgression: boolean;
+  warmups: boolean;
+};
+
 /**
  * A single row. Weight is stored in kilograms, distance in metres and height
  * in centimetres everywhere; this records how to display them, which is why it
@@ -45,13 +71,19 @@ export const appSettings = sqliteTable('app_settings', {
   heightCm: real('height_cm'),
   liftingExperience: text('lifting_experience', { enum: EXPERIENCE_LEVELS }),
   cardioExperience: text('cardio_experience', { enum: EXPERIENCE_LEVELS }),
+  /** A visual estimate: the middle of the range picked, e.g. 20 for 18–23%. */
+  bodyFatPercent: real('body_fat_percent'),
+
+  /** When this account finished onboarding; synced, so a new phone skips it. */
+  onboardedAt: integer('onboarded_at'),
+  trainingPreferences: text('training_preferences', { mode: 'json' }).$type<TrainingPreferences>(),
 });
 
 export type AppSettings = typeof appSettings.$inferSelect;
 export type NewAppSettings = typeof appSettings.$inferInsert;
 
 /**
- * The profile as the app passes it around — the same seven columns, named for
+ * The profile as the app passes it around — the profile columns, named for
  * the person rather than for the settings row they happen to live in.
  */
 export type Profile = {
@@ -62,4 +94,5 @@ export type Profile = {
   heightCm: number | null;
   liftingExperience: ExperienceLevel | null;
   cardioExperience: ExperienceLevel | null;
+  bodyFatPercent: number | null;
 };

@@ -1,0 +1,17 @@
+{
+  "cli": { "version": ">= 15.0.15" },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": { "EXPO_PUBLIC_APP_ENV": "development" }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": { "EXPO_PUBLIC_APP_ENV": "preview" }
+    },
+    "production": {
+      "env": { "EXPO_PUBLIC_APP_ENV": "production" }
+    }
+  }
+}

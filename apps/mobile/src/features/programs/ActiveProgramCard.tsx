@@ -8,7 +8,6 @@ import { db } from '../../db/client';
 import { Card } from '../../ui/Card';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
-import type { useWorkoutStarter } from '../session/useWorkoutStarter';
 
 type Props = {
   programId: string;
@@ -16,7 +15,6 @@ type Props = {
   cycleNumber: number;
   days: ProgramDay[];
   summaryByWorkoutId: Map<string, WorkoutSummary>;
-  starter: ReturnType<typeof useWorkoutStarter>;
   onChanged: () => void;
 };
 
@@ -40,13 +38,13 @@ function DayRow({
   position,
   summary,
   onToggle,
-  onStart,
+  onOpen,
 }: {
   day: ProgramDay;
   position: number;
   summary: WorkoutSummary | undefined;
   onToggle: () => void;
-  onStart: () => void;
+  onOpen: () => void;
 }) {
   const done = day.completedAt !== null;
   const title = day.workout?.name ?? 'Rest Day';
@@ -55,10 +53,10 @@ function DayRow({
   return (
     <View style={styles.dayRow}>
       <Pressable
-        // Rest days have nothing to start, so only a workout day is pressable.
+        // Rest days have no workout to open, so only a workout day is pressable.
         accessibilityRole={day.workout ? 'button' : undefined}
         accessibilityLabel={`Day ${position + 1}, ${title}`}
-        onPress={day.workout ? onStart : undefined}
+        onPress={day.workout ? onOpen : undefined}
         style={({ pressed }) => [styles.dayMain, pressed && day.workout ? styles.pressed : null]}
       >
         <Text variant="heading" color={done ? 'textMuted' : 'text'}>{title}</Text>
@@ -81,9 +79,10 @@ function DayRow({
 }
 
 /**
- * The active program, expanded in place on the Session tab rather than behind a
- * push: this is the screen a user opens to start today's session, so tapping a
- * day starts its workout. Editing the cycle lives in the program library.
+ * The active program, expanded in place on the Workout tab rather than behind a
+ * push. Tapping a day opens its workout's overview, where Start Workout begins
+ * the session: a tap on a list row must never start one by itself. Editing the
+ * cycle lives in the program library.
  */
 export function ActiveProgramCard({
   programId,
@@ -91,7 +90,6 @@ export function ActiveProgramCard({
   cycleNumber,
   days,
   summaryByWorkoutId,
-  starter,
   onChanged,
 }: Props) {
   const [open, setOpen] = useState(true);
@@ -131,7 +129,7 @@ export function ActiveProgramCard({
                 setProgramDayCompleted(db, programId, day.dayIndex, day.completedAt === null, Date.now());
                 onChanged();
               }}
-              onStart={() => day.workout && starter.start(day.workout.id)}
+              onOpen={() => day.workout && router.push(`/workouts/${day.workout.id}`)}
             />
           ))
         : null}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatWorkoutTarget, targetInputsFor } from './workoutTargets';
+import { formatWorkoutTarget, targetInputsFor, targetMuscles } from './workoutTargets';
 
 describe('targetInputsFor', () => {
   it('gives weight and reps for weight_reps', () => {
@@ -40,9 +40,9 @@ describe('formatWorkoutTarget', () => {
     );
   });
 
-  it('shows an em dash for a weight_reps set with no target weight', () => {
+  it('shows only the reps for a weight_reps set with no target weight', () => {
     expect(formatWorkoutTarget('weight_reps', { targetWeightKg: null, targetReps: 8 }, 'kg')).toBe(
-      '— × 8',
+      '8 reps',
     );
   });
 
@@ -68,5 +68,28 @@ describe('formatWorkoutTarget', () => {
     expect(formatWorkoutTarget('weight_reps', { targetWeightKg: 60, targetReps: 5 }, 'lb')).toBe(
       '132.3 lb × 5',
     );
+  });
+});
+
+describe('formatWorkoutTarget ranges', () => {
+  it('shows a rep range when there is one', () => {
+    expect(formatWorkoutTarget('weight_reps', { targetWeightKg: null, targetReps: 7, targetRepsMax: 9 }, 'kg')).toBe('7–9 reps');
+    expect(formatWorkoutTarget('weight_reps', { targetWeightKg: 60, targetReps: 7, targetRepsMax: 9 }, 'kg')).toBe('60 kg × 7–9');
+  });
+});
+
+describe('targetMuscles', () => {
+  it('counts exercises and weights secondary sets at half', () => {
+    const chest = { id: 'c', name: 'Chest', primary: true };
+    const triceps = { id: 't', name: 'Triceps', primary: false };
+    expect(
+      targetMuscles([
+        { sets: 4, muscles: [chest, triceps] },
+        { sets: 3, muscles: [{ ...triceps, primary: true }] },
+      ]),
+    ).toEqual([
+      { id: 't', name: 'Triceps', exercises: 2, sets: 5 },
+      { id: 'c', name: 'Chest', exercises: 1, sets: 4 },
+    ]);
   });
 });

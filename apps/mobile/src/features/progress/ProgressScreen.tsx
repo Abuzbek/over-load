@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { muscleLoad } from '../../data/historyRepo';
+import { getProfile } from '../../data/settingsRepo';
 import { db } from '../../db/client';
 import { Card } from '../../ui/Card';
 import { Screen } from '../../ui/Screen';
@@ -37,6 +38,7 @@ export function ProgressScreen() {
   const load = new Map(rows.map((r) => [r.muscle, r.sets]));
   const target = WEEKLY_TARGET_SETS * (days / 7);
   const hardest = rows[0]?.sets ?? 0;
+  const figure = getProfile(db).gender === 'female' ? 'female' : 'male';
 
   return (
     <Screen scroll safeTop>
@@ -53,7 +55,7 @@ export function ProgressScreen() {
       </View>
 
       <Card>
-        <MuscleHeatmap load={load} target={target} />
+        <MuscleHeatmap load={load} target={target} figure={figure} />
         <Text variant="caption" color="textMuted">
           {rows.length === 0
             ? 'Nothing logged in this window yet.'

@@ -24,7 +24,6 @@ function seedWorkoutExercise() {
     name: 'Back Squat',
     trackingType: 'weight_reps',
     primaryMuscle: 'quads',
-    secondaryMuscles: ['glutes'],
     equipment: 'barbell',
   }).run();
 

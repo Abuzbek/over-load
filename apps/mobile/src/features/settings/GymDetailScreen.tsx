@@ -6,7 +6,7 @@ import {
   type EquipmentConfig,
 } from '@overload/schema';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import {
   duplicateGym,
@@ -24,17 +24,17 @@ import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
 import { Collapsible } from '../../ui/Collapsible';
-import { ListRow } from '../../ui/ListRow';
 import { Screen } from '../../ui/Screen';
 import { SearchField } from '../../ui/SearchField';
 import { Segmented } from '../../ui/Segmented';
 import { Sheet } from '../../ui/Sheet';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
+import { EquipmentThumb } from '../library/EquipmentThumb';
 import { EquipmentEditor } from './EquipmentEditor';
 import { GYM_ICONS } from './GymProfilesScreen';
 
-const CATEGORY_LABELS: Record<EquipmentCategory, string> = {
+export const CATEGORY_LABELS: Record<EquipmentCategory, string> = {
   free_weights: 'Free weights',
   loaded_bars: 'Loaded bars',
   fixed_weight_bars: 'Fixed weight bars',
@@ -75,7 +75,17 @@ const EDIT_LABEL: Record<EquipmentConfig['kind'], string> = {
   none: '',
 };
 
-export function GymDetailScreen({ gymId }: { gymId: string }) {
+/**
+ * `embedded`: inside onboarding, only the equipment. Renaming happens on its
+ * own step there, and removing or duplicating the one gym being set up would
+ * leave the program step without it.
+ */
+export function GymDetailScreen({ gymId, embedded = false, filter: outerFilter }: {
+  gymId: string;
+  embedded?: boolean;
+  /** Embedded, the name filter lives outside (onboarding keeps it by the Next button). */
+  filter?: string;
+}) {
   const [, setVersion] = useState(0);
   const [editing, setEditing] = useState<GymEquipmentRow | null>(null);
   const [showAll, setShowAll] = useState(true);
@@ -91,7 +101,7 @@ export function GymDetailScreen({ gymId }: { gymId: string }) {
   const gym = listGyms(db).find((g) => g.gym.id === gymId)?.gym;
   const all = gym ? listGymEquipment(db, gym.id) : [];
 
-  const needle = filter.trim().toLowerCase();
+  const needle = (outerFilter ?? filter).trim().toLowerCase();
   const rows = all.filter(
     (r) =>
       (showAll || r.owned) &&
@@ -121,26 +131,30 @@ export function GymDetailScreen({ gymId }: { gymId: string }) {
 
   return (
     <Screen scroll>
-      <View style={styles.actions}>
-        <Button title="Edit icon" variant="secondary" onPress={() => setPickingIcon(true)} />
-        <Button
-          title="Rename"
-          variant="secondary"
-          onPress={() => {
-            setName(gym!.name);
-            setRenaming(true);
-          }}
-        />
-        <Button
-          title="Duplicate"
-          variant="secondary"
-          onPress={() => {
-            const copy = duplicateGym(db, gymId, `${gym!.name} copy`, Date.now());
-            if (copy) router.replace({ pathname: '/settings/gym/[id]', params: { id: copy.id, name: copy.name } });
-          }}
-        />
-      </View>
+      {embedded ? null : (
+        <View style={styles.actions}>
+          <Button title="Edit icon" variant="secondary" onPress={() => setPickingIcon(true)} />
+          <Button
+            title="Rename"
+            variant="secondary"
+            onPress={() => {
+              setName(gym!.name);
+              setRenaming(true);
+            }}
+          />
+          <Button
+            title="Duplicate"
+            variant="secondary"
+            onPress={() => {
+              const copy = duplicateGym(db, gymId, `${gym!.name} copy`, Date.now());
+              if (copy) router.replace({ pathname: '/settings/gym/[id]', params: { id: copy.id, name: copy.name } });
+            }}
+          />
+        </View>
+      )}
 
+      {embedded ? null : (
+      <>
       <View style={styles.filterRow}>
         <Text variant="heading">Equipment</Text>
         <Segmented
@@ -155,6 +169,8 @@ export function GymDetailScreen({ gymId }: { gymId: string }) {
       </View>
 
       <SearchField value={filter} onChangeText={setFilter} placeholder="Filter equipment by name" />
+      </>
+      )}
 
       {EQUIPMENT_CATEGORIES.map((category) => {
         const items = byCategory.get(category) ?? [];
@@ -162,9 +178,10 @@ export function GymDetailScreen({ gymId }: { gymId: string }) {
         const owned = items.filter((i) => i.owned).length;
         const allOwned = owned === items.length;
         return (
-          <Collapsible
+          <Section
             key={category}
-            title={`${CATEGORY_LABELS[category]}  (${owned}/${items.length})`}
+            flat={embedded}
+            title={embedded ? CATEGORY_LABELS[category] : `${CATEGORY_LABELS[category]}  (${owned}/${items.length})`}
             defaultOpen={needle !== '' || !showAll}
           >
             <Card style={styles.rows}>
@@ -183,41 +200,18 @@ export function GymDetailScreen({ gymId }: { gymId: string }) {
               </Pressable>
 
               {items.map((row) => (
-                <ListRow
+                <EquipmentRow
                   key={row.equipment.id}
-                  title={row.equipment.name}
-                  subtitle={describe(row.config)}
-                  right={
-                    <View style={styles.rowRight}>
-                      {row.equipment.kind === 'none' ? null : (
-                        <Pressable
-                          accessibilityRole="button"
-                          accessibilityLabel={`${EDIT_LABEL[row.equipment.kind]} for ${row.equipment.name}`}
-                          hitSlop={10}
-                          onPress={() => setEditing(row)}
-                        >
-                          <Text variant="caption" color="accent">{EDIT_LABEL[row.equipment.kind]}</Text>
-                        </Pressable>
-                      )}
-                      <Pressable
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: row.owned }}
-                        accessibilityLabel={`${row.equipment.name} available here`}
-                        hitSlop={12}
-                        onPress={() => {
-                          setGymEquipmentOwned(db, gymId, row.equipment.id, !row.owned, Date.now());
-                          bump();
-                        }}
-                        style={[styles.box, row.owned && styles.boxOn]}
-                      >
-                        {row.owned ? <Lucide name="check" size={14} color={theme.colors.onAccent} /> : null}
-                      </Pressable>
-                    </View>
-                  }
+                  row={row}
+                  onEdit={() => setEditing(row)}
+                  onToggle={() => {
+                    setGymEquipmentOwned(db, gymId, row.equipment.id, !row.owned, Date.now());
+                    bump();
+                  }}
                 />
               ))}
             </Card>
-          </Collapsible>
+          </Section>
         );
       })}
 
@@ -227,16 +221,18 @@ export function GymDetailScreen({ gymId }: { gymId: string }) {
         </Text>
       ) : null}
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => {
-          removeGym(db, gymId, Date.now());
-          router.back();
-        }}
-        style={styles.remove}
-      >
-        <Text variant="caption" color="danger">{`Remove ${gym.name}`}</Text>
-      </Pressable>
+      {embedded ? null : (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              removeGym(db, gymId, Date.now());
+              router.back();
+            }}
+            style={styles.remove}
+          >
+            <Text variant="caption" color="danger">{`Remove ${gym.name}`}</Text>
+          </Pressable>
+      )}
 
       <EquipmentEditor
         item={editing?.equipment ?? null}
@@ -304,7 +300,64 @@ export function GymDetailScreen({ gymId }: { gymId: string }) {
   );
 }
 
+/** A category: collapsible in Settings, laid flat in onboarding where it is the whole screen. */
+function Section({ flat, title, defaultOpen, children }: { flat: boolean; title: string; defaultOpen: boolean; children: ReactNode }) {
+  if (!flat) return <Collapsible title={title} defaultOpen={defaultOpen}>{children}</Collapsible>;
+  return (
+    <View style={styles.flatSection}>
+      <Text variant="heading">{title}</Text>
+      {children}
+    </View>
+  );
+}
+
+/** One item: its picture, the weights this gym has (two lines at most), and whether it is here. */
+function EquipmentRow({ row, onEdit, onToggle }: { row: GymEquipmentRow; onEdit: () => void; onToggle: () => void }) {
+  const weights = describe(row.config);
+  return (
+    <View style={styles.item}>
+      <EquipmentThumb id={row.equipment.id} size={44} />
+      <View style={styles.itemMain}>
+        <Text variant="heading">{row.equipment.name}</Text>
+        {weights ? <Text variant="caption" color="textMuted" numberOfLines={2}>{weights}</Text> : null}
+        {row.equipment.kind === 'none' ? null : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${EDIT_LABEL[row.equipment.kind]} for ${row.equipment.name}`}
+            hitSlop={8}
+            onPress={onEdit}
+          >
+            <Text variant="caption" style={styles.editLink}>{EDIT_LABEL[row.equipment.kind]}</Text>
+          </Pressable>
+        )}
+      </View>
+      <Pressable
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: row.owned }}
+        accessibilityLabel={`${row.equipment.name} available here`}
+        hitSlop={12}
+        onPress={onToggle}
+        style={[styles.box, row.owned && styles.boxOn]}
+      >
+        {row.owned ? <Lucide name="check" size={14} color={theme.colors.onAccent} /> : null}
+      </Pressable>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  flatSection: { gap: theme.spacing.sm },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.border,
+  },
+  itemMain: { flex: 1, gap: 2 },
+  editLink: { textDecorationLine: 'underline', color: theme.colors.text, marginTop: 2 },
   actions: { flexDirection: 'row', gap: theme.spacing.sm },
   filterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   rows: { paddingVertical: 0, paddingHorizontal: 0, gap: 0 },

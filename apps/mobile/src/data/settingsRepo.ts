@@ -1,12 +1,12 @@
 import type { DistanceUnit, Unit } from '@overload/domain';
 import {
   appSettings,
-  newId,
   now,
   type Db,
   type HeightUnit,
   type NewAppSettings,
   type Profile,
+  type TrainingPreferences,
 } from '@overload/schema';
 import { eq, isNull } from 'drizzle-orm';
 
@@ -14,6 +14,12 @@ import { eq, isNull } from 'drizzle-orm';
  * `app_settings` is a single-row table, created empty by its migration, so the
  * very first read on every existing install hits an absent row.
  */
+/**
+ * The same id on every device, so an account's settings are one row that
+ * sync merges rather than one per install.
+ */
+export const SETTINGS_ID = 'settings';
+
 function currentRow(db: Db) {
   return db.select().from(appSettings).where(isNull(appSettings.deletedAt)).get();
 }
@@ -30,7 +36,7 @@ function upsertSettings(db: Db, patch: Partial<NewAppSettings>, at: number): voi
     db.update(appSettings).set({ ...patch, updatedAt: at }).where(eq(appSettings.id, row.id)).run();
     return;
   }
-  db.insert(appSettings).values({ id: newId(), createdAt: at, updatedAt: at, ...patch }).run();
+  db.insert(appSettings).values({ id: SETTINGS_ID, createdAt: at, updatedAt: at, ...patch }).run();
 }
 
 export function getWeightUnit(db: Db): Unit {
@@ -86,7 +92,17 @@ export function getProfile(db: Db): Profile {
     heightCm: row.heightCm,
     liftingExperience: row.liftingExperience,
     cardioExperience: row.cardioExperience,
+    bodyFatPercent: row.bodyFatPercent,
   };
+}
+
+/** Whether this account has been through onboarding (on any device). */
+export function getOnboardedAt(db: Db): number | null {
+  return currentRow(db)?.onboardedAt ?? null;
+}
+
+export function setOnboarded(db: Db, preferences: TrainingPreferences, at: number): void {
+  upsertSettings(db, { onboardedAt: at, trainingPreferences: preferences }, at);
 }
 
 const EMPTY_PROFILE: Profile = {
@@ -97,6 +113,7 @@ const EMPTY_PROFILE: Profile = {
   heightCm: null,
   liftingExperience: null,
   cardioExperience: null,
+  bodyFatPercent: null,
 };
 
 /**
@@ -113,5 +130,6 @@ export function setProfile(db: Db, patch: Partial<Profile>, at: number): void {
   if ('heightCm' in patch) columns.heightCm = patch.heightCm;
   if ('liftingExperience' in patch) columns.liftingExperience = patch.liftingExperience;
   if ('cardioExperience' in patch) columns.cardioExperience = patch.cardioExperience;
+  if ('bodyFatPercent' in patch) columns.bodyFatPercent = patch.bodyFatPercent;
   upsertSettings(db, columns, at);
 }

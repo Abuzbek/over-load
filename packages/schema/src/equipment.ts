@@ -39,7 +39,8 @@ export type EquipmentConfig =
   | { kind: 'labels'; labels: string[] };
 
 /**
- * The catalogue: seeded reference data, the same for everyone. What a
+ * The catalogue: seeded reference data, the same for everyone, keyed by the
+ * item's id in app_file.json. What a
  * particular gym owns, and the weights it actually has, lives in
  * `gym_equipment`.
  */
@@ -52,12 +53,6 @@ export const equipment = sqliteTable(
     kind: text('kind', { enum: WEIGHT_KINDS }).notNull(),
     /** The catalogue's starting values, copied into gym_equipment on first use. */
     defaults: text('defaults', { mode: 'json' }).$type<EquipmentConfig>().notNull(),
-    /**
-     * Which of the exercise catalogue's coarse equipment values this unlocks
-     * ("barbell", "cable", "machine"). Empty for a bench: owning one does not
-     * make an exercise possible on its own.
-     */
-    satisfies: text('satisfies', { mode: 'json' }).$type<string[]>().notNull(),
   },
   (table) => ({
     categoryIdx: index('equipment_category_idx').on(table.category),

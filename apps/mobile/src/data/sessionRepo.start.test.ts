@@ -27,7 +27,6 @@ beforeEach(() => {
     name: 'Bench Press',
     trackingType: 'weight_reps' as const,
     primaryMuscle: 'chest',
-    secondaryMuscles: [],
     equipment: 'barbell',
   };
   db.insert(exercises).values(row).run();

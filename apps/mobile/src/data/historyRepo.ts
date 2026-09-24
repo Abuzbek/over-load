@@ -1,13 +1,15 @@
 import { totalVolumeKg, type CompletedSet } from '@overload/domain';
 import {
+  exerciseMuscles,
   exercises,
+  lookups,
   sessionSets,
   sessionExercises,
   sessions,
   type Db,
   type Session,
 } from '@overload/schema';
-import { and, count, countDistinct, desc, eq, gte, isNotNull, isNull, lte } from 'drizzle-orm';
+import { and, asc, count, countDistinct, desc, eq, gte, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { toCompletedSet } from './sessionRepo';
 
 export type WorkoutSummary = {
@@ -113,15 +115,17 @@ export type MuscleLoad = { muscle: string; sets: number };
  * exercises and sessions — the same four periodTotals guards.
  */
 export function muscleLoad(db: Db, sinceMs: number, untilMs: number): MuscleLoad[] {
-  const rows = db
-    .select({
-      primaryMuscle: exercises.primaryMuscle,
-      secondaryMuscles: exercises.secondaryMuscles,
-    })
+  const sets = sql<number>`sum(${exerciseMuscles.weight})`;
+  return db
+    .select({ muscle: lookups.name, sets })
     .from(sessionSets)
     .innerJoin(sessionExercises, eq(sessionExercises.id, sessionSets.sessionExerciseId))
     .innerJoin(exercises, eq(exercises.id, sessionExercises.exerciseId))
     .innerJoin(sessions, eq(sessions.id, sessionExercises.sessionId))
+    // No tombstone on these two: exercise_muscles and lookups are derived
+    // catalogue tables, reached only through the live exercise above.
+    .innerJoin(exerciseMuscles, eq(exerciseMuscles.exerciseId, exercises.id))
+    .innerJoin(lookups, eq(lookups.id, exerciseMuscles.muscleId))
     .where(
       and(
         isNotNull(sessionSets.completedAt),
@@ -133,20 +137,7 @@ export function muscleLoad(db: Db, sinceMs: number, untilMs: number): MuscleLoad
         isNull(sessions.deletedAt),
       ),
     )
+    .groupBy(lookups.id)
+    .orderBy(desc(sets), asc(lookups.name))
     .all();
-
-  const totals = new Map<string, number>();
-  for (const row of rows) {
-    totals.set(row.primaryMuscle, (totals.get(row.primaryMuscle) ?? 0) + 1);
-    for (const secondary of row.secondaryMuscles ?? []) {
-      // A muscle listed as both primary and secondary on one exercise would
-      // otherwise score 1.5 for a single set.
-      if (secondary === row.primaryMuscle) continue;
-      totals.set(secondary, (totals.get(secondary) ?? 0) + 0.5);
-    }
-  }
-
-  return [...totals.entries()]
-    .map(([muscle, sets]) => ({ muscle, sets }))
-    .sort((a, b) => b.sets - a.sets || a.muscle.localeCompare(b.muscle));
 }

@@ -16,14 +16,19 @@ vi.mock('./backup', () => ({
 }));
 vi.mock('@overload/schema/migrations', () => ({ default: {} }));
 vi.mock('drizzle-orm/expo-sqlite/migrator', () => ({ migrate: vi.fn() }));
-vi.mock('../data/seedRepo', () => ({ seedExercisesIfEmpty: vi.fn(), syncEquipmentCatalogue: vi.fn() }));
+vi.mock('../data/seedRepo', () => ({
+  CATALOGUE_VERSION: 'current',
+  getCatalogueVersion: vi.fn(() => null),
+  syncCatalogue: vi.fn(),
+}));
+vi.mock('../../assets/app_file.json', () => ({ default: { generatedAt: 'current', exercises: [], uuidIndex: {} } }));
 vi.mock('../data/programRepo', () => ({ ensureDefaultProgram: vi.fn() }));
 vi.mock('../data/gymRepo', () => ({ ensureDefaultGym: vi.fn() }));
 vi.mock('../data/sessionRepo', () => ({ rebuildAllPersonalRecords: vi.fn() }));
 
 const { backupDatabase, discardBackup, restoreDatabase } = await import('./backup');
 const { migrate } = await import('drizzle-orm/expo-sqlite/migrator');
-const { seedExercisesIfEmpty, syncEquipmentCatalogue } = await import('../data/seedRepo');
+const { getCatalogueVersion, syncCatalogue } = await import('../data/seedRepo');
 const { ensureDefaultProgram } = await import('../data/programRepo');
 const { ensureDefaultGym } = await import('../data/gymRepo');
 const { rebuildAllPersonalRecords } = await import('../data/sessionRepo');
@@ -62,7 +67,7 @@ describe('initializeDatabase', () => {
     expect(migrate).toHaveBeenCalledTimes(1);
     expect(restoreDatabase).toHaveBeenCalledTimes(1);
     expect(discardBackup).not.toHaveBeenCalled();
-    expect(seedExercisesIfEmpty).not.toHaveBeenCalled();
+    expect(syncCatalogue).not.toHaveBeenCalled();
 
     // Ordering: backup, then migrate, then restore.
     expect(callOrder(backupDatabase)).toBeLessThan(callOrder(migrate));
@@ -85,20 +90,31 @@ describe('initializeDatabase', () => {
     expect(migrate).toHaveBeenCalledTimes(1);
     expect(restoreDatabase).not.toHaveBeenCalled();
     expect(discardBackup).toHaveBeenCalledTimes(1);
-    expect(seedExercisesIfEmpty).toHaveBeenCalledTimes(1);
+    expect(syncCatalogue).toHaveBeenCalledTimes(1);
     expect(ensureDefaultProgram).toHaveBeenCalledTimes(1);
-    expect(syncEquipmentCatalogue).toHaveBeenCalledTimes(1);
     expect(ensureDefaultGym).toHaveBeenCalledTimes(1);
     expect(rebuildAllPersonalRecords).toHaveBeenCalledTimes(1);
 
     // Ordering: backup, then migrate, then discard, then seed, then default program, then rebuild.
     expect(callOrder(backupDatabase)).toBeLessThan(callOrder(migrate));
     expect(callOrder(migrate)).toBeLessThan(callOrder(discardBackup));
-    expect(callOrder(discardBackup)).toBeLessThan(callOrder(seedExercisesIfEmpty));
-    expect(callOrder(seedExercisesIfEmpty)).toBeLessThan(callOrder(ensureDefaultProgram));
+    expect(callOrder(discardBackup)).toBeLessThan(callOrder(syncCatalogue));
+    expect(callOrder(syncCatalogue)).toBeLessThan(callOrder(ensureDefaultProgram));
     // The first gym owns every catalogue item, so the catalogue has to exist first.
-    expect(callOrder(syncEquipmentCatalogue)).toBeLessThan(callOrder(ensureDefaultGym));
+    expect(callOrder(syncCatalogue)).toBeLessThan(callOrder(ensureDefaultGym));
     expect(callOrder(ensureDefaultProgram)).toBeLessThan(callOrder(rebuildAllPersonalRecords));
+  });
+
+  // The 3.7 MB file is only parsed when the seeded catalogue is out of date;
+  // an ordinary launch must not pay for it.
+  it('skips the catalogue sync when the seeded version is current', async () => {
+    vi.mocked(migrate).mockResolvedValueOnce(undefined);
+    vi.mocked(getCatalogueVersion).mockReturnValueOnce('current');
+
+    await initializeDatabase();
+
+    expect(syncCatalogue).not.toHaveBeenCalled();
+    expect(ensureDefaultGym).toHaveBeenCalledTimes(1);
   });
 
   it('does not let a failed personal-record rebuild reject initializeDatabase', async () => {
@@ -131,7 +147,6 @@ describe('rebuildAllPersonalRecords', () => {
       name: 'Plank',
       trackingType: 'duration' as const,
       primaryMuscle: 'core',
-      secondaryMuscles: [],
       equipment: 'bodyweight',
     };
     db.insert(exercises).values(plank).run();

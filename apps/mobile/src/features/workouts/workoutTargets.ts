@@ -11,7 +11,16 @@ export type WorkoutTargetInput = {
 export type WorkoutTargetValues = {
   targetWeightKg: number | null;
   targetReps: number | null;
+  /** With targetReps, a range: "7–9 reps". */
+  targetRepsMax?: number | null;
 };
+
+/** "8", or "7–9" for a range. */
+function reps(values: WorkoutTargetValues): string {
+  if (values.targetReps === null) return '—';
+  const max = values.targetRepsMax;
+  return max != null && max > values.targetReps ? `${values.targetReps}–${max}` : String(values.targetReps);
+}
 
 const REPS: WorkoutTargetInput = { field: 'reps', placeholder: 'Reps', keyboard: 'number-pad' };
 
@@ -55,11 +64,38 @@ export function formatWorkoutTarget(
 ): string | null {
   switch (trackingType) {
     case 'weight_reps':
-      return `${formatWeight(values.targetWeightKg, unit)} × ${values.targetReps ?? '—'}`;
+      // No target weight yet: the reps are the plan, so say only that.
+      if (values.targetWeightKg === null) return `${reps(values)} reps`;
+      return `${formatWeight(values.targetWeightKg, unit)} × ${reps(values)}`;
     case 'reps':
-      return `${values.targetReps ?? '—'} reps`;
+      return `${reps(values)} reps`;
     case 'duration':
     case 'distance_duration':
       return null;
   }
+}
+
+/** One estimate for the app and the program generator: see programPlan in @overload/domain. */
+export { estimateWorkoutMinutes } from '@overload/domain';
+
+export type MuscleVolume = { id: string; name: string; exercises: number; sets: number };
+
+/**
+ * The overview's Target Muscles: per muscle group, how many exercises train it
+ * and how many sets it gets — a full set as a primary, half as a secondary,
+ * the heatmap's weighting. Most sets first.
+ */
+export function targetMuscles(
+  exercises: { sets: number; muscles: { id: string; name: string; primary: boolean }[] }[],
+): MuscleVolume[] {
+  const byId = new Map<string, MuscleVolume>();
+  for (const { sets, muscles } of exercises) {
+    for (const m of muscles) {
+      const v = byId.get(m.id) ?? { id: m.id, name: m.name, exercises: 0, sets: 0 };
+      v.exercises += 1;
+      v.sets += m.primary ? sets : sets / 2;
+      byId.set(m.id, v);
+    }
+  }
+  return [...byId.values()].sort((a, b) => b.sets - a.sets || a.name.localeCompare(b.name));
 }

@@ -10,13 +10,6 @@ export const gyms = sqliteTable('gyms', {
   name: text('name').notNull(),
   /** A lucide icon name, chosen when the gym is created. */
   icon: text('icon').notNull().default('dumbbell'),
-  /**
-   * Dead since the real catalogue landed: superseded by the `gym_equipment`
-   * table. NOT dropped — dropping a column rebuilds the table, and `gyms` is
-   * referenced by `gym_equipment` and `app_settings`, which is exactly the
-   * rebuild that failed on a device at migration 0005.
-   */
-  equipment: text('equipment', { mode: 'json' }).$type<string[]>().notNull(),
   orderIndex: integer('order_index').notNull().default(0),
 });
 
