@@ -1,6 +1,6 @@
-import { generatePlan, type Plan, type PlanCandidate } from '@overload/domain';
+import { generatePlan, type Plan, type PlanCandidate, type PlanGoal } from '@overload/domain';
 import { exerciseLinks, gyms, lookups, programDays, programs, type Db, type TrainingPreferences } from '@overload/schema';
-import { and, eq, isNotNull, isNull, ne, notInArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, ne, notInArray } from 'drizzle-orm';
 import equipmentSeed from '../../../../tools/seed-equipment/equipment.json';
 import { listExercises } from './exerciseRepo';
 import { activateGym, createGymFromPreset, removeGym } from './gymRepo';
@@ -47,22 +47,40 @@ export const SKILLS: { key: string; label: string; excludes: RegExp; unless?: Re
   { key: 'pullups10', label: 'Can you do at least 10 strict, unassisted pull-ups or chin-ups?', excludes: /weighted.*(pull|chin)-up/i },
   { key: 'dips10', label: 'Can you do at least 10 bodyweight dips?', excludes: /\bdips?\b/i, unless: /assist|machine|bench/i },
   { key: 'pushups15', label: 'Can you do at least 15 strict push-ups?', excludes: /push-up/i, unless: /incline|knee/i },
-  { key: 'bench10', label: 'Can you bench press a barbell for at least 10 reps?', excludes: /barbell.*bench press/i, unless: /incline|decline/i },
+  // Every free-bar bench (cambered, Swiss, close grip, pause …), not only those named "barbell".
+  { key: 'bench10', label: 'Can you bench press a barbell for at least 10 reps?', excludes: /bench press/i, unless: /dumbbell|kettlebell|smith|machine|incline|decline/i },
   { key: 'incline10', label: 'Can you incline press a barbell for at least 10 reps?', excludes: /incline barbell|barbell incline/i },
   { key: 'ohp10', label: 'Can you overhead press a barbell for at least 10 reps?', excludes: /barbell.*(overhead|shoulder) press/i },
 ];
 
+/** The catalogue's per-goal classification of an exercise, and how the generator reads it. */
+const CLASSIFICATION = { strength: 'exerciseClassificationStrength', hypertrophy: 'exerciseClassificationHypertrophy' } as const;
+
 /**
  * What the generator may choose from: seeded exercises the gym can host, that
  * track weight or reps (the session screen logs those), minus what the skill
- * answers rule out.
+ * answers rule out. Compound or not comes from the catalogue's classification
+ * for the goal (a face pull is multi-joint but an accessory); for both goals,
+ * the heavier of the two.
  */
-export function planCandidates(db: Db, gymId: string, skills: string[]): PlanCandidate[] {
-  const compoundId = db
-    .select({ id: lookups.id })
-    .from(lookups)
-    .where(and(eq(lookups.type, 'exerciseType'), eq(lookups.name, 'Multi-joint (compound)')))
-    .get()?.id;
+export function planCandidates(db: Db, gymId: string, skills: string[], goal: PlanGoal): PlanCandidate[] {
+  const roles = ['exclusionGroupings', CLASSIFICATION.strength, CLASSIFICATION.hypertrophy];
+  const links = new Map<string, Map<string, string[]>>();
+  for (const r of db
+    .select({ id: exerciseLinks.exerciseId, role: exerciseLinks.role, name: lookups.name })
+    .from(exerciseLinks)
+    .innerJoin(lookups, eq(lookups.id, exerciseLinks.lookupId))
+    .where(inArray(exerciseLinks.role, roles))
+    .orderBy(exerciseLinks.position)
+    .all()) {
+    const byRole = links.get(r.id) ?? new Map<string, string[]>();
+    byRole.set(r.role, [...(byRole.get(r.role) ?? []), r.name]);
+    links.set(r.id, byRole);
+  }
+  const linked = (id: string, role: string) => links.get(id)?.get(role) ?? [];
+  const classes = (id: string) =>
+    goal === 'both' ? [...linked(id, CLASSIFICATION.strength), ...linked(id, CLASSIFICATION.hypertrophy)] : linked(id, CLASSIFICATION[goal]);
+
   const ruledOut = SKILLS.filter((s) => !skills.includes(s.key));
   // One side at a time: those sets take twice as long, which the time budget needs.
   const unilateral = new Set(
@@ -78,18 +96,25 @@ export function planCandidates(db: Db, gymId: string, skills: string[]): PlanCan
   return listExercises(db, { gymId })
     .filter((e) => !e.isCustom && (e.trackingType === 'weight_reps' || e.trackingType === 'reps') && e.primaryMuscles)
     .filter((e) => !ruledOut.some((s) => s.excludes.test(e.name) && !s.unless?.test(e.name)))
-    .map((e) => ({
-      id: e.id,
-      name: e.name,
-      primaryMuscles: e.primaryMuscles!.split(', '),
-      compound: e.exerciseTypeId === compoundId,
-      strength: e.recommendationStrength,
-      hypertrophy: e.recommendationHypertrophy,
-      stability: e.stability,
-      rom: e.rom,
-      unilateral: unilateral.has(e.id),
-      repsOnly: e.trackingType === 'reps',
-    }));
+    .map((e) => {
+      const primaryMuscles = e.primaryMuscles!.split(', ');
+      return {
+        id: e.id,
+        name: e.name,
+        mainMuscle: e.primaryMuscle,
+        primaryMuscles,
+        secondaryMuscles: e.secondaryMuscles ? e.secondaryMuscles.split(', ') : [],
+        compound: classes(e.id).some((c) => c.endsWith('Compound')),
+        primaryCompound: classes(e.id).includes('Primary Compound'),
+        exclusionGroups: linked(e.id, 'exclusionGroupings'),
+        strength: e.recommendationStrength,
+        hypertrophy: e.recommendationHypertrophy,
+        stability: e.stability,
+        rom: e.rom,
+        unilateral: unilateral.has(e.id),
+        repsOnly: e.trackingType === 'reps',
+      };
+    });
 }
 
 export function planProgram(db: Db, gymId: string, prefs: TrainingPreferences): Plan {
@@ -106,7 +131,7 @@ export function planProgram(db: Db, gymId: string, prefs: TrainingPreferences): 
     focus: Object.fromEntries(Object.entries(prefs.focus).flatMap(([id, points]) => byName([id]).map((n) => [n, points]))),
     deprioritized: byName(prefs.deprioritized),
     level: level === null || level === 'beginner' ? 'novice' : level,
-    candidates: planCandidates(db, gymId, prefs.skills),
+    candidates: planCandidates(db, gymId, prefs.skills, prefs.goal),
   });
 }
 
@@ -131,7 +156,7 @@ export function createProgramFromPlan(
     return workout.id;
   });
 
-  const program = createProgram(db, { name: display.name, icon: display.icon, iconColor: display.color }, at);
+  const program = createProgram(db, { name: display.name, icon: display.icon, iconColor: display.color, generated: true }, at);
   plan.days.forEach((w, day) => setProgramDay(db, program.id, day, w === null ? null : workoutIds[w]!, at));
 
   const withWorkouts = db

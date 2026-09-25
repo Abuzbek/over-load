@@ -7,7 +7,7 @@ import { needsOnboarding } from '../data/onboardingRepo';
 import { getOnboardedAt } from '../data/settingsRepo';
 import { clearAccountData, localOwner, outboxSize } from '../data/syncRepo';
 import { db } from '../db/client';
-import { onAccountChanged, signOutOfAccount, type Account } from './auth';
+import { accountStillExists, onAccountChanged, signOutOfAccount, type Account } from './auth';
 import { firebaseEnabled } from './firebase';
 import { accountOnboardedAt, firestoreRemote } from './firestoreRemote';
 import { syncNow } from './syncEngine';
@@ -88,7 +88,7 @@ export function startSync(): void {
     const owner = localOwner(db);
     if (account && owner && owner !== account.uid) resetLocalCopy();
     update({ account, authResolved: true, onboarding: 'unknown', lastSyncedAt: null, error: null });
-    if (account) void checkOnboarding(account.uid);
+    if (account) void confirmAccount(account.uid);
     void requestSync();
   });
 
@@ -98,6 +98,22 @@ export function startSync(): void {
   setInterval(() => {
     if (AppState.currentState === 'active') void requestSync();
   }, INTERVAL_MS);
+}
+
+/**
+ * A restored session whose account was deleted on the server signs out, back
+ * to the sign-in screen, and drops the local copy; otherwise it would look like
+ * a new account and land in onboarding. Only then is onboarding checked.
+ */
+async function confirmAccount(uid: string): Promise<void> {
+  if (!(await accountStillExists())) {
+    if (status.account?.uid !== uid) return;
+    // The account and its server copy are gone; so is this phone's copy of it.
+    resetLocalCopy();
+    await signOutOfAccount();
+    return;
+  }
+  await checkOnboarding(uid);
 }
 
 /**

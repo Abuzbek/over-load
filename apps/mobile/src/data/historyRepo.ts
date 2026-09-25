@@ -9,8 +9,10 @@ import {
   type Db,
   type Session,
 } from '@overload/schema';
-import { and, asc, count, countDistinct, desc, eq, gte, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, count, countDistinct, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, sql } from 'drizzle-orm';
+import { getActiveProgram, getProgramDays } from './programRepo';
 import { toCompletedSet } from './sessionRepo';
+import { getWorkoutDetail } from './workoutRepo';
 
 export type WorkoutSummary = {
   workout: Session;
@@ -41,6 +43,9 @@ export function listFinishedWorkouts(db: Db, limit = 50): WorkoutSummary[] {
         and(
           eq(sessionExercises.sessionId, workout.id),
           isNotNull(sessionSets.completedAt),
+        // A warm-up is not training volume, and a drop or myo round is part of its set.
+        ne(sessionSets.setType, 'warmup'),
+        isNull(sessionSets.parentSetId),
           isNull(sessionSets.deletedAt),
           isNull(sessionExercises.deletedAt),
           isNull(exercises.deletedAt),
@@ -64,18 +69,17 @@ export type PeriodTotals = {
 };
 
 /**
- * One aggregate query, not a loop per row (see lastPerformance in sessionRepo
- * for the known-bad precedent). Four levels carry a tombstone filter here —
+ * Aggregate queries, not a loop per row (see lastPerformance in sessionRepo
+ * for the known-bad precedent): one for sets and exercises, one for muscles. Four levels carry a tombstone filter here —
  * session_sets, session_exercises, exercises and sessions — the same four
  * listWorkoutSummaries guards; dropping any one silently inflates the count
- * rather than throwing.
+ * rather than throwing. `workoutIds` narrows it to sessions of those workouts.
  */
-export function periodTotals(db: Db, sinceMs: number, untilMs: number): PeriodTotals {
+export function periodTotals(db: Db, sinceMs: number, untilMs: number, workoutIds?: string[]): PeriodTotals {
   const row = db
     .select({
       sets: count(sessionSets.id),
       exercises: countDistinct(sessionExercises.exerciseId),
-      muscles: countDistinct(exercises.primaryMuscle),
     })
     .from(sessionSets)
     .innerJoin(sessionExercises, eq(sessionExercises.id, sessionSets.sessionExerciseId))
@@ -84,17 +88,75 @@ export function periodTotals(db: Db, sinceMs: number, untilMs: number): PeriodTo
     .where(
       and(
         isNotNull(sessionSets.completedAt),
+        // A warm-up is not training volume, and a drop or myo round is part of its set.
+        ne(sessionSets.setType, 'warmup'),
+        isNull(sessionSets.parentSetId),
         gte(sessionSets.completedAt, sinceMs),
         lte(sessionSets.completedAt, untilMs),
         isNull(sessionSets.deletedAt),
         isNull(sessionExercises.deletedAt),
         isNull(exercises.deletedAt),
         isNull(sessions.deletedAt),
+        workoutIds ? inArray(sessions.workoutId, workoutIds) : undefined,
       ),
     )
     .get();
 
-  return row ?? { sets: 0, exercises: 0, muscles: 0 };
+  // Every muscle a set trains, supporting ones too: a squat works the glutes and
+  // adductors as well as the quads. A separate query: joined above, one set
+  // would count once per muscle.
+  const muscles = db
+    .select({ n: countDistinct(exerciseMuscles.muscleId) })
+    .from(sessionSets)
+    .innerJoin(sessionExercises, eq(sessionExercises.id, sessionSets.sessionExerciseId))
+    .innerJoin(exercises, eq(exercises.id, sessionExercises.exerciseId))
+    .innerJoin(sessions, eq(sessions.id, sessionExercises.sessionId))
+    .innerJoin(exerciseMuscles, eq(exerciseMuscles.exerciseId, exercises.id))
+    .where(
+      and(
+        isNotNull(sessionSets.completedAt),
+        ne(sessionSets.setType, 'warmup'),
+        isNull(sessionSets.parentSetId),
+        gte(sessionSets.completedAt, sinceMs),
+        lte(sessionSets.completedAt, untilMs),
+        isNull(sessionSets.deletedAt),
+        isNull(sessionExercises.deletedAt),
+        isNull(exercises.deletedAt),
+        isNull(sessions.deletedAt),
+        workoutIds ? inArray(sessions.workoutId, workoutIds) : undefined,
+      ),
+    )
+    .get()?.n ?? 0;
+
+  return { sets: row?.sets ?? 0, exercises: row?.exercises ?? 0, muscles };
+}
+
+/**
+ * What the active program plans for one cycle: every set of every training
+ * day (a workout on two days counts twice), and the distinct exercises and
+ * muscles among them — the dashboard's weekly targets. Null with no active
+ * program or one with nothing planned.
+ */
+export function programWeekTargets(db: Db): (PeriodTotals & { workoutIds: string[] }) | null {
+  const program = getActiveProgram(db);
+  if (!program) return null;
+  const details = getProgramDays(db, program.id).flatMap((d) => (d.workout ? [getWorkoutDetail(db, d.workout.id)] : []));
+  const planned = details.flatMap((d) => d?.exercises ?? []);
+  if (planned.length === 0) return null;
+  return {
+    sets: planned.reduce((n, e) => n + e.sessionSets.length, 0),
+    exercises: new Set(planned.map((e) => e.exercise.id)).size,
+    // Every muscle the week trains, supporting ones too — as periodTotals counts them.
+    muscles: new Set(
+      db
+        .select({ id: exerciseMuscles.muscleId })
+        .from(exerciseMuscles)
+        .where(inArray(exerciseMuscles.exerciseId, [...new Set(planned.map((e) => e.exercise.id))]))
+        .all()
+        .map((r) => r.id),
+    ).size,
+    workoutIds: [...new Set(details.map((d) => d!.workout.id))],
+  };
 }
 
 export type MuscleLoad = { muscle: string; sets: number };
@@ -129,6 +191,9 @@ export function muscleLoad(db: Db, sinceMs: number, untilMs: number): MuscleLoad
     .where(
       and(
         isNotNull(sessionSets.completedAt),
+        // A warm-up is not training volume, and a drop or myo round is part of its set.
+        ne(sessionSets.setType, 'warmup'),
+        isNull(sessionSets.parentSetId),
         gte(sessionSets.completedAt, sinceMs),
         lte(sessionSets.completedAt, untilMs),
         isNull(sessionSets.deletedAt),

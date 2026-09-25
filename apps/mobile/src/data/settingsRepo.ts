@@ -1,4 +1,4 @@
-import type { DistanceUnit, Unit } from '@overload/domain';
+import { DEFAULT_WARMUP_SCHEME, type DistanceUnit, type Unit, type WarmupStep } from '@overload/domain';
 import {
   appSettings,
   now,
@@ -99,6 +99,18 @@ export function getProfile(db: Db): Profile {
 /** Whether this account has been through onboarding (on any device). */
 export function getOnboardedAt(db: Db): number | null {
   return currentRow(db)?.onboardedAt ?? null;
+}
+
+/** The user's warm-up scheme, or the default one. */
+export function getWarmupScheme(db: Db): WarmupStep[] {
+  return currentRow(db)?.trainingPreferences?.warmupScheme ?? DEFAULT_WARMUP_SCHEME;
+}
+
+/** Kept with the training preferences; a phone that has none (not onboarded) keeps nothing. */
+export function setWarmupScheme(db: Db, scheme: WarmupStep[], at: number): void {
+  const preferences = currentRow(db)?.trainingPreferences;
+  if (!preferences) return;
+  upsertSettings(db, { trainingPreferences: { ...preferences, warmupScheme: scheme } }, at);
 }
 
 export function setOnboarded(db: Db, preferences: TrainingPreferences, at: number): void {

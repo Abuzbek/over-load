@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native';
 import {
   addProgramDay,
   getProgramDays,
+  isGenerated,
   removeProgramDay,
   setProgramDay,
 } from '../../data/programRepo';
@@ -23,6 +24,9 @@ export function ProgramDaysScreen({ programId, programName }: { programId: strin
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const days = getProgramDays(db, programId);
+  // A generated program's workouts are laid out across a week: days can
+  // change, but the cycle stays at seven.
+  const fixed = isGenerated(db, programId);
   const library = listWorkouts(db);
 
   // Day rows are numbered by position, not by dayIndex: a gap in the indexes
@@ -79,7 +83,13 @@ export function ProgramDaysScreen({ programId, programName }: { programId: strin
         ))}
       </Card>
 
-      <Button title="+ Add day" variant="secondary" onPress={addDay} />
+      {fixed ? (
+        <Text variant="caption" color="textMuted">
+          A generated program runs week by week, so it keeps its seven days. Change any day's workout, or make one a rest day.
+        </Text>
+      ) : (
+        <Button title="+ Add day" variant="secondary" onPress={addDay} />
+      )}
 
       <Sheet
         visible={editing !== null}
@@ -108,11 +118,13 @@ export function ProgramDaysScreen({ programId, programName }: { programId: strin
           variant="ghost"
           onPress={() => editing !== null && assign(editing, null)}
         />
-        <Button
-          title="Remove day"
-          variant="destructive"
-          onPress={() => editing !== null && removeDay(editing)}
-        />
+        {fixed ? null : (
+          <Button
+            title="Remove day"
+            variant="destructive"
+            onPress={() => editing !== null && removeDay(editing)}
+          />
+        )}
         <Button title="Cancel" variant="secondary" onPress={() => setEditing(null)} />
       </Sheet>
     </Screen>

@@ -1,0 +1,1 @@
+ALTER TABLE `programs` ADD `generated` integer DEFAULT false NOT NULL;

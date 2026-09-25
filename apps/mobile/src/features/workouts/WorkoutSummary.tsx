@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import { MuscleThumb } from '../library/MuscleThumb';
+import { RIR_COLORS } from '../../ui/rirColors';
 import type { MuscleVolume } from './workoutTargets';
 
 /**
@@ -16,8 +17,7 @@ export type SummaryMuscle = { id: string; name: string; primary: boolean };
 /** One set line: "7–9 reps", and the reps to leave in reserve. */
 export type SummarySet = { key: string; label: string; rir: number | null };
 
-/** RIR 0–6+, hardest to easiest: red, amber, green, blue. The session screen uses the same scale. */
-export const RIR_COLORS = ['#E5484D', '#E5484D', '#F2B84B', '#F2B84B', '#3DD68C', '#3DD68C', '#3E8CF0'];
+export { RIR_COLORS };
 
 export function RirBadge({ rir }: { rir: number }) {
   return (
@@ -52,7 +52,8 @@ export function TargetMuscleCards({ volumes, figure, selected, onSelect }: {
             <View style={styles.cardText}>
               <Text variant="heading">{v.name}</Text>
               <Text variant="caption" color="textMuted">{v.exercises} {v.exercises === 1 ? 'exercise' : 'exercises'}</Text>
-              <Text variant="caption" color="textMuted">{v.sets} {v.sets === 1 ? 'set' : 'sets'}</Text>
+              {/* Whole sets: the fractions are how the count is weighted, not something to read. */}
+              <Text variant="caption" color="textMuted">{Math.round(v.sets)} {Math.round(v.sets) === 1 ? 'set' : 'sets'}</Text>
             </View>
           </Pressable>
         ))}

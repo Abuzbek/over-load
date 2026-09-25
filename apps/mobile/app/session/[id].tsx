@@ -5,7 +5,7 @@ export default function SessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
     <>
-      <Stack.Screen options={{ title: 'Workout', headerBackVisible: false }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <ActiveSession sessionId={id} />
     </>
   );

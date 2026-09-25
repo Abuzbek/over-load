@@ -17,6 +17,11 @@ export const sessions = sqliteTable(
     startedAt: integer('started_at').notNull(),
     /** Null means in progress. On launch, such a session is offered for resume. */
     endedAt: integer('ended_at'),
+    /**
+     * Set while the workout is paused: its clock stands still. Resuming moves
+     * startedAt forward by the pause, so every duration read later leaves it out.
+     */
+    pausedAt: integer('paused_at'),
     notes: text('notes'),
   },
   (table) => ({
@@ -54,6 +59,21 @@ export const sessionSets = sqliteTable(
     distanceM: real('distance_m'),
     rpe: real('rpe'),
     rir: integer('rir'),
+    /** Reps done past the full ones, short of the full range of motion. */
+    partialReps: integer('partial_reps'),
+    /**
+     * The plan for this set, copied from the workout when the session starts:
+     * the rep range, the reps to leave in reserve and a load, if there is one.
+     */
+    targetReps: integer('target_reps'),
+    targetRepsMax: integer('target_reps_max'),
+    targetRir: integer('target_rir'),
+    targetWeightKg: real('target_weight_kg'),
+    /**
+     * A later round of a drop or myo set: the set it continues. Rounds are not
+     * sets of their own — they share the parent's number and count as one set.
+     */
+    parentSetId: text('parent_set_id'),
     /** Null means planned but not yet performed. This is what makes crash recovery work. */
     completedAt: integer('completed_at'),
   },

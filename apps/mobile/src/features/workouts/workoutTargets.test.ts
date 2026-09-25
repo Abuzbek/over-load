@@ -79,17 +79,20 @@ describe('formatWorkoutTarget ranges', () => {
 });
 
 describe('targetMuscles', () => {
-  it('counts exercises and weights secondary sets at half', () => {
-    const chest = { id: 'c', name: 'Chest', primary: true };
-    const triceps = { id: 't', name: 'Triceps', primary: false };
+  it("counts a set fully for the exercise's main muscle, half for other primaries, a quarter for secondaries", () => {
+    const quads = { id: 'q', name: 'Quads', primary: true };
+    const glutes = { id: 'g', name: 'Glutes', primary: true };
+    const back = { id: 'b', name: 'Lower Back', primary: false };
     expect(
       targetMuscles([
-        { sets: 4, muscles: [chest, triceps] },
-        { sets: 3, muscles: [{ ...triceps, primary: true }] },
+        // A squat lists Glutes before Quads, but it is a quads exercise.
+        { sets: 4, main: 'Quads', muscles: [glutes, quads, back] },
+        { sets: 3, main: 'Glutes', muscles: [glutes] },
       ]),
     ).toEqual([
-      { id: 't', name: 'Triceps', exercises: 2, sets: 5 },
-      { id: 'c', name: 'Chest', exercises: 1, sets: 4 },
+      { id: 'g', name: 'Glutes', exercises: 2, sets: 5 },
+      { id: 'q', name: 'Quads', exercises: 1, sets: 4 },
+      { id: 'b', name: 'Lower Back', exercises: 1, sets: 1 },
     ]);
   });
 });

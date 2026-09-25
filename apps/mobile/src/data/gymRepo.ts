@@ -1,6 +1,7 @@
 import {
   appSettings,
   equipment,
+  exerciseEquipment,
   type Equipment,
   type EquipmentConfig,
   gymEquipment,
@@ -329,4 +330,36 @@ export function ensureDefaultGym(db: Db, at: number): Gym {
       .run();
   }
   return gym;
+}
+
+/** A plate: its weight and the colour the gym's plates of that weight come in. */
+export type Plate = { kg: number; label: string | null };
+/** How an exercise is loaded in this gym: the bar it uses and the plates to hand. */
+export type BarLoading = { barName: string; barKg: number; plates: Plate[] };
+
+/**
+ * For the plate calculator: the loaded bar this exercise uses — one its
+ * resistance equipment calls for and this gym owns — with the gym's plates.
+ * Null for anything not loaded onto a bar (dumbbells, machines, bodyweight).
+ * ponytail: a bar with several weights uses its heaviest (a 20 kg barbell, not the 7 kg technique bar);
+ * choosing the bar per exercise comes with the plate-calculator settings.
+ */
+export function barLoadingFor(db: Db, gymId: string, exerciseId: string): BarLoading | null {
+  const needed = new Set(
+    db
+      .select({ id: exerciseEquipment.equipmentId })
+      .from(exerciseEquipment)
+      .where(and(eq(exerciseEquipment.exerciseId, exerciseId), eq(exerciseEquipment.need, 'resistance')))
+      .all()
+      .map((r) => r.id),
+  );
+  const owned = listGymEquipment(db, gymId).filter((r) => r.owned);
+  const bar = owned.find((r) => r.equipment.category === 'loaded_bars' && needed.has(r.equipment.id));
+  if (!bar || bar.config.kind !== 'list' || bar.config.values.length === 0) return null;
+  const plates = owned
+    .filter((r) => r.equipment.category === 'free_weights' && /plate/i.test(r.equipment.name) && r.config.kind === 'list')
+    .flatMap((r) => (r.config.kind === 'list' ? r.config.values : []))
+    .map((v) => ({ kg: v.kg, label: v.label ?? null }));
+  if (plates.length === 0) return null;
+  return { barName: bar.equipment.name, barKg: Math.max(...bar.config.values.map((v) => v.kg)), plates };
 }

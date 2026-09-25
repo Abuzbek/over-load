@@ -82,18 +82,19 @@ export type MuscleVolume = { id: string; name: string; exercises: number; sets: 
 
 /**
  * The overview's Target Muscles: per muscle group, how many exercises train it
- * and how many sets it gets — a full set as a primary, half as a secondary,
- * the heatmap's weighting. Most sets first.
+ * and how many sets it gets, counted as the program generator counts them — a
+ * full set for the muscle the exercise is for (`main`), half for its other
+ * primaries, a quarter for the supporting ones. Most sets first.
  */
 export function targetMuscles(
-  exercises: { sets: number; muscles: { id: string; name: string; primary: boolean }[] }[],
+  exercises: { sets: number; main?: string; muscles: { id: string; name: string; primary: boolean }[] }[],
 ): MuscleVolume[] {
   const byId = new Map<string, MuscleVolume>();
-  for (const { sets, muscles } of exercises) {
+  for (const { sets, main, muscles } of exercises) {
     for (const m of muscles) {
       const v = byId.get(m.id) ?? { id: m.id, name: m.name, exercises: 0, sets: 0 };
       v.exercises += 1;
-      v.sets += m.primary ? sets : sets / 2;
+      v.sets += sets * (m.name === main ? 1 : m.primary ? 0.5 : 0.25);
       byId.set(m.id, v);
     }
   }

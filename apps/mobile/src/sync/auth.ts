@@ -41,6 +41,28 @@ export function currentAccount(): Account | null {
   return toAccount(auth().instance.currentUser);
 }
 
+/** What the server says when the signed-in user no longer exists there. */
+const GONE = new Set(['auth/user-not-found', 'auth/user-disabled', 'auth/user-token-expired', 'auth/invalid-user-token']);
+
+/**
+ * Asks Firebase whether the cached user still exists. The phone keeps a
+ * signed-in user after the account is deleted or disabled in the console, until
+ * its token next refreshes (up to an hour). Offline, or any other failure,
+ * counts as still there: the app is offline-first, and only the server saying
+ * "gone" signs anyone out.
+ */
+export async function accountStillExists(): Promise<boolean> {
+  const { m, instance } = auth();
+  const user = instance.currentUser;
+  if (!user) return false;
+  try {
+    await m.reload(user);
+    return true;
+  } catch (e) {
+    return !GONE.has((e as { code?: string }).code ?? '');
+  }
+}
+
 export function onAccountChanged(listener: (account: Account | null) => void): () => void {
   const { m, instance } = auth();
   return m.onAuthStateChanged(instance, (user) => listener(toAccount(user)));

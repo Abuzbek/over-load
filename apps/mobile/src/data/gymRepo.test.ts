@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { listExercises } from './exerciseRepo';
 import {
   activateGym,
+  barLoadingFor,
   countOwnedEquipment,
   createGymFromPreset,
   duplicateGym,
@@ -362,5 +363,16 @@ describe('countOwnedEquipment', () => {
     const counts = countOwnedEquipment(db);
     expect(counts.get(a.id)).toBe(1);
     expect(counts.get(b.id)).toBe(1);
+  });
+});
+
+describe('barLoadingFor', () => {
+  it("is the exercise's bar and the gym's plates, and nothing for what is not loaded on a bar", () => {
+    const gym = createGymFromPreset(db, 'Garage', 'house', ['Barbell', 'Weight plates', 'Dumbbells'], now());
+    const id = (name: string) => listExercises(db).find((e) => e.name === name)!.id;
+    expect(barLoadingFor(db, gym.id, id('Bench press'))).toEqual({ barName: 'Barbell', barKg: 20, plates: [{ kg: 20, label: null }] });
+    expect(barLoadingFor(db, gym.id, id('Dumbbell curl'))).toBeNull();
+    const bare = createGymFromPreset(db, 'Bar only', 'house', ['Barbell'], now());
+    expect(barLoadingFor(db, bare.id, id('Bench press'))).toBeNull();
   });
 });

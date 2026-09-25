@@ -141,7 +141,7 @@ export function WorkoutBuilder({ workoutId }: Props) {
     })),
     DEFAULT_REST_SECONDS,
   );
-  const volumes = targetMuscles(detail.exercises.map((e, i) => ({ sets: e.sessionSets.length, muscles: musclesOf[i]! })));
+  const volumes = targetMuscles(detail.exercises.map((e, i) => ({ sets: e.sessionSets.length, main: e.exercise.primaryMuscle, muscles: musclesOf[i]! })));
   const menuIndex = detail.exercises.findIndex((e) => e.workoutExercise.id === menuId);
 
   // Swaps the exercise with its neighbour and persists the whole live order.

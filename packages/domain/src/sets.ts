@@ -1,6 +1,6 @@
 import { tracksWeight, type TrackingType } from './trackingTypes';
 
-export type SetType = 'normal' | 'warmup' | 'drop' | 'failure';
+export type SetType = 'normal' | 'warmup' | 'drop' | 'myo' | 'failure';
 
 /**
  * A set that actually happened. Repositories map database rows into this shape;
@@ -36,4 +36,12 @@ export function setVolumeKg(set: CompletedSet): number {
 
 export function totalVolumeKg(sets: CompletedSet[]): number {
   return sets.filter(countsTowardRecords).reduce((sum, s) => sum + setVolumeKg(s), 0);
+}
+
+/**
+ * A drop set's next round: the load taken down by about 40%, rounded down to
+ * what can be loaded. 55 kg drops to 32.5, then 17.5.
+ */
+export function nextDropKg(kg: number, incrementKg = 2.5): number {
+  return Math.max(Math.floor((kg * 0.6) / incrementKg + 1e-9) * incrementKg, incrementKg);
 }

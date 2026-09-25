@@ -3,7 +3,7 @@ import { exercises } from './exercises';
 import { programs } from './programs';
 import { syncColumns } from './sync';
 
-export const SET_TYPES = ['normal', 'warmup', 'drop', 'failure'] as const;
+export const SET_TYPES = ['normal', 'warmup', 'drop', 'myo', 'failure'] as const;
 export type SetType = (typeof SET_TYPES)[number];
 
 /**
