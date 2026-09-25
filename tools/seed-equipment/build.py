@@ -188,56 +188,60 @@ def satisfies(item: dict) -> list:
     return []
 
 
-# Pre-fill presets offered when you add a gym. Membership is by group, with a
-# few explicit names for the small ones. These are starting points the user
-# edits afterwards, not claims about any real gym.
+# Pre-fill presets offered when you add a gym. Membership comes from the
+# catalogue itself: every equipment entry in app_file.json carries a flag per
+# gym type (commercialGym, warehouseGym, localGym, garageGym, homeGym). The
+# catalogue lists some items twice, singular and plural ("Dumbbell" is the
+# singular of "Dumbbells"); the seed keeps the plural, so a flag on either
+# counts for it. Everything is every item; blank is none.
+CATALOGUE = 'apps/mobile/assets/app_file.json'
 PRESETS = [
-    ('everything', 'Everything Gym', {'all': True}),
-    ('commercial', 'Commercial Gym', {'categories': [
-        'free_weights', 'loaded_bars', 'fixed_weight_bars', 'bands_ropes', 'body_weights',
-        'benches_racks', 'accessories_functional', 'cable_machines',
-        'pin_loaded_machines', 'plate_loaded_machines', 'cardio',
-    ], 'exclude': [
-        'Strongman Log', 'Yoke', 'Sled', 'Axle Bar', 'Marrs Bar', 'Buffalo Bar',
-        'Cambered Squat Bar', 'Cambered Bench Press Bar',
-    ]}),
-    ('warehouse', 'Warehouse Gym', {'categories': [
-        'free_weights', 'loaded_bars', 'fixed_weight_bars', 'bands_ropes', 'body_weights',
-        'benches_racks', 'accessories_functional', 'loaded_accessories',
-        'plate_loaded_machines',
-    ]}),
-    ('local', 'Local Gym', {'categories': [
-        'free_weights', 'loaded_bars', 'bands_ropes', 'body_weights', 'benches_racks',
-        'accessories_functional', 'cable_machines', 'pin_loaded_machines', 'cardio',
-    ], 'exclude': ['Strongman Log', 'Yoke', 'Sled', 'Axle Bar', 'Marrs Bar']}),
-    ('garage', 'Garage Gym', {'names': [
-        'Barbell', 'Weight Plates', 'Bumper Plates', 'Dumbbells', 'Kettlebells', 'EZ Bar',
-        'Trap Bar', 'Power Rack', 'Squat Stand', 'Flat Bench', 'Adjustable Bench',
-        'Straight Pull-Up Bar', 'Dip Bars', 'Long Resistance Bands', 'Short Resistance Band',
-        'Gymnastics Rings', 'Ab Wheel', 'Jump Rope', 'Weighted Vest', 'Ankle Weights',
-        'Dip/Pull-Up/Belt Squat Belt', 'Farmer\u2019s Handles', 'Sled', 'Landmine Attachment/Wall Corner',
-        'Plyometric Boxes', 'Slant Board', 'Yoga Blocks',
-    ]}),
-    ('home', 'Home Gym', {'names': [
-        'Dumbbells', 'Kettlebells', 'Long Resistance Bands', 'Short Resistance Band',
-        'Adjustable Bench', 'Flat Bench', 'Straight Pull-Up Bar', 'Push-Up Handles',
-        'Ab Wheel', 'Jump Rope', 'Yoga Blocks', 'Stability Ball', 'Bosu Ball',
-        'Suspension Trainer', 'Ankle Weights', 'Weighted Vest', 'Medicine Ball',
-        'Bodyweight Only', 'Chair', 'Bed', 'Couch',
-    ]}),
-    ('blank', 'Start From Blank Slate', {'names': []}),
+    ('everything', 'Everything Gym', None),
+    ('commercial', 'Commercial Gym', 'commercialGym'),
+    ('warehouse', 'Warehouse Gym', 'warehouseGym'),
+    ('local', 'Local Gym', 'localGym'),
+    ('garage', 'Garage Gym', 'garageGym'),
+    ('home', 'Home Gym', 'homeGym'),
+    ('blank', 'Start From Blank Slate', ''),
 ]
 
 
-def preset_members(rule, items):
-    if rule.get('all'):
-        return [i['name'] for i in items]
-    if 'names' in rule:
-        known = {i['name'] for i in items}
-        return [n for n in rule['names'] if n in known]
-    exclude = set(rule.get('exclude', []))
-    cats = set(rule['categories'])
-    return [i['name'] for i in items if i['category'] in cats and i['name'] not in exclude]
+def catalogue_flags():
+    """Lower-cased seed name -> the set of gym flags the catalogue gives it."""
+    with open(CATALOGUE, encoding='utf-8') as f:
+        index = json.load(f)['uuidIndex']
+    equipment = {k: v for k, v in index.items() if v.get('type') == 'equipment'}
+    plural_of = {v['pluralOf']: v['name'] for v in equipment.values() if v.get('pluralOf')}
+    flags = {}
+    for key, v in equipment.items():
+        name = plural_of.get(key, v['name']).lower()
+        flags.setdefault(name, set()).update(g for _, _, g in PRESETS if g and v.get(g) == 1)
+    return flags
+
+
+def presets_for(items):
+    flags = catalogue_flags()
+    return [
+        {
+            'key': key,
+            'name': name,
+            'items': [i['name'] for i in items if flag is None or flag in flags.get(i['name'].lower(), set())],
+        }
+        for key, name, flag in PRESETS
+    ]
+
+
+def rebuild_presets():
+    """Only the presets, from the items already in equipment.json: no CSV needed."""
+    path = 'tools/seed-equipment/equipment.json'
+    with open(path, encoding='utf-8') as f:
+        data = json.load(f)
+    data['presets'] = presets_for(data['items'])
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.write('\n')
+    for p in data['presets']:
+        print(f"{p['name']}: {len(p['items'])}")
 
 
 def main():
@@ -255,10 +259,7 @@ def main():
         items.append({k: v for k, v in item.items() if v is not None})
 
     items.sort(key=lambda i: (i['category'], i['name']))
-    presets = [
-        {'key': key, 'name': name, 'items': preset_members(rule, items)}
-        for key, name, rule in PRESETS
-    ]
+    presets = presets_for(items)
 
     with open('tools/seed-equipment/equipment.json', 'w', encoding='utf-8') as f:
         json.dump({'items': items, 'presets': presets}, f, ensure_ascii=False, indent=2)
@@ -269,4 +270,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    rebuild_presets() if '--presets' in sys.argv else main()

@@ -5,13 +5,14 @@ import {
   generatePlan,
   repRange,
   rirScheme,
+  weeklySetTarget,
   type PlanCandidate,
   type PlanInput,
   type PlannedWorkout,
 } from './programPlan';
 
 const c = (id: string, muscle: string, over: Partial<PlanCandidate> = {}): PlanCandidate => ({
-  id, name: id, primaryMuscles: [muscle], compound: false, strength: 3, hypertrophy: 3,
+  id, name: id, mainMuscle: muscle, primaryMuscles: [muscle], secondaryMuscles: [], compound: false, primaryCompound: false, exclusionGroups: [], strength: 3, hypertrophy: 3,
   stability: 3, rom: 3, unilateral: false, repsOnly: false, ...over,
 });
 
@@ -28,10 +29,10 @@ const minutes = (w: PlannedWorkout) =>
   estimateWorkoutMinutes(w.exercises.map((e) => ({ sets: e.sets.length, restSeconds: e.restSeconds, unilateral: e.unilateral })));
 
 describe('generatePlan', () => {
-  it('lays three full-body days out A, B, A with rest between', () => {
+  it('gives each training day its own workout, with rest between', () => {
     const plan = generatePlan(input());
-    expect(plan.workouts.map((w) => w.name)).toEqual(['Workout A', 'Workout B']);
-    expect(plan.days).toEqual([0, null, 1, null, 0, null, null]);
+    expect(plan.workouts.map((w) => w.name)).toEqual(['Workout A', 'Workout B', 'Workout C']);
+    expect(plan.days).toEqual([0, null, 1, null, 2, null, null]);
   });
 
   // The bug this covers: "20 to 40 minutes" produced a 56-minute workout.
@@ -50,9 +51,18 @@ describe('generatePlan', () => {
     expect(count(90)).toBeGreaterThan(count(40));
   });
 
-  it('never repeats an exercise across the program', () => {
-    const ids = generatePlan(input({ sessionMinutes: 90 })).workouts.flatMap((w) => w.exercises.map((e) => e.exerciseId));
+  it('never repeats an exercise across the program while there are others to use', () => {
+    const ids = generatePlan(input({ daysPerWeek: 2 })).workouts.flatMap((w) => w.exercises.map((e) => e.exerciseId));
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('reuses an exercise from another day rather than leave a muscle out, but never twice in one workout', () => {
+    const plan = generatePlan(input({ sessionMinutes: 90, daysPerWeek: 5 }));
+    for (const w of plan.workouts) {
+      const ids = w.exercises.map((e) => e.exerciseId);
+      expect(new Set(ids).size).toBe(ids.length);
+      expect(ids.length).toBeGreaterThan(3);
+    }
   });
 
   it('plans each set as a rep range with reps in reserve', () => {
@@ -66,18 +76,66 @@ describe('generatePlan', () => {
     expect(first.restSeconds).toBe(90);
   });
 
-  it('leads with focused muscles, adds a set per point, and drops deprioritized ones', () => {
-    const a = generatePlan(input({ focus: { Calves: 2 }, deprioritized: ['Chest'] })).workouts[0]!.exercises;
-    expect(a[0]).toMatchObject({ muscle: 'Calves' });
-    expect(a[0]!.sets).toHaveLength(5);
-    expect(a.some((e) => e.muscle === 'Chest')).toBe(false);
+  it('gives focused muscles more weekly volume, and drops deprioritized ones', () => {
+    const plan = generatePlan(input({ sessionMinutes: 90, focus: { Calves: 2 }, deprioritized: ['Chest'] }));
+    const weekly = (muscle: string) =>
+      plan.days.reduce<number>((n, w) => n + (w === null ? 0 : plan.workouts[w]!.exercises.filter((e) => e.muscle === muscle).reduce((s, e) => s + e.sets.length, 0)), 0);
+    expect(weekly('Calves')).toBeGreaterThan(weekly('Biceps'));
+    expect(weekly('Chest')).toBe(0);
   });
 
-  it('builds upper and lower days for a split, alternating when under four days', () => {
+  // The bug this covers: five focus muscles, and a split squat (quads, glutes
+  // and adductors all primary) crowded them out while counting for none of them.
+  it('covers every focused muscle', () => {
+    const squat = c('Split squat', 'Quads', { compound: true, primaryMuscles: ['Quads', 'Glutes', 'Adductors'] });
+    const candidates = [squat, ...CATALOGUE];
+    const focus = { Glutes: 1, Chest: 1, 'Side Delts': 1, Lats: 1, Quads: 1 };
+    const a = generatePlan(input({ sessionMinutes: 60, focus, candidates })).workouts[0]!.exercises;
+    for (const m of Object.keys(focus)) {
+      const covered = a.some((e) => candidates.find((c) => c.id === e.exerciseId)!.primaryMuscles.includes(m));
+      expect(covered, m).toBe(true);
+    }
+  });
+
+  it('counts a compound for its other primaries at half, so they need fewer sets of their own', () => {
+    const glutes = (candidates: PlanCandidate[]) =>
+      generatePlan(input({ sessionMinutes: 30, candidates })).workouts.flatMap((w) => w.exercises).filter((e) => e.muscle === 'Glutes')
+        .reduce<number>((n, e) => n + e.sets.length, 0);
+    const squat = c('Squat', 'Quads', { compound: true, primaryCompound: true, primaryMuscles: ['Glutes', 'Quads'] });
+    const without = CATALOGUE.filter((x) => x.mainMuscle !== 'Quads');
+    expect(glutes([squat, ...without])).toBeLessThan(glutes([c('Leg extension', 'Quads'), ...without]));
+  });
+
+  it('never puts two variants from one exclusion group in a program, while there is another choice', () => {
+    const candidates = [
+      c('Pin-loaded pullover', 'Lats', { exclusionGroups: ['Machine pullovers'] }),
+      c('Plate-loaded pullover', 'Lats', { exclusionGroups: ['Machine pullovers'] }),
+      c('Pulldown', 'Lats', { hypertrophy: 5 }),
+    ];
+    const ids = generatePlan(input({ candidates, daysPerWeek: 2 })).workouts.flatMap((w) => w.exercises.map((e) => e.exerciseId));
+    expect(ids).toContain('Pin-loaded pullover');
+    expect(ids).not.toContain('Plate-loaded pullover');
+  });
+
+  it('fills the session it was given', () => {
+    const plan = generatePlan(input({ sessionMinutes: 60 }));
+    for (const w of plan.workouts) expect(minutes(w)).toBeGreaterThan(50);
+  });
+
+  it('picks an exercise meant for the muscle over one that merely involves it', () => {
+    const candidates = [
+      c('Squat', 'Quads', { primaryMuscles: ['Quads', 'Glutes'], hypertrophy: 1 }),
+      c('Hip thrust', 'Glutes', { hypertrophy: 3 }),
+    ];
+    const plan = generatePlan(input({ focus: { Glutes: 2 }, candidates }));
+    expect(plan.workouts[0]!.exercises.find((e) => e.muscle === 'Glutes')?.exerciseId).toBe('Hip thrust');
+  });
+
+  it('alternates upper and lower days for a split', () => {
     expect(generatePlan(input({ split: 'upper_lower', daysPerWeek: 4 })).workouts.map((w) => w.name))
       .toEqual(['Upper A', 'Lower A', 'Upper B', 'Lower B']);
-    const three = generatePlan(input({ split: 'upper_lower', daysPerWeek: 3 }));
-    expect(three.days.filter((d) => d !== null)).toEqual([0, 1, 0]);
+    expect(generatePlan(input({ split: 'upper_lower', daysPerWeek: 3 })).workouts.map((w) => w.name))
+      .toEqual(['Upper A', 'Lower A', 'Upper B']);
   });
 
   it('gives novices the more stable variation when recommendations tie', () => {
@@ -95,13 +153,20 @@ describe('generatePlan', () => {
     expect(generatePlan(input({ candidates })).workouts[0]!.exercises[0]!.exerciseId).toBe('Barbell squat');
   });
 
-  it('prefers an isolation exercise once the big lifts are in', () => {
-    const candidates = [
-      ...['Quads', 'Chest', 'Lats'].map((m) => c(m, m, { compound: true })),
-      c('Pulldown', 'Hamstrings', { compound: true }),
-      c('Curl', 'Hamstrings'),
-    ];
-    expect(generatePlan(input({ candidates })).workouts[0]!.exercises[3]!.exerciseId).toBe('Curl');
+  it('gives a big muscle a compound, a primary one first, and a small muscle isolation when it scores as well', () => {
+    const pick = (muscle: string, candidates: PlanCandidate[]) =>
+      generatePlan(input({ candidates })).workouts[0]!.exercises.find((e) => e.muscle === muscle)?.exerciseId;
+    expect(pick('Quads', [c('Leg extension', 'Quads'), c('Leg press', 'Quads', { compound: true }), c('Squat', 'Quads', { compound: true, primaryCompound: true, hypertrophy: 4 })]))
+      .toBe('Squat');
+    expect(pick('Biceps', [c('Chin-up', 'Biceps', { compound: true, hypertrophy: 4 }), c('Curl', 'Biceps')])).toBe('Curl');
+  });
+});
+
+describe('weeklySetTarget', () => {
+  it('adds half again per focus point', () => {
+    expect(weeklySetTarget('intermediate', 0)).toBe(9);
+    expect(weeklySetTarget('intermediate', 2)).toBe(18);
+    expect(weeklySetTarget('novice', 0)).toBe(6);
   });
 });
 

@@ -1,7 +1,8 @@
-import { exercises, newId, now, workoutExercises, workoutSets, sessions, type Exercise } from '@overload/schema';
+import { exercises, newId, now, programs, workoutExercises, workoutSets, sessions, type Exercise } from '@overload/schema';
 import { createTestDb } from '@overload/schema/testing';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createProgram, setProgramDay } from './programRepo';
 import {
   addExerciseToWorkout,
   addWorkoutSet,
@@ -180,6 +181,17 @@ describe('reorderWorkoutExercises', () => {
 });
 
 describe('listWorkoutSummaries', () => {
+  it('flags workouts a live program schedules, and only those', () => {
+    const own = createWorkout(db, 'Arms');
+    const scheduled = createWorkout(db, 'Workout A');
+    const program = createProgram(db, { name: 'P', icon: 'x', iconColor: 'x' }, 1);
+    setProgramDay(db, program.id, 0, scheduled.id, 1);
+    const inProgram = () => Object.fromEntries(listWorkoutSummaries(db).map((s) => [s.workout.name, s.inProgram]));
+    expect(inProgram()).toEqual({ Arms: false, 'Workout A': true });
+    db.update(programs).set({ deletedAt: 2 }).where(eq(programs.id, program.id)).run();
+    expect(inProgram()['Workout A']).toBe(false);
+  });
+
   it('counts live exercises and lists their primary muscles in order', () => {
     const workout = createWorkout(db, 'Push Day');
     addExerciseToWorkout(db, workout.id, bench.id);

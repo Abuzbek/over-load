@@ -13,10 +13,11 @@ plan you can train (`workouts`, `workout_exercises`, `workout_sets`); a
 a place you train (`gyms`) and the equipment in it (`equipment` catalogue +
 `gym_equipment`), which filters that catalogue. The weight editor a piece of
 equipment gets is decided by its **category**, never by the item. There is no
-"routine" — migration 0008 removed the last of that name. Release 1 (the logging loop) is built and merged. The app shell and design
-system (four tabs, `src/ui/` component kit) is built on branch `app-shell`,
-not yet merged; see `docs/superpowers/2026-09-22-session-handoff.md` for full
-state and history.
+"routine". A **plan** is the generator's output before it is written as a program.
+
+Work happens on feature branches merged into `dev` by PR (`main` is the release
+branch). The app is signed-in only when built with Firebase; see Sync. The
+roadmap — what is deliberately not built yet — is at the end of this file.
 
 ## Commands
 
@@ -27,7 +28,7 @@ pnpm start          # Expo dev server — then press i (iOS) or a (Android)
 pnpm ios            # straight to the iOS simulator
 pnpm android        # straight to an Android emulator/device
 
-pnpm test           # full suite (396 tests, 31 files)
+pnpm test           # full suite (456 tests, 38 files); functions/ has its own: npm test there
 pnpm typecheck      # type gate; CI runs this too (.github/workflows/ci.yml)
 pnpm run ci         # everything CI runs, locally: install + typecheck + test + bundle
 pnpm bundle         # expo export — catches packaging breaks tests cannot see
@@ -44,47 +45,103 @@ apps/mobile/src/data/    repository layer — the ONLY place SQL is written
 apps/mobile/src/db/      client, backup, bootstrap
 apps/mobile/src/features/ + src/ui/ + app/    screens; repository calls only
 apps/mobile/assets/app_file.json   the exercise catalogue (1213 exercises), seeded as-is
-tools/seed-equipment/    equipment.json: starting weights + gym presets, by item name
+apps/mobile/assets/instructions.json   exercise how-tos, built from assets/markdown/ (gitignored)
+apps/mobile/assets/equipment/ + equipment_thumbs/   equipment art (1024px) and the 144px copies the app bundles
+apps/mobile/assets/muscle_groups/  per-muscle thumbnails; body_fat/: onboarding body-fat figures (SVG)
+functions/               Cloud Functions (Telegram login codes) — its own npm package, not in the workspace
+tools/seed-equipment/    equipment.json: starting weights + gym presets, by item name (presets from the
+                         catalogue's per-item commercialGym/…/homeGym flags: build.py --presets)
+tools/catalogue/         build_instructions.py, build_equipment_thumbs.py (regenerate derived assets)
 ```
 
 ### Navigation (`apps/mobile/app/`)
 
-Four tabs under `app/(tabs)/` — `index` (Train), `history`, `progress`,
-`profile` — plus a persistent in-progress workout bar composed into the tab
-bar itself (`(tabs)/_layout.tsx`, via the `Tabs` `tabBar` prop, not a sibling
-after `<Tabs>` — a sibling renders below the whole navigator, tab bar
-included).
+Tabs under `app/(tabs)/`: `index` (Dashboard), `workout` (active program + workout
+library), `new` (the centre + button), `progress`, `more` (settings). The
+in-progress workout bar is composed into the tab bar itself (`(tabs)/_layout.tsx`,
+via the `Tabs` `tabBar` prop — a sibling after `<Tabs>` renders below the tab bar).
 
-**`app/session/[id].tsx` lives deliberately OUTSIDE `(tabs)`.** Mid-set, a tab
-bar is a distraction and a mis-tap risk; the in-progress bar is what routes
-back into it. `app/routines/`, `app/exercises.tsx` and `app/history/[id].tsx`
-are also outside the tab group — they push as full-screen routes with their
-own native header.
+The root `app/_layout.tsx` gates everything: sign-in (`SignInScreen`) until an
+account is signed in, then `onboarding` for an account that has not onboarded,
+via two `Stack.Protected` groups. **`app/session/[id].tsx` lives deliberately
+OUTSIDE `(tabs)`** — mid-set a tab bar is a mis-tap risk; the in-progress bar
+routes back into it. `workouts/[id]` (the workout overview), `programs/`,
+`exercises` (the picker/library), `history/[id]` and `settings/*` push as
+full-screen routes. The two `add-exercise` routes are modals, declared in the
+root layout (presentation set inside a screen is ignored).
+
+**Opening a workout never starts it.** Program days and workout cards open the
+overview; only its pinned Start Workout starts a session, through
+`useWorkoutStarter`'s in-progress guard.
 
 ### Design system (`apps/mobile/src/ui/`)
 
 Dark-only "Editorial" tokens (warm near-black, serif display headings, amber
 accent) in `theme.ts` and `typography.ts`, consumed through: `Text`, `Screen`,
 `Button`, `Card`, `ListRow`, `SectionLabel`, `EmptyState`, `StatTile`,
-`Sheet`, `NumericField`. `Button` is a `forwardRef` — `<Link asChild>` clones
+`Sheet`, `NumericField`, plus `BottomSheet` (@gorhom), `RangeSlider`, `WheelColumn`
+(@quidone wheel picker, JS-only) and `Segmented`. Workout display pieces shared by the
+overview and the onboarding preview live in `features/workouts/WorkoutSummary.tsx`
+(target-muscle cards, exercise rows with set lines and RIR badges). `Button` is a `forwardRef` — `<Link asChild>` clones
 its child and passes a ref, and a plain function component dropped it once
 before, stopping the app from launching entirely. `Sheet` is the
 cross-platform modal (no `Alert.prompt`, which is iOS-only).
 
-### `packages/domain` — three new helpers (still zero dependencies)
+### Where things live
 
-`formatLastTrained(lastTrainedAt, now)`, `summariseMuscles(primaryMuscles,
-max)`, `formatElapsed(ms)` — all in `formatLastTrained.ts`, all pure
-primitive-in/primitive-out functions per the package's own rule.
-
-### New repository queries (`apps/mobile/src/data/`)
-
-`listRoutineSummaries(db)` (`routineRepo.ts`) — one grouped query across
-`routines` → `routine_exercises` → `exercises` → `workouts`, returning
-exercise count, `lastTrainedAt` and up to three `primaryMuscles` per routine.
-Four joined levels means four separate tombstone tests, not one.
-`getActiveWorkout(db)` (`sessionRepo.ts`) — the active workout row itself,
-consumed by the in-progress bar.
+- **Exercise picker** (`features/library/ExerciseList.tsx`): filters (muscle, type,
+  laterality, resistance/support equipment, ROM, stability, gym) all run in SQL
+  (`exerciseRepo.listExercises`). Rows are grouped into five equipment groups
+  (`EXERCISE_GROUPS`), sorted by recommendation level; groups rank by their top rows.
+  `ExerciseInfoSheet` shows instructions, details and history.
+- **Program generator** (`packages/domain/src/programPlan.ts`, pure) is volume-driven:
+  each muscle has a weekly set target (`weeklySetTarget`: +50% per focus point, half for
+  minor muscles like adductors), tracked across the whole week. A set counts 1 for the
+  muscle the exercise is *for*, 0.5 for its other primaries, 0.25 for secondaries.
+  **The catalogue lists primaries in no useful order** (a lat pulldown's first is Biceps,
+  a squat's Glutes), so the main muscle comes from the movement pattern (`mainMuscleOf`).
+  Compound or not, and "primary compound", come from the catalogue's per-goal
+  classification (`exerciseClassification*` links), not `exerciseType`; big muscles get a
+  compound, small ones isolation; two variants from one `exclusionGroupings` group never
+  share a program. After every muscle is covered, spare time goes to extra sets (focused
+  first) up to a weekly cap, so the session the user picked is filled. Rep ranges, RIR,
+  rest and a hard session-length budget via `estimateWorkoutSeconds` — the same estimate
+  the workout overview shows. `onboardingRepo` feeds it candidates and writes the result
+  (`createProgramFromPlan`). One workout per training day (A, B, C…), each muscle spread
+  over about target÷3 days; a generated program is flagged `programs.generated` and keeps
+  its seven days (`addProgramDay`/`removeProgramDay` refuse; a day's workout can change).
+- **Dashboard rings** measure this week (from Monday) against the active program's week
+  (`historyRepo.programWeekTargets`). Muscles count every muscle an exercise trains,
+  supporting ones too (`exercise_muscles`), not just the main one.
+- **Workout sets** carry `target_reps` (+ `target_reps_max` for a range) and
+  `target_rir`; `workout_exercises.rest_seconds` holds the planned rest.
+- **Session logger** (`features/session/ActiveSession.tsx`): one exercise per page (a
+  horizontal pager) with a strip of exercises on top; the route hides the native header and
+  the screen draws its own (menu, workout clock, rest countdown). Sets are typed on the app's
+  own `ui/Keypad.tsx` (digits, RIR row, full/partial switch), not the system keyboard —
+  fields are Pressables, and each is saved (`updateSet`) as soon as it is left. Session sets
+  copy the plan as `target_*` columns when the workout starts; reps start empty and an
+  untouched box logs its placeholder (the top of the range). Set types: normal, warmup, drop,
+  myo, failure; a drop/myo set's later rounds are rows with `parent_set_id`. Warm-ups are
+  inserted *before* the working sets with indexes below the lowest in use (`addWarmupSets`);
+  warm-ups and rounds are left out of set counts and volume (`historyRepo`), and records
+  already skip warm-ups. Layout rules live in `setTable.ts` (tested); the warm-up maths is
+  `packages/domain/src/warmup.ts`; the user's scheme is kept in `training_preferences`.
+  A drop or myo set starts with one round (drop: `nextDropKg`, RIR 0; myo: the set's weight,
+  shown greyed) and runs without rest until its last round. Supersets (`supersetGroup`) join
+  an exercise to the *next* one only; ticking a set moves to the partner with no rest, and
+  rest starts after the last. Pause stores `sessions.paused_at`; resuming moves `started_at`
+  forward, so durations everywhere leave the pause out. **Rows swipe to delete only because
+  each Swipeable `blocksExternalGesture` the pager's `Gesture.Native()`** — without it the
+  horizontal pager takes every drag; and an open row closes before any other tap on the page,
+  or a sheet opened over it sticks invisible.
+  The **plate calculator** shows above the keypad while a weight is typed for an exercise
+  loaded on a bar: `gymRepo.barLoadingFor` finds the bar its resistance equipment needs and
+  the active gym owns (heaviest listed weight), plus the gym's plates; the maths is
+  `packages/domain/src/plates.ts`. Any weight may be typed: what the gym's plates cannot make
+  shows as an "extra" plate each side, and −/+ step by the lightest plate pair from exactly
+  what is typed. Plates show in the unit they are marked in (whole quarter-kilos ⇒ kg), with
+  the total also in the user's unit when that differs.
 
 ## Invariants — do not break these
 
@@ -138,14 +195,19 @@ leaves Firebase out and the app runs local-only (`extra.firebase` in `app.config
   sync), then fresh defaults. The one exception to the tombstone rule; the catalogue is
   kept. Sign-out syncs first and refuses to lose unsynced changes without `force`.
 - The catalogue, `equipment` and `personal_records` never sync.
-- **Onboarding** (`app/onboarding.tsx`, `src/features/onboarding/`) runs for an account
-  that `needsOnboarding`: no `app_settings.onboarded_at` (synced) and no data of its own.
-  The root layout guards it with `Stack.Protected`, and on a fresh phone waits for the
-  first sync (`firstSyncDone`) before deciding. It writes the profile as it goes, creates
-  the gym on the gym-type step (`setUpGym` replaces every other gym), and writes the
-  program only on finishing. The generator is `generatePlan` (`packages/domain/src/
-  programPlan.ts`, pure); `onboardingRepo.planCandidates` feeds it the gym's exercises
-  in popularity order — ties go to the earlier one, so keep that order.
+- **Onboarding** (`app/onboarding.tsx`, `src/features/onboarding/`) is decided by
+  Firebase: after sign-in `syncService.checkOnboarding` reads `onboardedAt` from the
+  account's settings doc in Firestore (a phone that already has the flag skips the
+  read). A build without Firebase uses `needsOnboarding` (local). Onboarding writes the
+  profile as it goes, creates the gym on the gym-type step (`setUpGym`: replaces the
+  default on a new account, never an existing account's gyms) and writes the program
+  only on finishing. Candidates go to the generator in popularity order — ties go to
+  the earlier one, so keep that order.
+- **Never write to `app_settings` just because someone signed in.** A fresh write makes
+  this phone's row newer than the account's and sync would keep the phone's. The
+  Account page shows the Firebase name/email as a fallback instead of storing them.
+- **Phone sign-in is hidden** (commented out in `SignInScreen.tsx`); the sheet, SMS and
+  Telegram paths all remain.
 - **Telegram login codes go through Cloud Functions** (`functions/`, its own npm package,
   outside the pnpm workspace; `firebase.json` + `.firebaserc` at the root, aliases
   development/preview/production). `sendTelegramCode` throttles per number (codes cost
@@ -182,8 +244,11 @@ leaves Firebase out and the app runs local-only (`extra.firebase` in `app.config
   `BottomSheetTextInput`, or dragging and the keyboard misbehave. The older `Sheet` (a
   Modal) still backs the confirm dialogs.
 - **`.svg` files import as markup strings** (babel `inline-import`, like `.sql`), for
-  `SvgXml`. The muscle thumbnails in `assets/muscle_groups/` come in this way — and that
-  folder, like `assets/markdown/`, is gitignored, so a clean checkout cannot bundle.
+  `SvgXml`: muscle thumbnails and body-fat figures come in this way. Only
+  `assets/markdown/` and `assets/body/` are gitignored; the app bundles neither
+  (`instructions.json` and the heatmap's `regions.json` are the committed outputs).
+  Deleting a bundled asset folder breaks the bundle: `equipmentImages.ts` requires
+  every thumbnail by path.
 - **A screen reading the DB in its render body will show stale data** when another
   screen mutates it — the stack keeps it mounted. Use `useFocusEffect` to bump a
   version counter. Do not use `key={version}`; it remounts and resets scroll.
@@ -201,7 +266,7 @@ leaves Firebase out and the app runs local-only (`extra.firebase` in `app.config
   comments at their line; read them before touching either.
 - **`Screen`'s `safeTop` prop is opt-in, not automatic.** Only the four tab screens need
   it — `headerShown: false` means nothing else reserves the status-bar area for them.
-  Screens pushed on the stack (routine builder, workout detail) keep a real native header,
+  Screens pushed on the stack (workout overview, workout detail) keep a real native header,
   which already insets the content; turning `safeTop` on there double-insets. Also: add
   it to the *base* padding (`insets.top + theme.spacing.lg`), never in place of it — a
   bare `insets.top` wins the style merge and both under-pads the title and disagrees with
@@ -217,7 +282,11 @@ leaves Firebase out and the app runs local-only (`extra.firebase` in `app.config
 crash/force-quit recovery are verified against the tab shell, as are programs,
 gyms and the equipment catalogue. The one remaining gap is keyboard
 scroll-into-view on the session screen, unverified because the simulator's
-software keyboard will not appear.
+software keyboard will not appear. Driven on the iOS simulator since: the exercise
+picker and its sheets, the workout overview and Start Workout, the sign-in screen,
+all three onboarding phases end to end (with sync disabled), and the Account page
+signed in with Google. Log out, Apple sign-in and the Telegram flow have not been
+exercised against a real account.
 
 **Android:** the owner confirmed on 2026-09-22 that the app works there, after
 the rename and the equipment catalogue landed. That is a report, not a driven
@@ -233,3 +302,46 @@ with 133 tests passing, typecheck clean and `expo export` succeeding, and the ap
 still would not launch: a Metro resolver flag silently mis-resolving 183 modules,
 two undeclared expo-router peer dependencies, a major-version-wrong `query-string`,
 and a `Button` that dropped the ref `<Link asChild>` passes it. Run the app.
+
+## Roadmap — not built yet, on purpose
+
+### Direction: a coach platform (like Hevy + Hevy Coach)
+
+The product is sold to coaches; everything below serves that.
+
+- **Invitation at first launch.** A modal asks "Do you have a coach invitation?"
+  - With one, the account is a **client**. Onboarding skips the program generator, because the coach builds the program now or later.
+  - Without one, it is a self-coached user with today's onboarding.
+- **Clients are read-only.** A client cannot create or change programs, workouts or exercises. They follow the coach's program and log sessions.
+  - This breaks today's assumption that every row under `users/{uid}` is owned and edited by that user.
+  - Design sync, rules and screens for a program the trainee does not own.
+- **Measurements.** Clients get a daily reminder to measure.
+  - Weight is the minimum; body measurements of every kind and progress photos should be trackable.
+  - Ordinary users can opt into the same reminders.
+- **Pricing.** The coach pays per client, in tiers: 1–10 clients $25/mo, 11–25 clients $40/mo, and so on (not final). A coached client pays nothing.
+
+### Backlog
+
+In rough order of what was asked for earlier:
+
+1. **Set types** in workouts and sessions: standard (only one today), warm-up, failure,
+   drop sets, myo-reps / rest-pause, partials, left/right. `workout_sets.set_type`
+   exists with `normal` only.
+2. **Starting-weight recommendations**: the generator plans reps and RIR but no load.
+   Inputs to use: bodyweight, gender, lifting experience, the catalogue's per-exercise
+   `bodyweight` fraction, and the onboarding skill answers (today they only exclude
+   exercises).
+3. **Smart progression, warm-up sets, deload**: onboarding saves the preferences
+   (`app_settings.training_preferences`); nothing acts on them yet.
+4. **Exercise images**: every exercise thumbnail is a placeholder. If images must stay
+   out of the repo, load them at runtime (e.g. Firebase Storage) rather than bundling.
+5. **Workout editing gaps**: no way to remove an exercise from a workout; the ⋮ menu adds
+   sets with a single rep target, not a range or RIR; the overview header's gym icon and
+   ⋮ are not built; programs are never regenerated after onboarding.
+6. **Phone / Telegram sign-in**: deploy the functions (Blaze plan, Gateway token secret)
+   and uncomment the button.
+7. **Firebase console per profile** (preview, production): Firestore + rules deploy,
+   Apple/Google providers, APNs key, Android SHA fingerprints. Development is set up.
+8. **Smaller**: history sort chips in the info sheet; move the remaining `Sheet` modals to
+   `BottomSheet`; marketing/feature slides after onboarding (only with a subscription);
+   drive an Android checklist.

@@ -51,6 +51,8 @@ export function TrainScreen() {
   const activeProgram = getActiveProgram(db);
   const days = activeProgram ? getProgramDays(db, activeProgram.id) : [];
   const summaryByWorkoutId = new Map(summaries.map((s) => [s.workout.id, s]));
+  // Workouts a program schedules live under that program; the library is the ones made on their own.
+  const library = summaries.filter((s) => !s.inProgram);
 
   return (
     <Screen scroll safeTop>
@@ -85,14 +87,14 @@ export function TrainScreen() {
       </Card>
 
       <Collapsible title="Workout library">
-        {summaries.length === 0 ? (
+        {library.length === 0 ? (
           <EmptyState
             title="No workouts yet"
             body="Build one with the + button and it will show up here, with the last time you trained it."
           />
         ) : (
           <View style={styles.list}>
-            {summaries.map((s) => <WorkoutCard key={s.workout.id} summary={s} />)}
+            {library.map((s) => <WorkoutCard key={s.workout.id} summary={s} />)}
           </View>
         )}
       </Collapsible>

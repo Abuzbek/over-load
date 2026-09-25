@@ -54,12 +54,13 @@ describe('startSessionFromWorkout', () => {
     expect(detail?.workout.workoutId).toBe(workout.id);
   });
 
-  it('copies planned sets with targets pre-filled and completedAt null', () => {
+  it('copies planned sets as targets, the load pre-filled, reps left to type, completedAt null', () => {
     const workout = pushDay();
     const detail = getSessionDetail(db, startSessionFromWorkout(db, workout.id, AT));
     const sessionSets = detail!.exercises[0]!.sessionSets;
 
-    expect(sessionSets.map((s) => s.reps)).toEqual([8, 6]);
+    expect(sessionSets.map((s) => s.targetReps)).toEqual([8, 6]);
+    expect(sessionSets.map((s) => s.reps)).toEqual([null, null]);
     expect(sessionSets.map((s) => s.weightKg)).toEqual([80, 90]);
     expect(sessionSets.every((s) => s.completedAt === null)).toBe(true);
   });
@@ -71,7 +72,7 @@ describe('startSessionFromWorkout', () => {
     db.update(workoutSets).set({ targetReps: 99 }).where(eq(workoutSets.targetReps, 8)).run();
 
     const sessionSets = getSessionDetail(db, sessionId)!.exercises[0]!.sessionSets;
-    expect(sessionSets.map((s) => s.reps)).toEqual([8, 6]);
+    expect(sessionSets.map((s) => s.targetReps)).toEqual([8, 6]);
   });
 
   it('throws for an unknown workout', () => {

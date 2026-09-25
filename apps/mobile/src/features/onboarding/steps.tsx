@@ -909,7 +909,7 @@ function Preview({ plan, figure }: { plan: Plan; figure: 'male' | 'female' }) {
       {workout ? (
         <>
           <TargetMuscleCards
-            volumes={targetMuscles(workout.exercises.map((e) => ({ sets: e.sets.length, muscles: muscles.get(e.exerciseId)! })))}
+            volumes={targetMuscles(workout.exercises.map((e) => ({ sets: e.sets.length, main: e.muscle, muscles: muscles.get(e.exerciseId)! })))}
             figure={figure}
           />
           <WorkoutHeading

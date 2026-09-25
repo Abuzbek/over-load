@@ -3,7 +3,9 @@ import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { startBareSession } from './sessionTestFixtures';
-import { listFinishedWorkouts, muscleLoad, periodTotals } from './historyRepo';
+import { listFinishedWorkouts, muscleLoad, periodTotals, programWeekTargets } from './historyRepo';
+import { activateProgram, createProgram, setProgramDay } from './programRepo';
+import { addExerciseToWorkout, addWorkoutSet, createWorkout } from './workoutRepo';
 import { addExerciseToSession, addSet, completeSet, discardSession, finishSession } from './sessionRepo';
 
 const AT = 1_700_000_000_000;
@@ -37,6 +39,12 @@ beforeEach(() => {
   };
   db.insert(exercises).values(plankRow).run();
   plank = plankRow as unknown as Exercise;
+
+  // What each trains: bench the chest, and the triceps in support; the plank the core.
+  for (const [muscle, exerciseId, weight] of [['m-chest', row.id, 1], ['m-triceps', row.id, 0.5], ['m-core', plankRow.id, 1]] as const) {
+    db.insert(lookups).values({ id: muscle, type: 'featureMuscleGroup', name: muscle }).onConflictDoNothing().run();
+    db.insert(exerciseMuscles).values({ exerciseId, muscleId: muscle, weight }).run();
+  }
 });
 
 afterEach(() => close());
@@ -119,7 +127,7 @@ describe('periodTotals', () => {
     expect(periodTotals(db, 0, AT)).toEqual({ sets: 0, exercises: 0, muscles: 0 });
   });
 
-  it('counts completed sets, distinct exercises and distinct primary muscles', () => {
+  it('counts completed sets, distinct exercises, and every muscle they train, supporting ones too', () => {
     const sessionId = startBareSession(db, 'Push', AT);
     const we = addExerciseToSession(db, sessionId, bench.id, AT);
     for (const [weightKg, reps] of [[100, 5], [100, 5], [100, 3]] as Array<[number, number]>) {
@@ -127,7 +135,7 @@ describe('periodTotals', () => {
       completeSet(db, set.id, { weightKg, reps }, AT);
     }
 
-    expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 3, exercises: 1, muscles: 1 });
+    expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 3, exercises: 1, muscles: 2 });
   });
 
   it('excludes a planned-but-not-performed set (completedAt IS NULL)', () => {
@@ -149,7 +157,7 @@ describe('periodTotals', () => {
     const s2 = addSet(db, we2.id, AT + 500);
     completeSet(db, s2.id, { weightKg: 100, reps: 5 }, AT + 500);
 
-    expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 2, exercises: 1, muscles: 1 });
+    expect(periodTotals(db, AT - 1000, AT + 1000)).toEqual({ sets: 2, exercises: 1, muscles: 2 });
   });
 
   it('includes a set exactly at sinceMs and one exactly at untilMs; excludes one a millisecond outside either edge', () => {
@@ -168,7 +176,7 @@ describe('periodTotals', () => {
     const afterUntil = addSet(db, we.id, AT);
     completeSet(db, afterUntil.id, { weightKg: 100, reps: 5 }, AT + 1001);
 
-    expect(periodTotals(db, AT, AT + 1000)).toEqual({ sets: 2, exercises: 1, muscles: 1 });
+    expect(periodTotals(db, AT, AT + 1000)).toEqual({ sets: 2, exercises: 1, muscles: 2 });
   });
 });
 
@@ -305,5 +313,24 @@ describe('muscleLoad', () => {
     logSet(legs, AT);
 
     expect(muscleLoad(db, AT - 1000, AT + 1000).map((r) => r.muscle)).toEqual(['quadriceps', 'chest']);
+  });
+});
+
+describe('programWeekTargets', () => {
+  it("counts a cycle's planned sets per day it is scheduled, and its distinct exercises and muscles", () => {
+    expect(programWeekTargets(db)).toBeNull();
+    const program = createProgram(db, { name: 'P', icon: 'x', iconColor: 'x' }, AT);
+    activateProgram(db, program.id, AT);
+    const push = createWorkout(db, 'Push');
+    const we = addExerciseToWorkout(db, push.id, bench.id);
+    addWorkoutSet(db, we.id, { targetReps: 8 });
+    addWorkoutSet(db, we.id, { targetReps: 8 });
+    const core = createWorkout(db, 'Core');
+    addWorkoutSet(db, addExerciseToWorkout(db, core.id, plank.id).id, { targetReps: 1 });
+    setProgramDay(db, program.id, 0, push.id, AT);
+    setProgramDay(db, program.id, 2, core.id, AT);
+    setProgramDay(db, program.id, 4, push.id, AT);
+    expect(programWeekTargets(db)).toMatchObject({ sets: 5, exercises: 2, muscles: 3 });
+    expect(programWeekTargets(db)!.workoutIds.sort()).toEqual([push.id, core.id].sort());
   });
 });

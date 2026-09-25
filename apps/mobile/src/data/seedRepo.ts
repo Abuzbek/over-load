@@ -1,3 +1,4 @@
+import { mainMuscleOf } from '@overload/domain';
 import {
   catalogueMeta,
   equipment,
@@ -24,7 +25,7 @@ import { and, eq, inArray, notInArray, sql } from 'drizzle-orm';
  * compares this with catalogue_meta and only parses the 3.7 MB file on a
  * mismatch — a test pins the prefix to the file's own generatedAt.
  */
-export const CATALOGUE_VERSION = '2026-05-05T21:00:52Z#2';
+export const CATALOGUE_VERSION = '2026-05-05T21:00:52Z#4';
 
 export type AppFileEntry = { type: string; name: string | number } & Record<string, unknown>;
 export type AppFileExercise = { id: string; name: string } & Record<string, unknown>;
@@ -163,7 +164,11 @@ export function syncCatalogue(
       deletedAt: null,
       name: row.name,
       trackingType: inferTrackingType(list('exerciseMetrics').map(name)),
-      primaryMuscle: featureMuscles[0] ? name(featureMuscles[0]) : 'Other',
+      // What the exercise is for, by movement pattern: the file lists primaries
+      // in no useful order (a lat pulldown's first is Biceps).
+      primaryMuscle:
+        mainMuscleOf(list('movementPattern').map(name), list('primaryFeatureMuscle').map(name)) ??
+        (featureMuscles[0] ? name(featureMuscles[0]) : 'Other'),
       equipment: resistance ? name(resistance) : 'None',
       instructions: instructions[row.id] ?? null,
       isCustom: false,

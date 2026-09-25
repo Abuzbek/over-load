@@ -43,6 +43,8 @@ export type TrainingPreferences = {
   skills: string[];
   smartProgression: boolean;
   warmups: boolean;
+  /** The warm-up scheme the user edited, as % of the working weight × reps. Absent: the default. */
+  warmupScheme?: { percent: number; reps: number }[];
 };
 
 /**

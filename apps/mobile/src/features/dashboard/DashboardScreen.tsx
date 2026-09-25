@@ -2,7 +2,7 @@ import { formatWeight, type PersonalRecordType } from '@overload/domain';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { periodTotals } from '../../data/historyRepo';
+import { periodTotals, programWeekTargets } from '../../data/historyRepo';
 import { listAllPersonalRecords, type PersonalRecordSummary } from '../../data/sessionRepo';
 import { getWeightUnit } from '../../data/settingsRepo';
 import { db } from '../../db/client';
@@ -14,7 +14,13 @@ import { Segmented } from '../../ui/Segmented';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 
-const WEEK_MS = 7 * 86_400_000;
+/** Monday 00:00 local time: the week the program's targets are for. */
+function startOfWeek(now: Date): number {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.getTime();
+}
 
 /**
  * Chart colours, deliberately local rather than theme tokens: three rings need
@@ -22,70 +28,70 @@ const WEEK_MS = 7 * 86_400_000;
  */
 const RING = { muscles: '#6E9BFF', sets: theme.colors.accent, exercises: '#4FD1C5' };
 
-type Mode = 'week' | 'all';
+type Mode = 'program' | 'all';
 
 /**
- * The reference design measures these against an "Active Program" target. This
- * app has workouts, not programs — nothing defines a weekly goal. So "this
- * week" is measured against **last week**, which is real data and gives the
- * same "N left" shape. Swap the denominator when programs exist.
+ * This week, done against planned: the active program's week sets the
+ * targets; "Active program" counts only its workouts, "All workouts" every
+ * session since Monday. Each ring fills toward its target and says how many
+ * are left.
  */
 function TotalsSlide({ width }: { width: number }) {
-  const [mode, setMode] = useState<Mode>('week');
+  const [mode, setMode] = useState<Mode>('program');
   const now = Date.now();
 
-  const totals = periodTotals(db, mode === 'all' ? 0 : now - WEEK_MS, now);
-  // Only needed for the comparison, so only queried in week mode.
-  const prior = mode === 'week' ? periodTotals(db, now - 2 * WEEK_MS, now - WEEK_MS) : null;
+  const targets = programWeekTargets(db);
+  const done = periodTotals(db, startOfWeek(new Date(now)), now, mode === 'program' && targets ? targets.workoutIds : undefined);
 
   const ring = (value: number, target: number | undefined, size: number, color: string) => {
-    const left = target && target > value ? target - value : 0;
+    const left = target !== undefined ? Math.max(target - value, 0) : 0;
     return (
       <ProgressRing
         value={value}
         target={target}
         size={size}
         color={color}
-        caption={left > 0 ? `${left} left` : undefined}
+        caption={target === undefined ? undefined : left > 0 ? `${left} left` : 'done'}
       />
     );
   };
 
-  const sub = (target: number | undefined) =>
-    target === undefined ? ' ' : `${target} last week`;
+  const metrics = [
+    ['Muscles', done.muscles, targets?.muscles, 86, RING.muscles],
+    ['Sets', done.sets, targets?.sets, 128, RING.sets],
+    ['Exercises', done.exercises, targets?.exercises, 86, RING.exercises],
+  ] as const;
 
   return (
     <View style={{ width }}>
       <Card style={styles.slideCard}>
-        <Text variant="title">{mode === 'all' ? 'All workouts' : 'This week'}</Text>
+        <Text variant="title">This week</Text>
         <View style={styles.slideBody}>
 
         {/* Rings in one row so they share a centre line, labels in a second
             row so they share a baseline — a single column per metric makes the
             short columns float against the tall middle one. */}
         <View style={styles.rings}>
-          {ring(totals.muscles, prior?.muscles, 86, RING.muscles)}
-          {ring(totals.sets, prior?.sets, 128, RING.sets)}
-          {ring(totals.exercises, prior?.exercises, 86, RING.exercises)}
+          {metrics.map(([label, value, target, size, color]) => (
+            <View key={label}>{ring(value, target, size, color)}</View>
+          ))}
         </View>
         <View style={styles.ringLabels}>
-          {([['Muscles', prior?.muscles], ['Sets', prior?.sets], ['Exercises', prior?.exercises]] as const).map(
-            ([label, target]) => (
-              <View key={label} style={styles.ringLabel}>
-                <Text variant="heading">{label}</Text>
-                <Text variant="caption" color="textMuted">{sub(target)}</Text>
-              </View>
-            ),
-          )}
+          {metrics.map(([label, , target]) => (
+            <View key={label} style={styles.ringLabel}>
+              <Text variant="heading">{label}</Text>
+              <Text variant="caption" color="textMuted">{target === undefined ? 'No program' : `of ${target} planned`}</Text>
+            </View>
+          ))}
           </View>
         </View>
 
         <Segmented
-          accessibilityLabel="Period"
+          accessibilityLabel="Count"
           value={mode}
           onChange={setMode}
           options={[
-            { value: 'week', label: 'This week' },
+            { value: 'program', label: 'Active program' },
             { value: 'all', label: 'All workouts' },
           ]}
         />

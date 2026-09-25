@@ -2,6 +2,8 @@ import { summariseMuscles } from '@overload/domain';
 import {
   exercises,
   newId,
+  programDays,
+  programs,
   now,
   workoutExercises,
   workoutSets,
@@ -198,6 +200,8 @@ export type WorkoutSummary = {
   primaryMuscles: string[];
   /** In order, for the one-line preview under a workout's name. */
   exerciseNames: string[];
+  /** Scheduled on a day of a live program: shown with the program, not in the library. */
+  inProgram: boolean;
 };
 
 /**
@@ -205,7 +209,7 @@ export type WorkoutSummary = {
  * already shows what the per-row loop costs, and it is a known deferred minor.
  *
  * Four levels carry a tombstone filter: workouts, workout_exercises, exercises
- * and sessions. Dropping any one of them silently changes the numbers on the
+ * and sessions (program_days and programs too, for `inProgram`). Dropping any one of them silently changes the numbers on the
  * Train screen rather than throwing.
  */
 export function listWorkoutSummaries(db: Db): WorkoutSummary[] {
@@ -233,6 +237,16 @@ export function listWorkoutSummaries(db: Db): WorkoutSummary[] {
 
   const lastByWorkout = new Map(lastTrained.map((r) => [r.workoutId, r.lastAt ?? null]));
 
+  const scheduled = new Set(
+    db
+      .selectDistinct({ workoutId: programDays.workoutId })
+      .from(programDays)
+      .innerJoin(programs, eq(programs.id, programDays.programId))
+      .where(and(isNotNull(programDays.workoutId), isNull(programDays.deletedAt), isNull(programs.deletedAt)))
+      .all()
+      .map((r) => r.workoutId),
+  );
+
   return live.map((workout) => {
     const mine = entries.filter((e) => e.workoutId === workout.id);
     return {
@@ -241,6 +255,7 @@ export function listWorkoutSummaries(db: Db): WorkoutSummary[] {
       lastTrainedAt: lastByWorkout.get(workout.id) ?? null,
       primaryMuscles: summariseMuscles(mine.map((e) => e.primaryMuscle), 3),
       exerciseNames: mine.map((e) => e.name),
+      inProgram: scheduled.has(workout.id),
     };
   });
 }

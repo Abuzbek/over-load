@@ -95,6 +95,9 @@ export default function RootLayout() {
           headerTintColor: theme.colors.text,
           headerTitleStyle: { color: theme.colors.text },
           contentStyle: { backgroundColor: theme.colors.background },
+          // The chevron alone: iOS otherwise labels it with the screen behind,
+          // which for anything pushed from a tab is the group name "(tabs)".
+          headerBackButtonDisplayMode: 'minimal',
         }}
       >
         {/* headerShown: false is load-bearing. Without it the root Stack draws its

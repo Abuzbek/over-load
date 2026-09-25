@@ -44,7 +44,7 @@ export function getActiveProgram(db: Db): Program | undefined {
  */
 export function createProgram(
   db: Db,
-  values: { name: string; icon?: string; iconColor?: string },
+  values: { name: string; icon?: string; iconColor?: string; generated?: boolean },
   at: number,
 ): Program {
   const highest = db.select({ maxIndex: max(programs.orderIndex) }).from(programs).get();
@@ -58,6 +58,7 @@ export function createProgram(
     iconColor: values.iconColor ?? null,
     orderIndex: (highest?.maxIndex ?? -1) + 1,
     cycleNumber: 1,
+    generated: values.generated ?? false,
   };
 
   db.transaction((tx) => {
@@ -245,12 +246,18 @@ export function markDayDoneForWorkout(db: Db, workoutId: string, at: number): vo
   advanceCycleIfComplete(db, program.id, at);
 }
 
+/** A generated program's cycle is fixed at its seven days (see programs.generated). */
+export function isGenerated(db: Db, programId: string): boolean {
+  return db.select({ generated: programs.generated }).from(programs).where(eq(programs.id, programId)).get()?.generated ?? false;
+}
+
 /**
- * Tombstones a day. Day numbers are positional, so removing day 2 renumbers
+ * Tombstones a day. A generated program's never are. Day numbers are positional, so removing day 2 renumbers
  * everything after it — the stored dayIndex values keep their gaps, which is
  * what stops addProgramDay reusing an index.
  */
 export function removeProgramDay(db: Db, programId: string, dayIndex: number, at: number): void {
+  if (isGenerated(db, programId)) return;
   db.update(programDays)
     .set({ deletedAt: at, updatedAt: at })
     .where(
@@ -264,13 +271,15 @@ export function removeProgramDay(db: Db, programId: string, dayIndex: number, at
 }
 
 /**
- * Appends one rest day to the end of the cycle and returns its index.
+ * Appends one rest day to the end of the cycle and returns its index; null at
+ * the limit or for a generated program.
  *
  * The index is max(dayIndex) + 1 over ALL rows including tombstoned ones, per
  * the ordering invariant: a count of live rows collides with a soft-deleted
  * day that still holds the index.
  */
 export function addProgramDay(db: Db, programId: string, at: number): number | null {
+  if (isGenerated(db, programId)) return null;
   const rows = db
     .select({ maxIndex: max(programDays.dayIndex) })
     .from(programDays)

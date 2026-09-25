@@ -13,6 +13,11 @@ export const programs = sqliteTable('programs', {
    * every day has been ticked off — see advanceCycleIfComplete in programRepo.
    */
   cycleNumber: integer('cycle_number').notNull().default(1),
+  /**
+   * Made by the program generator: its workouts are laid out across a week, so
+   * the cycle stays at seven days — days can be changed, not added or removed.
+   */
+  generated: integer('generated', { mode: 'boolean' }).notNull().default(false),
 });
 
 /**

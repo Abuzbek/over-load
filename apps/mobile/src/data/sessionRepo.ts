@@ -1,4 +1,4 @@
-import { computePersonalRecords, type CompletedSet, type PersonalRecordType } from '@overload/domain';
+import { computePersonalRecords, nextDropKg, type CompletedSet, type PersonalRecordType } from '@overload/domain';
 import {
   exercises,
   newId,
@@ -14,8 +14,9 @@ import {
   type Session,
   type SessionExercise,
   type SessionSet,
+  type SetType,
 } from '@overload/schema';
-import { and, asc, desc, eq, inArray, isNotNull, isNull, max } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, max, min, or } from 'drizzle-orm';
 import { markDayDoneForWorkout } from './programRepo';
 import { getWorkoutDetail } from './workoutRepo';
 
@@ -35,8 +36,10 @@ function timestamps(at: number) {
 }
 
 /**
- * Copies the workout into a fresh workout tree. Targets become pre-filled
- * values on planned sessionSets, so the lifter edits a number rather than typing one.
+ * Copies the workout into a fresh session tree. Each set carries its plan (rep
+ * range, RIR, load) as targets; the load is pre-filled from the same working
+ * set last time, so the lifter edits a number rather than typing one. Reps
+ * start empty — the target shows as the placeholder.
  */
 export function startSessionFromWorkout(db: Db, workoutId: string, at: number): string {
   const detail = getWorkoutDetail(db, workoutId);
@@ -57,6 +60,8 @@ export function startSessionFromWorkout(db: Db, workoutId: string, at: number): 
 
     for (const entry of detail.exercises) {
       const sessionExerciseId = newId();
+      const before = lastPerformance(db, entry.exercise.id, sessionId).filter((s) => s.setType !== 'warmup');
+      let working = 0;
 
       tx.insert(sessionExercises).values({
         id: sessionExerciseId,
@@ -70,19 +75,24 @@ export function startSessionFromWorkout(db: Db, workoutId: string, at: number): 
       }).run();
 
       for (const plannedSet of entry.sessionSets) {
+        const last = plannedSet.setType === 'warmup' ? undefined : before[working++];
         tx.insert(sessionSets).values({
           id: newId(),
           ...timestamps(at),
           sessionExerciseId,
           orderIndex: plannedSet.orderIndex,
           setType: plannedSet.setType,
-          weightKg: plannedSet.targetWeightKg,
-          reps: plannedSet.targetReps,
+          weightKg: plannedSet.targetWeightKg ?? last?.weightKg ?? null,
+          reps: null,
           durationSeconds: null,
           distanceM: null,
           rpe: null,
           rir: null,
           completedAt: null,
+          targetReps: plannedSet.targetReps,
+          targetRepsMax: plannedSet.targetRepsMax,
+          targetRir: plannedSet.targetRir,
+          targetWeightKg: plannedSet.targetWeightKg,
         }).run();
       }
     }
@@ -171,6 +181,7 @@ export function getSessionDetail(db: Db, sessionId: string): SessionDetail | und
 export type SetValues = {
   weightKg?: number | null;
   reps?: number | null;
+  partialReps?: number | null;
   durationSeconds?: number | null;
   distanceM?: number | null;
   rpe?: number | null;
@@ -214,10 +225,11 @@ export function addSet(db: Db, sessionExerciseId: string, at: number): SessionSe
     .where(eq(sessionSets.sessionExerciseId, sessionExerciseId))
     .get();
 
+  // The last set of its own — not a drop or myo round, which only continues one.
   const previous = db
     .select()
     .from(sessionSets)
-    .where(and(eq(sessionSets.sessionExerciseId, sessionExerciseId), isNull(sessionSets.deletedAt)))
+    .where(and(eq(sessionSets.sessionExerciseId, sessionExerciseId), isNull(sessionSets.deletedAt), isNull(sessionSets.parentSetId)))
     .orderBy(desc(sessionSets.orderIndex))
     .get();
 
@@ -235,10 +247,213 @@ export function addSet(db: Db, sessionExerciseId: string, at: number): SessionSe
     rpe: null,
     rir: null,
     completedAt: null,
+    partialReps: null,
+    // Another set of the same plan.
+    targetReps: previous?.targetReps ?? null,
+    targetRepsMax: previous?.targetRepsMax ?? null,
+    targetRir: previous?.setType === 'warmup' ? null : (previous?.targetRir ?? null),
+    targetWeightKg: previous?.targetWeightKg ?? null,
+    parentSetId: null,
   };
 
   db.insert(sessionSets).values(row).run();
   return row;
+}
+
+/** The value fields of SetValues onto a patch: omitted keys stay as stored, an explicit null clears. */
+function patchOf(values: SetValues, at: number): Partial<typeof sessionSets.$inferInsert> {
+  const patch: Partial<typeof sessionSets.$inferInsert> = { updatedAt: at };
+  if (values.weightKg !== undefined) patch.weightKg = values.weightKg;
+  if (values.reps !== undefined) patch.reps = values.reps;
+  if (values.partialReps !== undefined) patch.partialReps = values.partialReps;
+  if (values.durationSeconds !== undefined) patch.durationSeconds = values.durationSeconds;
+  if (values.distanceM !== undefined) patch.distanceM = values.distanceM;
+  if (values.rpe !== undefined) patch.rpe = values.rpe;
+  if (values.rir !== undefined) patch.rir = values.rir;
+  return patch;
+}
+
+/**
+ * Saves what has been typed into a set without completing it, so a crash
+ * mid-set loses nothing. Same omitted-key rule as completeSet.
+ */
+export function updateSet(db: Db, setId: string, values: SetValues, at: number): void {
+  db.update(sessionSets).set(patchOf(values, at)).where(eq(sessionSets.id, setId)).run();
+}
+
+/**
+ * Changes what kind of set this is. A warm-up has no RIR to aim for; a failure
+ * set is RIR 0 by definition. A set that stops being a drop or myo set loses
+ * its rounds.
+ */
+export function setSetType(db: Db, setId: string, setType: SetType, at: number): void {
+  const patch: Partial<typeof sessionSets.$inferInsert> = { setType, updatedAt: at };
+  if (setType === 'warmup') patch.targetRir = null;
+  if (setType === 'failure') {
+    patch.targetRir = 0;
+    patch.rir = 0;
+  }
+  // A drop or myo set is taken to failure before its rounds begin.
+  if (setType === 'drop' || setType === 'myo') patch.rir = 0;
+  // Back to a plain set: the RIR 0 those types imply goes too, unless the set is already logged.
+  const was = db.select({ setType: sessionSets.setType, completedAt: sessionSets.completedAt }).from(sessionSets).where(eq(sessionSets.id, setId)).get();
+  if ((setType === 'normal' || setType === 'warmup') && was && was.setType !== 'normal' && was.setType !== 'warmup' && was.completedAt === null) {
+    patch.rir = null;
+    if (was.setType === 'failure') patch.targetRir = null;
+  }
+  db.transaction((tx) => {
+    tx.update(sessionSets).set(patch).where(eq(sessionSets.id, setId)).run();
+    if (setType !== 'drop' && setType !== 'myo') {
+      tx.update(sessionSets).set({ deletedAt: at, updatedAt: at }).where(and(eq(sessionSets.parentSetId, setId), isNull(sessionSets.deletedAt))).run();
+    } else {
+      tx.update(sessionSets).set({ setType, updatedAt: at }).where(and(eq(sessionSets.parentSetId, setId), isNull(sessionSets.deletedAt))).run();
+    }
+  });
+  // A drop or myo set is nothing without a round after it: it starts with one.
+  if (setType === 'drop' || setType === 'myo') {
+    const hasRound = db.select({ id: sessionSets.id }).from(sessionSets).where(and(eq(sessionSets.parentSetId, setId), isNull(sessionSets.deletedAt))).get();
+    if (!hasRound) addRound(db, setId, at);
+  }
+}
+
+/**
+ * Another round of a drop or myo set, planned from the round before it. A drop
+ * round is lighter (nextDropKg) and to failure; a myo round keeps the weight —
+ * left empty, so the box shows it greyed and ticking logs it.
+ */
+export function addRound(db: Db, parentSetId: string, at: number): SessionSet {
+  const parent = db.select().from(sessionSets).where(eq(sessionSets.id, parentSetId)).get();
+  if (!parent) throw new Error(`Set not found: ${parentSetId}`);
+  const before =
+    db
+      .select()
+      .from(sessionSets)
+      .where(and(eq(sessionSets.parentSetId, parentSetId), isNull(sessionSets.deletedAt)))
+      .orderBy(desc(sessionSets.orderIndex))
+      .get() ?? parent;
+  const load = before.weightKg ?? before.targetWeightKg;
+  const drop = parent.setType === 'drop';
+  const dropKg = drop && load !== null ? nextDropKg(load) : null;
+  const highest = db
+    .select({ maxIndex: max(sessionSets.orderIndex) })
+    .from(sessionSets)
+    .where(eq(sessionSets.sessionExerciseId, parent.sessionExerciseId))
+    .get();
+  const row = {
+    id: newId(),
+    ...timestamps(at),
+    sessionExerciseId: parent.sessionExerciseId,
+    orderIndex: (highest?.maxIndex ?? -1) + 1,
+    setType: parent.setType,
+    weightKg: dropKg,
+    reps: null,
+    durationSeconds: null,
+    distanceM: null,
+    rpe: null,
+    rir: drop ? 0 : null,
+    completedAt: null,
+    partialReps: null,
+    targetReps: null,
+    targetRepsMax: null,
+    targetRir: drop ? 0 : null,
+    targetWeightKg: drop ? dropKg : load,
+    parentSetId,
+  };
+  db.insert(sessionSets).values(row).run();
+  return row;
+}
+
+/**
+ * Warm-up sets before every other set of the exercise. They take indexes below
+ * the lowest in use (over all rows, tombstoned too — the same no-collision rule
+ * as max + 1 for appending), in the order given.
+ */
+export function addWarmupSets(
+  db: Db,
+  sessionExerciseId: string,
+  sets: { weightKg: number | null; reps: number | null }[],
+  at: number,
+): void {
+  const lowest = db
+    .select({ minIndex: min(sessionSets.orderIndex) })
+    .from(sessionSets)
+    .where(eq(sessionSets.sessionExerciseId, sessionExerciseId))
+    .get()?.minIndex ?? 0;
+  if (sets.length === 0) return;
+  db.insert(sessionSets)
+    .values(
+      sets.map((s, i) => ({
+        id: newId(),
+        ...timestamps(at),
+        sessionExerciseId,
+        orderIndex: lowest - sets.length + i,
+        setType: 'warmup' as const,
+        weightKg: s.weightKg,
+        reps: null,
+        targetReps: s.reps,
+        completedAt: null,
+      })),
+    )
+    .run();
+}
+
+/**
+ * Joins this exercise to the one after it: into that one's superset if it has
+ * one, else a new one. Only ever the next — supersets are neighbours.
+ */
+export function supersetWithNext(db: Db, sessionExerciseId: string, at: number): void {
+  const me = db.select().from(sessionExercises).where(eq(sessionExercises.id, sessionExerciseId)).get();
+  if (!me) return;
+  const siblings = db
+    .select()
+    .from(sessionExercises)
+    .where(and(eq(sessionExercises.sessionId, me.sessionId), isNull(sessionExercises.deletedAt)))
+    .orderBy(asc(sessionExercises.orderIndex))
+    .all();
+  const next = siblings[siblings.findIndex((s) => s.id === me.id) + 1];
+  if (!next) return;
+  const group = me.supersetGroup ?? next.supersetGroup ?? Math.max(0, ...siblings.map((s) => s.supersetGroup ?? 0)) + 1;
+  db.update(sessionExercises).set({ supersetGroup: group, updatedAt: at }).where(inArray(sessionExercises.id, [me.id, next.id])).run();
+}
+
+/** Takes this exercise out of its superset; a superset left with one exercise is no superset. */
+export function detachSuperset(db: Db, sessionExerciseId: string, at: number): void {
+  const me = db.select().from(sessionExercises).where(eq(sessionExercises.id, sessionExerciseId)).get();
+  if (!me?.supersetGroup) return;
+  db.update(sessionExercises).set({ supersetGroup: null, updatedAt: at }).where(eq(sessionExercises.id, me.id)).run();
+  const left = db
+    .select({ id: sessionExercises.id })
+    .from(sessionExercises)
+    .where(and(eq(sessionExercises.sessionId, me.sessionId), eq(sessionExercises.supersetGroup, me.supersetGroup), isNull(sessionExercises.deletedAt)))
+    .all();
+  if (left.length === 1) db.update(sessionExercises).set({ supersetGroup: null, updatedAt: at }).where(eq(sessionExercises.id, left[0]!.id)).run();
+}
+
+/** Stops the workout's clock. */
+export function pauseSession(db: Db, sessionId: string, at: number): void {
+  db.update(sessions).set({ pausedAt: at, updatedAt: at }).where(and(eq(sessions.id, sessionId), isNull(sessions.pausedAt))).run();
+}
+
+/**
+ * Starts the clock again. startedAt moves forward by the pause, so the workout's
+ * length — here and in history — leaves the pause out.
+ * ponytail: the start time shown later is shifted by the pauses; store paused_ms if that ever matters.
+ */
+export function resumeSession(db: Db, sessionId: string, at: number): void {
+  const row = db.select({ startedAt: sessions.startedAt, pausedAt: sessions.pausedAt }).from(sessions).where(eq(sessions.id, sessionId)).get();
+  if (!row?.pausedAt) return;
+  db.update(sessions)
+    .set({ startedAt: row.startedAt + (at - row.pausedAt), pausedAt: null, updatedAt: at })
+    .where(eq(sessions.id, sessionId))
+    .run();
+}
+
+/** Removes a set, and its rounds if it is a drop or myo set. */
+export function deleteSet(db: Db, setId: string, at: number): void {
+  db.update(sessionSets)
+    .set({ deletedAt: at, updatedAt: at })
+    .where(and(or(eq(sessionSets.id, setId), eq(sessionSets.parentSetId, setId)), isNull(sessionSets.deletedAt)))
+    .run();
 }
 
 /**
@@ -249,14 +464,7 @@ export function completeSet(db: Db, setId: string, values: SetValues, at: number
   // Typed against the schema, so renaming a column fails to compile here rather
   // than silently writing nothing. Each field is assigned only when present, so
   // an omitted key leaves the stored value alone while an explicit null clears it.
-  const patch: Partial<typeof sessionSets.$inferInsert> = { completedAt: at, updatedAt: at };
-  if (values.weightKg !== undefined) patch.weightKg = values.weightKg;
-  if (values.reps !== undefined) patch.reps = values.reps;
-  if (values.durationSeconds !== undefined) patch.durationSeconds = values.durationSeconds;
-  if (values.distanceM !== undefined) patch.distanceM = values.distanceM;
-  if (values.rpe !== undefined) patch.rpe = values.rpe;
-  if (values.rir !== undefined) patch.rir = values.rir;
-  db.update(sessionSets).set(patch).where(eq(sessionSets.id, setId)).run();
+  db.update(sessionSets).set({ ...patchOf(values, at), completedAt: at }).where(eq(sessionSets.id, setId)).run();
 }
 
 export function uncompleteSet(db: Db, setId: string): void {
@@ -399,6 +607,8 @@ export function rebuildAllPersonalRecords(db: Db): void {
 }
 
 export function finishSession(db: Db, sessionId: string, at: number): void {
+  // Finished while paused: the pause is not part of the workout.
+  resumeSession(db, sessionId, at);
   db.update(sessions).set({ endedAt: at, updatedAt: at }).where(eq(sessions.id, sessionId)).run();
 
   // Finishing a workout ticks off the program day it came from, so the user
