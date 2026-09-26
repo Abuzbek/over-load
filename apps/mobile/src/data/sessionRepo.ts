@@ -1,4 +1,4 @@
-import { computePersonalRecords, nextDropKg, type CompletedSet, type PersonalRecordType } from '@overload/domain';
+import { computePersonalRecords, nextDropKg, suggestSets, type CompletedSet, type PersonalRecordType, type SetPlan } from '@overload/domain';
 import {
   exercises,
   newId,
@@ -17,8 +17,20 @@ import {
   type SetType,
 } from '@overload/schema';
 import { and, asc, desc, eq, inArray, isNotNull, isNull, max, min, or } from 'drizzle-orm';
+import { getActiveGym, loadableWeights } from './gymRepo';
+import { cycleFor, cycleSets } from './periodizationRepo';
 import { markDayDoneForWorkout } from './programRepo';
-import { getWorkoutDetail } from './workoutRepo';
+import { isSmartProgressionOn } from './settingsRepo';
+import { addExerciseToWorkout, addWorkoutSet, getWorkoutDetail } from './workoutRepo';
+
+/** A working set as it is to be done, before it becomes a session set. */
+type PlannedWorking = {
+  setType: SetType;
+  targetReps: number | null;
+  targetRepsMax: number | null;
+  targetRir: number | null;
+  targetWeightKg: number | null;
+};
 
 export type WorkoutDetailExercise = {
   sessionExercise: SessionExercise;
@@ -37,15 +49,20 @@ function timestamps(at: number) {
 
 /**
  * Copies the workout into a fresh session tree. Each set carries its plan (rep
- * range, RIR, load) as targets; the load is pre-filled from the same working
- * set last time, so the lifter edits a number rather than typing one. Reps
- * start empty — the target shows as the placeholder.
+ * range, RIR, load) as targets. With smart progression on and a history to go
+ * on, each working set is pre-filled with a suggested weight and reps
+ * (suggestSets), and the weight becomes its target load; otherwise the load
+ * comes from the same working set last time and reps start empty, the target
+ * showing as the placeholder.
  */
 export function startSessionFromWorkout(db: Db, workoutId: string, at: number): string {
   const detail = getWorkoutDetail(db, workoutId);
   if (!detail) throw new Error(`Workout not found: ${workoutId}`);
 
   const sessionId = newId();
+  const smart = isSmartProgressionOn(db);
+  const gymId = getActiveGym(db)?.id;
+  const cycle = cycleFor(db, workoutId);
 
   db.transaction((tx) => {
     tx.insert(sessions).values({
@@ -61,7 +78,29 @@ export function startSessionFromWorkout(db: Db, workoutId: string, at: number): 
     for (const entry of detail.exercises) {
       const sessionExerciseId = newId();
       const before = lastPerformance(db, entry.exercise.id, sessionId).filter((s) => s.setType !== 'warmup');
-      let working = 0;
+      // The working sets to do: this cycle's, for a periodized program; else as planned.
+      const planned = entry.sessionSets.filter((s) => s.setType !== 'warmup');
+      const working: PlannedWorking[] = cycle
+        ? cycleSets(db, entry.exercise, entry.sessionSets, cycle).map((c) => ({
+            setType: c.setType,
+            targetReps: c.repsMin,
+            targetRepsMax: c.repsMax,
+            targetRir: c.rir,
+            targetWeightKg: null,
+          }))
+        : planned.map((s) => ({ setType: s.setType, targetReps: s.targetReps, targetRepsMax: s.targetRepsMax, targetRir: s.targetRir, targetWeightKg: s.targetWeightKg }));
+      const suggested = smart
+        ? suggestSets(
+            lastWorkingSets(db, entry.exercise.id, sessionId),
+            working.map((s): SetPlan => ({
+              repsMin: s.targetReps ?? 8,
+              // A set to failure: as many as the load allows.
+              repsMax: s.targetRepsMax ?? (s.setType === 'failure' ? 30 : (s.targetReps ?? 12)),
+              rir: s.targetRir ?? 2,
+            })),
+            gymId ? loadableWeights(db, gymId, entry.exercise.id) : null,
+          )
+        : null;
 
       tx.insert(sessionExercises).values({
         id: sessionExerciseId,
@@ -74,27 +113,44 @@ export function startSessionFromWorkout(db: Db, workoutId: string, at: number): 
         supersetGroup: entry.workoutExercise.supersetGroup,
       }).run();
 
-      for (const plannedSet of entry.sessionSets) {
-        const last = plannedSet.setType === 'warmup' ? undefined : before[working++];
+      const row = (orderIndex: number) => ({
+        id: newId(),
+        ...timestamps(at),
+        sessionExerciseId,
+        orderIndex,
+        reps: null,
+        durationSeconds: null,
+        distanceM: null,
+        rpe: null,
+        rir: null,
+        completedAt: null,
+      });
+      // Planned warm-ups first, as they were.
+      for (const w of entry.sessionSets.filter((s) => s.setType === 'warmup')) {
         tx.insert(sessionSets).values({
-          id: newId(),
-          ...timestamps(at),
-          sessionExerciseId,
-          orderIndex: plannedSet.orderIndex,
+          ...row(w.orderIndex - 1000),
+          setType: 'warmup',
+          weightKg: w.targetWeightKg,
+          targetReps: w.targetReps,
+          targetRepsMax: w.targetRepsMax,
+          targetRir: w.targetRir,
+          targetWeightKg: w.targetWeightKg,
+        }).run();
+      }
+      working.forEach((plannedSet, n) => {
+        const last = before[n];
+        const suggestion = suggested?.[n];
+        tx.insert(sessionSets).values({
+          ...row(n),
           setType: plannedSet.setType,
-          weightKg: plannedSet.targetWeightKg ?? last?.weightKg ?? null,
-          reps: null,
-          durationSeconds: null,
-          distanceM: null,
-          rpe: null,
-          rir: null,
-          completedAt: null,
+          weightKg: plannedSet.targetWeightKg ?? suggestion?.weightKg ?? last?.weightKg ?? null,
+          reps: plannedSet.setType === 'failure' ? null : (suggestion?.reps ?? null),
           targetReps: plannedSet.targetReps,
           targetRepsMax: plannedSet.targetRepsMax,
           targetRir: plannedSet.targetRir,
-          targetWeightKg: plannedSet.targetWeightKg,
+          targetWeightKg: plannedSet.targetWeightKg ?? suggestion?.weightKg ?? null,
         }).run();
-      }
+      });
     }
   });
 
@@ -525,6 +581,8 @@ export function lastPerformance(
         eq(sessionExercises.sessionId, previousSession.sessionId),
         eq(sessionExercises.exerciseId, exerciseId),
         isNotNull(sessionSets.completedAt),
+        // A drop or myo round is part of its set, not a set to compare with.
+        isNull(sessionSets.parentSetId),
         isNull(sessionSets.deletedAt),
         isNull(sessionExercises.deletedAt),
         isNull(exercises.deletedAt),
@@ -533,6 +591,37 @@ export function lastPerformance(
     .orderBy(asc(sessionSets.orderIndex))
     .all()
     .map(({ set, trackingType }) => toCompletedSet(set, exerciseId, trackingType));
+}
+
+/**
+ * Adds an exercise to a workout planned as it was last done: one set per
+ * working set of its latest session, at that weight, for that many reps and
+ * that RIR (6 × 50, 6 × 40, 7 × 45, 8 × 30 comes back as those four sets). Never
+ * done: one set of 8.
+ */
+export function addExerciseFromHistory(db: Db, workoutId: string, exerciseId: string): void {
+  const workoutExercise = addExerciseToWorkout(db, workoutId, exerciseId);
+  const last = lastWorkingSets(db, exerciseId, '');
+  if (last.length === 0) {
+    addWorkoutSet(db, workoutExercise.id, { targetReps: 8 });
+    return;
+  }
+  for (const set of last) {
+    addWorkoutSet(db, workoutExercise.id, { targetReps: set.reps ?? undefined, targetWeightKg: set.weightKg ?? undefined, targetRir: set.rir ?? undefined });
+  }
+}
+
+/**
+ * Last time's working sets of an exercise as logged — load, reps, RIR,
+ * partials and the RIR planned — for smart progression. Warm-ups and drop or
+ * myo rounds are left out.
+ */
+export function lastWorkingSets(db: Db, exerciseId: string, excludeSessionId: string): SessionSet[] {
+  const previous = lastPerformance(db, exerciseId, excludeSessionId);
+  if (previous.length === 0) return [];
+  const ids = previous.filter((s) => s.setType !== 'warmup').map((s) => s.id);
+  if (ids.length === 0) return [];
+  return db.select().from(sessionSets).where(inArray(sessionSets.id, ids)).orderBy(asc(sessionSets.orderIndex)).all();
 }
 
 /** Completed sessionSets for a single exercise across all history, most-recent tombstones excluded. */

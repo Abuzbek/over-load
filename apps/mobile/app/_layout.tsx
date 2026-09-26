@@ -110,6 +110,8 @@ export default function RootLayout() {
             here: set from inside the screen, the options were dropped whole. */}
         <Stack.Screen name="session/[id]/add-exercise" options={{ presentation: 'modal', title: 'Add exercises' }} />
         <Stack.Screen name="workouts/[id]/add-exercise" options={{ presentation: 'modal', title: 'Add exercises' }} />
+        {/* Draws its own header (×, progress), like onboarding. */}
+        <Stack.Screen name="programs/new" options={{ headerShown: false }} />
         </Stack.Protected>
         {/* Until the account has onboarded, onboarding is the only way in. */}
         <Stack.Protected guard={onboard}>

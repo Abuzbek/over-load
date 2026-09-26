@@ -46,6 +46,8 @@ export function createProgram(
   db: Db,
   values: { name: string; icon?: string; iconColor?: string; generated?: boolean },
   at: number,
+  /** Days in the new cycle: seven, or one for a program built from scratch, which grows it. */
+  dayCount = DEFAULT_DAY_COUNT,
 ): Program {
   const highest = db.select({ maxIndex: max(programs.orderIndex) }).from(programs).get();
   const row = {
@@ -65,7 +67,7 @@ export function createProgram(
     tx.insert(programs).values(row).run();
     tx.insert(programDays)
       .values(
-        Array.from({ length: DEFAULT_DAY_COUNT }, (_, dayIndex) => ({
+        Array.from({ length: dayCount }, (_, dayIndex) => ({
           id: newId(),
           createdAt: at,
           updatedAt: at,

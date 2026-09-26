@@ -1,12 +1,7 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { ProgramDaysScreen } from '../../src/features/programs/ProgramDaysScreen';
+import { useLocalSearchParams } from 'expo-router';
+import { ProgramEditor } from '../../src/features/programs/ProgramEditor';
 
-export default function ProgramDaysRoute() {
+export default function ProgramRoute() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
-  return (
-    <>
-      <Stack.Screen options={{ title: name ?? 'Program' }} />
-      <ProgramDaysScreen programId={id} programName={name ?? 'Program'} />
-    </>
-  );
+  return <ProgramEditor programId={id} programName={name ?? 'Program'} />;
 }

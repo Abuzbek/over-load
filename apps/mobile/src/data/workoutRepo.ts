@@ -57,6 +57,10 @@ export function createWorkout(db: Db, name: string): Workout {
   return row;
 }
 
+export function renameWorkout(db: Db, workoutId: string, name: string, at: number): void {
+  db.update(workouts).set({ name, updatedAt: at }).where(eq(workouts.id, workoutId)).run();
+}
+
 export function softDeleteWorkout(db: Db, workoutId: string): void {
   db.update(workouts).set({ deletedAt: now(), updatedAt: now() }).where(eq(workouts.id, workoutId)).run();
 }

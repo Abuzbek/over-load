@@ -6,6 +6,7 @@ import { listExercises } from './exerciseRepo';
 import {
   activateGym,
   barLoadingFor,
+  loadableWeights,
   countOwnedEquipment,
   createGymFromPreset,
   duplicateGym,
@@ -374,5 +375,17 @@ describe('barLoadingFor', () => {
     expect(barLoadingFor(db, gym.id, id('Dumbbell curl'))).toBeNull();
     const bare = createGymFromPreset(db, 'Bar only', 'house', ['Barbell'], now());
     expect(barLoadingFor(db, bare.id, id('Bench press'))).toBeNull();
+  });
+});
+
+describe('loadableWeights', () => {
+  it("is what the exercise's equipment can make in this gym: bar totals, a rack, a stack", () => {
+    const gym = createGymFromPreset(db, 'Full', 'house', ['Barbell', 'Weight plates', 'Dumbbells', 'Pin-loaded leg press'], now());
+    const id = (name: string) => listExercises(db).find((e) => e.name === name)!.id;
+    expect(loadableWeights(db, gym.id, id('Bench press'))!.slice(0, 3)).toEqual([20, 60, 100]);
+    expect(loadableWeights(db, gym.id, id('Dumbbell curl'))).toEqual([10, 20]);
+    const press = loadableWeights(db, gym.id, id('Leg press'))!;
+    expect([press[0], press.at(-1), press.length]).toEqual([5, 250, 50]);
+    expect(loadableWeights(db, gym.id, id('Push-up'))).toBeNull();
   });
 });

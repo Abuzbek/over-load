@@ -110,6 +110,28 @@ cross-platform modal (no `Alert.prompt`, which is iOS-only).
   (`createProgramFromPlan`). One workout per training day (A, B, C…), each muscle spread
   over about target÷3 days; a generated program is flagged `programs.generated` and keeps
   its seven days (`addProgramDay`/`removeProgramDay` refuse; a day's workout can change).
+- **Periodization** (`packages/domain/src/periodization.ts`, pure): a block of 7 cycles, the
+  last a deload (if chosen), then it repeats. By goal: hypertrophy (and isolation work for
+  any goal) keeps the rep range and tapers RIR to failure sets; strength/both compounds
+  alternate moderate cycles with heavy ones (2–4 reps, then "2+" failure sets). Only a
+  *generated* active program is periodized (`periodizationRepo.cycleFor`, using the
+  program's `cycle_number` and the goal/deload preferences); its workout overview shows this
+  cycle's sets and a session starts from them, with smart progression filling the loads.
+- **Creating programs**: + → New Program opens `features/programs/CreateProgramFlow.tsx`
+  (`/programs/new`), built on onboarding's step pieces and the shared `onboarding/StepFlow`
+  frame. Smart Generation re-asks the program questions from last time's answers
+  (`get/setTrainingPreferences`) and ends in Save to Library / Activate Program
+  (`createProgramFromPlan(..., { activate })`); Build From Scratch names it and opens the
+  editor with one rest day. `/programs/[id]` is `ProgramEditor`: a tab per day + Add Day,
+  and the day's `WorkoutPlan` (the same component the workout overview shows). An exercise
+  added to a workout is planned as it was last done (`addExerciseFromHistory`).
+- **Smart progression** (`packages/domain/src/progression.ts`, pure): an estimated one-rep
+  max (Epley) from last time's working sets — reps + RIR (+ half the partials) to failure,
+  the planned RIR when none was logged — aimed one rep of capacity higher; each planned set
+  gets the heaviest weight the equipment can make (`gymRepo.loadableWeights`: bar totals,
+  racks, stacks, plate pairs) whose reps, less its target RIR, land in the range. Applied
+  when a session starts (`startSessionFromWorkout`), pre-filling weight and reps, unless
+  `training_preferences.smartProgression` is off. Nothing yet with no history.
 - **Dashboard rings** measure this week (from Monday) against the active program's week
   (`historyRepo.programWeekTargets`). Muscles count every muscle an exercise trains,
   supporting ones too (`exercise_muscles`), not just the main one.
@@ -324,15 +346,16 @@ The product is sold to coaches; everything below serves that.
 
 In rough order of what was asked for earlier:
 
-1. **Set types** in workouts and sessions: standard (only one today), warm-up, failure,
-   drop sets, myo-reps / rest-pause, partials, left/right. `workout_sets.set_type`
-   exists with `normal` only.
-2. **Starting-weight recommendations**: the generator plans reps and RIR but no load.
+1. **Set types in the workout builder**: the logger has all of them; plans still only
+   make standard sets. Left/right logging is not built.
+2. **Starting-weight recommendations**: progression needs one logged session; the first
+   has no load.
    Inputs to use: bodyweight, gender, lifting experience, the catalogue's per-exercise
    `bodyweight` fraction, and the onboarding skill answers (today they only exclude
    exercises).
-3. **Smart progression, warm-up sets, deload**: onboarding saves the preferences
-   (`app_settings.training_preferences`); nothing acts on them yet.
+3. **Progression and warm-ups, the rest**: progression is applied at session start, not
+   yet adjusted mid-session after a harder set, and has no "why" explanation (the wand);
+   warm-ups are added by hand, not automatically; deload is saved but unused.
 4. **Exercise images**: every exercise thumbnail is a placeholder. If images must stay
    out of the repo, load them at runtime (e.g. Firebase Storage) rather than bundling.
 5. **Workout editing gaps**: no way to remove an exercise from a workout; the ⋮ menu adds

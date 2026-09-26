@@ -101,6 +101,22 @@ export function getOnboardedAt(db: Db): number | null {
   return currentRow(db)?.onboardedAt ?? null;
 }
 
+/** The training preferences last chosen (onboarding, or the last program created); null before any. */
+export function getTrainingPreferences(db: Db): TrainingPreferences | null {
+  return currentRow(db)?.trainingPreferences ?? null;
+}
+
+/** Replaces them, keeping the warm-up scheme the user edited. */
+export function setTrainingPreferences(db: Db, preferences: TrainingPreferences, at: number): void {
+  const scheme = currentRow(db)?.trainingPreferences?.warmupScheme;
+  upsertSettings(db, { trainingPreferences: scheme ? { ...preferences, warmupScheme: scheme } : preferences }, at);
+}
+
+/** Smart progression, as chosen in onboarding; on unless turned off. */
+export function isSmartProgressionOn(db: Db): boolean {
+  return currentRow(db)?.trainingPreferences?.smartProgression ?? true;
+}
+
 /** The user's warm-up scheme, or the default one. */
 export function getWarmupScheme(db: Db): WarmupStep[] {
   return currentRow(db)?.trainingPreferences?.warmupScheme ?? DEFAULT_WARMUP_SCHEME;
