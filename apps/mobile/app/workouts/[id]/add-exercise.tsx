@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { addExerciseToWorkout, addWorkoutSet } from '../../../src/data/workoutRepo';
+import { addExerciseFromHistory } from '../../../src/data/sessionRepo';
 import { db } from '../../../src/db/client';
 import { ExerciseList } from '../../../src/features/library/ExerciseList';
 
@@ -9,11 +9,8 @@ export default function AddExerciseScreen() {
   return (
     <ExerciseList
       onAdd={(exerciseIds) => {
-        for (const exerciseId of exerciseIds) {
-          const workoutExercise = addExerciseToWorkout(db, id, exerciseId);
-          // A new exercise starts with one set so the card is never empty.
-          addWorkoutSet(db, workoutExercise.id, { targetReps: 8 });
-        }
+        // Planned as last done, or one set of 8 for something new.
+        for (const exerciseId of exerciseIds) addExerciseFromHistory(db, id, exerciseId);
         router.back();
       }}
     />

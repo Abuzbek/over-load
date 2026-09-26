@@ -15,7 +15,7 @@ import type { MuscleVolume } from './workoutTargets';
 type Figure = 'male' | 'female';
 export type SummaryMuscle = { id: string; name: string; primary: boolean };
 /** One set line: "7–9 reps", and the reps to leave in reserve. */
-export type SummarySet = { key: string; label: string; rir: number | null };
+export type SummarySet = { key: string; label: string; rir: number | null; /** In place of the set's number: "F" for a set to failure. */ badge?: string };
 
 export { RIR_COLORS };
 
@@ -81,7 +81,7 @@ export function ExerciseSummaryRow({ name, sets, muscles, highlight, onPress, on
         {sets.map((set, index) => (
           <View key={set.key} style={styles.setLine}>
             <View style={styles.setNumber}>
-              <Text variant="caption">{index + 1}</Text>
+              <Text variant="caption">{set.badge ?? index + 1}</Text>
             </View>
             <Text color="textMuted" style={styles.flex}>{set.label}</Text>
             {set.rir !== null ? <RirBadge rir={set.rir} /> : null}

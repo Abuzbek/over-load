@@ -1,8 +1,8 @@
 import { Lucide } from '@react-native-vector-icons/lucide';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
-import { activateProgram, createProgram, listPrograms } from '../../data/programRepo';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { activateProgram, listPrograms } from '../../data/programRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
@@ -10,35 +10,17 @@ import { Collapsible } from '../../ui/Collapsible';
 import { ListRow } from '../../ui/ListRow';
 import { Screen } from '../../ui/Screen';
 import { SectionLabel } from '../../ui/SectionLabel';
-import { Sheet } from '../../ui/Sheet';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 
 export function ProgramsScreen() {
   const [, setVersion] = useState(0);
-  // The tab bar's + sheet routes here with ?new=1 rather than duplicating the
-  // create flow: this screen already owns naming and creation.
-  const { new: newParam } = useLocalSearchParams<{ new?: string }>();
-  const [naming, setNaming] = useState(newParam === '1');
-  const [name, setName] = useState('');
-  const inputRef = useRef<TextInput>(null);
 
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const programs = listPrograms(db);
   const active = programs.find((p) => p.isActive);
   const archived = programs.filter((p) => !p.isActive);
-
-  function create() {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    // Created but NOT activated: switching what you train is a deliberate act,
-    // not a side effect of adding one.
-    createProgram(db, { name: trimmed }, Date.now());
-    setName('');
-    setNaming(false);
-    setVersion((v) => v + 1);
-  }
 
   function activate(id: string) {
     activateProgram(db, id, Date.now());
@@ -91,26 +73,7 @@ export function ProgramsScreen() {
         )}
       </Collapsible>
 
-      <Sheet
-        visible={naming}
-        onRequestClose={() => setNaming(false)}
-        title="New program"
-        body="Name it now; add workouts to it afterwards."
-        // autoFocus is unreliable on a TextInput inside a Modal on Android.
-        onShow={() => inputRef.current?.focus()}
-      >
-        <TextInput
-          ref={inputRef}
-          value={name}
-          onChangeText={setName}
-          placeholder="Program name"
-          placeholderTextColor={theme.colors.textMuted}
-          onSubmitEditing={create}
-          style={styles.input}
-        />
-        <Button title="Create" onPress={create} />
-        <Button title="Cancel" variant="secondary" onPress={() => setNaming(false)} />
-      </Sheet>
+      <Button title="New program" variant="secondary" onPress={() => router.push('/programs/new')} />
     </Screen>
   );
 }
@@ -118,11 +81,4 @@ export function ProgramsScreen() {
 const styles = StyleSheet.create({
   section: { gap: theme.spacing.sm },
   rows: { paddingVertical: 0, paddingHorizontal: 0, gap: 0 },
-  input: {
-    minHeight: 44,
-    color: theme.colors.text,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radius.sm,
-    paddingHorizontal: theme.spacing.md,
-  },
 });

@@ -11,6 +11,7 @@ import {
   type Gym,
 } from '@overload/schema';
 import { and, eq, inArray, isNull, max, sql } from 'drizzle-orm';
+import { barTotals, pairTotals } from '@overload/domain';
 import { SETTINGS_ID } from './settingsRepo';
 
 export type GymSummary = { gym: Gym; isActive: boolean };
@@ -362,4 +363,45 @@ export function barLoadingFor(db: Db, gymId: string, exerciseId: string): BarLoa
     .map((v) => ({ kg: v.kg, label: v.label ?? null }));
   if (plates.length === 0) return null;
   return { barName: bar.equipment.name, barKg: Math.max(...bar.config.values.map((v) => v.kg)), plates };
+}
+
+/**
+ * Every weight an exercise can be done at in this gym, in kg, for smart
+ * progression: a bar's totals with the gym's plates, a dumbbell or kettlebell
+ * rack, a stack's range, plate pairs on a plate-loaded machine. Null when the
+ * exercise's equipment says nothing about weight (bodyweight, bands), so the
+ * suggestion rounds to 2.5 kg instead.
+ * ponytail: a plate-loaded machine counts the plates added, not its own resistance.
+ */
+export function loadableWeights(db: Db, gymId: string, exerciseId: string): number[] | null {
+  const bar = barLoadingFor(db, gymId, exerciseId);
+  if (bar) return barTotals(bar.barKg, bar.plates.map((p) => p.kg));
+
+  const needed = new Set(
+    db
+      .select({ id: exerciseEquipment.equipmentId })
+      .from(exerciseEquipment)
+      .where(and(eq(exerciseEquipment.exerciseId, exerciseId), eq(exerciseEquipment.need, 'resistance')))
+      .all()
+      .map((r) => r.id),
+  );
+  const owned = listGymEquipment(db, gymId).filter((r) => r.owned);
+  const plates = owned
+    .filter((r) => r.equipment.category === 'free_weights' && /plate/i.test(r.equipment.name) && r.config.kind === 'list')
+    .flatMap((r) => (r.config.kind === 'list' ? r.config.values.map((v) => v.kg) : []));
+  const weights = owned
+    .filter((r) => needed.has(r.equipment.id))
+    .flatMap((r): number[] => {
+      const c = r.config;
+      if (c.kind === 'list' && !/plate/i.test(r.equipment.name)) return c.values.map((v) => v.kg);
+      if (c.kind === 'range' && c.incrementKg > 0) {
+        return Array.from({ length: Math.floor((c.maxKg - c.minKg) / c.incrementKg + 1e-9) + 1 }, (_, i) => c.minKg + i * c.incrementKg);
+      }
+      if (c.kind === 'base' && plates.length > 0) {
+        return r.equipment.category === 'plate_loaded_machines' ? pairTotals(plates) : pairTotals(plates).map((kg) => kg / 2);
+      }
+      return [];
+    })
+    .filter((kg) => kg > 0);
+  return weights.length > 0 ? [...new Set(weights)].sort((a, b) => a - b) : null;
 }

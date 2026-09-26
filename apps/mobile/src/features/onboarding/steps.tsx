@@ -28,7 +28,7 @@ import { ExerciseSummaryRow, RIR_COLORS, TargetMuscleCards, WorkoutHeading } fro
 import { GymDetailScreen } from '../settings/GymDetailScreen';
 import { GYM_ICONS } from '../settings/GymProfilesScreen';
 
-type IconName = ComponentProps<typeof Lucide>['name'];
+export type IconName = ComponentProps<typeof Lucide>['name'];
 
 export const PHASES = ['Basics', 'Gym & Equipment', 'Program'] as const;
 
@@ -51,7 +51,8 @@ export type Answers = {
   deprioritized: string[];
   daysPerWeek: number;
   sessionMinutes: number | null;
-  split: TrainingSplit;
+  /** null: not chosen yet (Create Program asks afresh). */
+  split: TrainingSplit | null;
   deload: boolean;
   skills: string[];
   programName: string;
@@ -98,7 +99,7 @@ export function preferencesOf(a: Answers): TrainingPreferences {
     deprioritized: a.deprioritized,
     daysPerWeek: a.daysPerWeek,
     sessionMinutes: a.sessionMinutes ?? 60,
-    split: a.split,
+    split: a.split ?? 'full_body',
     deload: a.deload,
     skills: a.skills,
     smartProgression: a.smartProgression,
@@ -130,7 +131,7 @@ const KG = Array.from({ length: 221 }, (_, i) => 30 + i);
 const LB = Array.from({ length: 441 }, (_, i) => 66 + i);
 
 
-const EXPERIENCE: { value: ExperienceLevel | null; label: string; lifting: string; cardio: string; icon: IconName }[] = [
+export const EXPERIENCE: { value: ExperienceLevel | null; label: string; lifting: string; cardio: string; icon: IconName }[] = [
   { value: null, label: 'None', lifting: 'Not lifting at the moment', cardio: 'Not doing cardio at the moment', icon: 'circle-off' },
   { value: 'beginner', label: 'Beginner', lifting: 'Lifting for a year or less', cardio: 'Doing cardio for a year or less', icon: 'signal-low' },
   { value: 'intermediate', label: 'Intermediate', lifting: 'Lifting for one to four years', cardio: 'Doing cardio for one to four years', icon: 'signal-medium' },
@@ -150,13 +151,13 @@ const PRESET_ICONS: Record<string, string> = {
   everything: 'warehouse', commercial: 'building-2', warehouse: 'warehouse', local: 'store', garage: 'house', home: 'house', blank: 'dumbbell',
 };
 
-const GOALS: { value: TrainingGoal; label: string; note: string; icon: IconName }[] = [
+export const GOALS: { value: TrainingGoal; label: string; note: string; icon: IconName }[] = [
   { value: 'hypertrophy', label: 'Build muscle', note: 'Moderate weights for more reps, to grow muscle size', icon: 'biceps-flexed' },
   { value: 'strength', label: 'Get stronger', note: 'Heavier weights for fewer reps, to lift more', icon: 'weight' },
   { value: 'both', label: 'Both', note: 'A mix of heavy and moderate work', icon: 'scale' },
 ];
 
-const SESSIONS: { minutes: number; label: string }[] = [
+export const SESSIONS: { minutes: number; label: string }[] = [
   { minutes: 20, label: 'Up to 20 minutes' },
   { minutes: 40, label: '20 to 40 minutes' },
   { minutes: 60, label: '40 to 60 minutes' },
@@ -164,13 +165,13 @@ const SESSIONS: { minutes: number; label: string }[] = [
   { minutes: 120, label: '90 to 120 minutes' },
 ];
 
-const SPLITS: { value: TrainingSplit; label: string; note: string }[] = [
+export const SPLITS: { value: TrainingSplit; label: string; note: string }[] = [
   { value: 'full_body', label: 'Full body', note: 'Train your whole body every workout. Recommended.' },
   { value: 'upper_lower', label: 'Upper / lower', note: 'Alternate upper-body and lower-body workouts' },
 ];
 
-const COLORS = ['#E5484D', '#E8834A', '#F2B84B', '#3DD68C', '#3E8CF0', '#9B6CF2', '#2BB5B8'];
-const PROGRAM_ICONS: IconName[] = [
+export const COLORS = ['#E5484D', '#E8834A', '#F2B84B', '#3DD68C', '#3E8CF0', '#9B6CF2', '#2BB5B8'];
+export const PROGRAM_ICONS: IconName[] = [
   'rocket', 'dumbbell', 'flame', 'zap', 'trophy', 'target', 'mountain', 'heart', 'star', 'crown',
   'shield', 'bolt', 'sun', 'moon', 'leaf', 'anchor', 'bike', 'footprints', 'timer', 'medal',
 ];
@@ -178,8 +179,8 @@ const PROGRAM_ICONS: IconName[] = [
 /** Upper body first, then lower, the order the muscle screens list them. */
 const UPPER = ['Chest', 'Upper Back', 'Lats', 'Front Delts', 'Side Delts', 'Rear Delts', 'Biceps', 'Triceps', 'Forearms', 'Upper Traps', 'Neck', 'Abs', 'Obliques', 'Serratus', 'Lower Back'];
 const LOWER = ['Quads', 'Hamstrings', 'Glutes', 'Adductors', 'Abductors', 'Calves', 'Tibs', 'Hip flexors'];
-const FOCUS_POINTS = 5;
-const MAX_DEPRIORITIZED = 5;
+export const FOCUS_POINTS = 5;
+export const MAX_DEPRIORITIZED = 5;
 
 export function buildSteps(a: Answers, set: (patch: Partial<Answers>) => void): Step[] {
   const figure = a.gender === 'female' ? 'female' : 'male';
@@ -379,16 +380,7 @@ export function buildSteps(a: Answers, set: (patch: Partial<Answers>) => void): 
     },
     {
       kind: 'question', phase: 2, title: 'How many days a week will you train?',
-      body: (
-        <View style={styles.stepper}>
-          <StepButton icon="minus" disabled={a.daysPerWeek <= 1} onPress={() => set({ daysPerWeek: a.daysPerWeek - 1 })} />
-          <View style={styles.stepperValue}>
-            <Text style={styles.bigNumber}>{a.daysPerWeek}</Text>
-            <Text color="textMuted">{a.daysPerWeek === 1 ? 'day a week' : 'days a week'}</Text>
-          </View>
-          <StepButton icon="plus" disabled={a.daysPerWeek >= 6} onPress={() => set({ daysPerWeek: a.daysPerWeek + 1 })} />
-        </View>
-      ),
+      body: <DaysStepper value={a.daysPerWeek} onChange={(daysPerWeek) => set({ daysPerWeek })} />,
       ready: true,
     },
     {
@@ -470,38 +462,7 @@ export function buildSteps(a: Answers, set: (patch: Partial<Answers>) => void): 
     },
     {
       kind: 'question', phase: 2, title: 'Pick a colour and icon',
-      body: (
-        <>
-          <View style={styles.colorRow}>
-            {COLORS.map((color) => (
-              <Pressable
-                key={color}
-                accessibilityRole="radio"
-                accessibilityLabel={color}
-                accessibilityState={{ selected: a.color === color }}
-                onPress={() => set({ color })}
-                style={[styles.swatch, { backgroundColor: color }, a.color === color && styles.swatchOn]}
-              >
-                <Lucide name={a.icon} size={18} color={theme.colors.onAccent} />
-              </Pressable>
-            ))}
-          </View>
-          <View style={styles.iconGrid}>
-            {PROGRAM_ICONS.map((icon) => (
-              <Pressable
-                key={icon}
-                accessibilityRole="radio"
-                accessibilityLabel={icon}
-                accessibilityState={{ selected: a.icon === icon }}
-                onPress={() => set({ icon })}
-                style={[styles.iconCell, a.icon === icon && styles.selected]}
-              >
-                <Lucide name={icon} size={22} color={a.icon === icon ? a.color : theme.colors.text} />
-              </Pressable>
-            ))}
-          </View>
-        </>
-      ),
+      body: <ColorIconPicker color={a.color} icon={a.icon} onChange={set} />,
       ready: true,
     },
     {
@@ -548,9 +509,68 @@ export function buildSteps(a: Answers, set: (patch: Partial<Answers>) => void): 
   ];
 }
 
-function defaultProgramName(a: Answers): string {
+export function defaultProgramName(a: Answers): string {
   const level = a.lifting ? a.lifting[0]!.toUpperCase() + a.lifting.slice(1) : 'Starter';
   return `${level} ${a.split === 'full_body' ? 'Full Body' : 'Upper / Lower'}`;
+}
+
+/** "3 days a week", with − and +. */
+export function DaysStepper({ value, onChange }: { value: number; onChange: (days: number) => void }) {
+  return (
+    <View style={styles.stepper}>
+      <StepButton icon="minus" disabled={value <= 1} onPress={() => onChange(value - 1)} />
+      <View style={styles.stepperValue}>
+        <Text style={styles.bigNumber}>{value}</Text>
+        <Text color="textMuted">{value === 1 ? 'day a week' : 'days a week'}</Text>
+      </View>
+      <StepButton icon="plus" disabled={value >= 6} onPress={() => onChange(value + 1)} />
+    </View>
+  );
+}
+
+/** A program's colour, as swatches showing its icon, and its icon, from a grid. */
+export function ColorIconPicker({ color, icon, onChange }: {
+  color: string;
+  icon: IconName;
+  onChange: (patch: { color?: string; icon?: IconName }) => void;
+}) {
+  return (
+    <>
+      <View style={styles.colorRow}>
+        {COLORS.map((c) => (
+          <Pressable
+            key={c}
+            accessibilityRole="radio"
+            accessibilityLabel={c}
+            accessibilityState={{ selected: color === c }}
+            onPress={() => onChange({ color: c })}
+            style={[styles.swatch, { backgroundColor: c }, color === c && styles.swatchOn]}
+          >
+            <Lucide name={icon} size={18} color={theme.colors.onAccent} />
+          </Pressable>
+        ))}
+      </View>
+      <View style={styles.iconGrid}>
+        {PROGRAM_ICONS.map((i) => (
+          <Pressable
+            key={i}
+            accessibilityRole="radio"
+            accessibilityLabel={i}
+            accessibilityState={{ selected: icon === i }}
+            onPress={() => onChange({ icon: i })}
+            style={[styles.iconCell, icon === i && styles.selected]}
+          >
+            <Lucide name={i} size={22} color={icon === i ? color : theme.colors.text} />
+          </Pressable>
+        ))}
+      </View>
+    </>
+  );
+}
+
+/** A single-line text box in the onboarding style. */
+export function FlowInput(props: ComponentProps<typeof TextInput>) {
+  return <TextInput placeholderTextColor={theme.colors.textMuted} style={styles.input} {...props} />;
 }
 
 function PhaseOverview({ current }: { current: 0 | 1 | 2 }) {
@@ -588,7 +608,7 @@ function PhaseOverview({ current }: { current: 0 | 1 | 2 }) {
   );
 }
 
-function Choices<T extends string | number | null>({ options, value, onChange }: {
+export function Choices<T extends string | number | null>({ options, value, onChange }: {
   options: { value: T; label: string; note?: string; icon?: IconName }[];
   value: T | undefined;
   onChange: (value: T) => void;
@@ -726,7 +746,7 @@ function useMuscles(): { upper: { id: string; name: string }[]; lower: { id: str
   return muscles;
 }
 
-function Focus({ figure, focus, onChange }: { figure: 'male' | 'female'; focus: Record<string, number>; onChange: (f: Record<string, number>) => void }) {
+export function Focus({ figure, focus, onChange }: { figure: 'male' | 'female'; focus: Record<string, number>; onChange: (f: Record<string, number>) => void }) {
   const { upper, lower } = useMuscles();
   const spent = Object.values(focus).reduce((s, p) => s + p, 0);
   const bump = (id: string, delta: number) => onChange({ ...focus, [id]: Math.min(Math.max((focus[id] ?? 0) + delta, 0), 2) });
@@ -758,7 +778,7 @@ function Focus({ figure, focus, onChange }: { figure: 'male' | 'female'; focus: 
   );
 }
 
-function Deprioritize({ figure, exclude, value, onChange }: {
+export function Deprioritize({ figure, exclude, value, onChange }: {
   figure: 'male' | 'female';
   exclude: string[];
   value: string[];
@@ -794,7 +814,7 @@ function Deprioritize({ figure, exclude, value, onChange }: {
 }
 
 /** "Focus points · 5/5 available" and a dot per point, filled while unspent. */
-function PointsFooter({ title, used, total, left = false }: { title: string; used: number; total: number; left?: boolean }) {
+export function PointsFooter({ title, used, total, left = false }: { title: string; used: number; total: number; left?: boolean }) {
   const shown = left ? total - used : used;
   return (
     <View style={styles.points}>
@@ -825,7 +845,7 @@ function StepButton({ icon, disabled, onPress, small = false }: { icon: IconName
   );
 }
 
-function ToggleCard({ icon, title, body, value, onChange }: { icon: IconName; title: string; body: string; value: boolean; onChange: (v: boolean) => void }) {
+export function ToggleCard({ icon, title, body, value, onChange }: { icon: IconName; title: string; body: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
     <View style={[styles.toggleCard, value && styles.selected]}>
       <View style={styles.toggleHeader}>
@@ -851,7 +871,7 @@ const GENERATING = [
  * The plan is computed at once; the checklist paces it so the steps can be
  * read. Nothing is written until onboarding finishes.
  */
-function Generating({ answers, onPlan }: { answers: Answers; onPlan: (plan: Plan) => void }) {
+export function Generating({ answers, onPlan }: { answers: Answers; onPlan: (plan: Plan) => void }) {
   const [done, setDone] = useState(answers.plan ? GENERATING.length : 0);
   useEffect(() => {
     if (answers.plan || !answers.gymId) return;
@@ -886,7 +906,7 @@ function Generating({ answers, onPlan }: { answers: Answers; onPlan: (plan: Plan
  * day's target muscles, length and exercises with their sets, rep ranges and
  * reps in reserve.
  */
-function Preview({ plan, figure }: { plan: Plan; figure: 'male' | 'female' }) {
+export function Preview({ plan, figure }: { plan: Plan; figure: 'male' | 'female' }) {
   const [day, setDay] = useState(Math.max(plan.days.findIndex((d) => d !== null), 0));
   const workout = plan.days[day] === null ? null : plan.workouts[plan.days[day]!]!;
   const muscles = new Map(workout?.exercises.map((e) => [e.exerciseId, getExerciseDetail(db, e.exerciseId)?.muscles ?? []]) ?? []);

@@ -13,3 +13,5 @@ export * from './instructions';
 export * from './programPlan';
 export * from './warmup';
 export * from './plates';
+export * from './progression';
+export * from './periodization';

@@ -136,14 +136,16 @@ export function planProgram(db: Db, gymId: string, prefs: TrainingPreferences): 
 }
 
 /**
- * Writes a plan as a program and makes it the active one, retiring any
- * program with no workout in it (the empty default every install creates).
+ * Writes a plan as a program. Activated (the default), it becomes the active
+ * program and any program with no workout in it (the empty default every
+ * install creates) is retired; otherwise it only joins the library.
  */
 export function createProgramFromPlan(
   db: Db,
   plan: Plan,
   display: { name: string; icon: string; color: string },
   at: number,
+  { activate = true }: { activate?: boolean } = {},
 ): string {
   const workoutIds = plan.workouts.map((w) => {
     const workout = createWorkout(db, w.name);
@@ -158,6 +160,7 @@ export function createProgramFromPlan(
 
   const program = createProgram(db, { name: display.name, icon: display.icon, iconColor: display.color, generated: true }, at);
   plan.days.forEach((w, day) => setProgramDay(db, program.id, day, w === null ? null : workoutIds[w]!, at));
+  if (!activate) return program.id;
 
   const withWorkouts = db
     .selectDistinct({ id: programDays.programId })

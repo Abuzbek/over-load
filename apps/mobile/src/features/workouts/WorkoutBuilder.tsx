@@ -1,11 +1,12 @@
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { DEFAULT_REST_SECONDS, toStorageKg, type Unit } from '@overload/domain';
+import { BLOCK_CYCLES, blockPosition, DEFAULT_REST_SECONDS, isDeloadCycle, toStorageKg, type Unit } from '@overload/domain';
 import { Lucide } from '@react-native-vector-icons/lucide';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getExerciseDetail } from '../../data/exerciseRepo';
+import { cycleFor, cycleSetLabel, cycleSets } from '../../data/periodizationRepo';
 import { getProfile, getWeightUnit } from '../../data/settingsRepo';
 import type { WorkoutDetailExercise } from '../../data/workoutRepo';
 import { addWorkoutSet, getWorkoutDetail, reorderWorkoutExercises } from '../../data/workoutRepo';
@@ -104,11 +105,12 @@ function ExerciseMenu({ entry, unit, onClose, onChanged, onMove }: {
 }
 
 /**
- * A workout's overview: what it holds and roughly how long it takes, with
- * Start Workout pinned to the bottom. Opening a workout never starts it —
- * only that button does, through useWorkoutStarter's in-progress guard.
+ * What a workout holds and roughly how long it takes: its target muscles, then
+ * each exercise with its sets, a ⋮ menu to edit and the info sheet. No scroll
+ * view of its own — the workout overview and the program editor both put it in
+ * theirs.
  */
-export function WorkoutBuilder({ workoutId }: Props) {
+export function WorkoutPlan({ workoutId }: { workoutId: string }) {
   // Bumped to re-read getWorkoutDetail: by an edit here, and on focus, since
   // add-exercise mutates this workout and navigates back to a still-mounted
   // screen. Do NOT switch this to key={version} — that remounts and resets
@@ -117,8 +119,6 @@ export function WorkoutBuilder({ workoutId }: Props) {
   const refresh = () => setVersion((v) => v + 1);
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
-  const insets = useSafeAreaInsets();
-  const starter = useWorkoutStarter();
   const [infoId, setInfoId] = useState<string | null>(null);
   const [menuId, setMenuId] = useState<string | null>(null);
   const [focusMuscle, setFocusMuscle] = useState<string | null>(null);
@@ -131,17 +131,25 @@ export function WorkoutBuilder({ workoutId }: Props) {
   }
 
   const count = detail.exercises.length;
+  // A periodized program's workout shows this cycle's sets, not the first cycle's.
+  const cycle = cycleFor(db, workoutId);
+  const shown = detail.exercises.map((e) => {
+    if (!cycle) return null;
+    const warmups = e.sessionSets.filter((s) => s.setType === 'warmup').length;
+    return { warmups, sets: cycleSets(db, e.exercise, e.sessionSets, cycle) };
+  });
+  const setCount = (i: number) => (shown[i] ? shown[i]!.warmups + shown[i]!.sets.length : detail.exercises[i]!.sessionSets.length);
   const details = detail.exercises.map((e) => getExerciseDetail(db, e.exercise.id));
   const musclesOf = details.map((d) => d?.muscles ?? []);
   const minutes = estimateWorkoutMinutes(
     detail.exercises.map((e, i) => ({
-      sets: e.sessionSets.length,
+      sets: setCount(i),
       restSeconds: e.workoutExercise.restSeconds,
       unilateral: details[i]?.links.laterality?.includes('Unilateral') ?? false,
     })),
     DEFAULT_REST_SECONDS,
   );
-  const volumes = targetMuscles(detail.exercises.map((e, i) => ({ sets: e.sessionSets.length, main: e.exercise.primaryMuscle, muscles: musclesOf[i]! })));
+  const volumes = targetMuscles(detail.exercises.map((e, i) => ({ sets: setCount(i), main: e.exercise.primaryMuscle, muscles: musclesOf[i]! })));
   const menuIndex = detail.exercises.findIndex((e) => e.workoutExercise.id === menuId);
 
   // Swaps the exercise with its neighbour and persists the whole live order.
@@ -155,50 +163,55 @@ export function WorkoutBuilder({ workoutId }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      {/* The workout's own name: a program day's workout is "<program> · Day N",
-          and the header is the only thing that says which one this is. */}
-      <Stack.Screen options={{ title: detail.workout.name }} />
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
-        <TargetMuscleCards volumes={volumes} figure={figure} selected={focusMuscle} onSelect={setFocusMuscle} />
+    <>
+      {cycle ? (
+        <Text variant="caption" color="textMuted">
+          {isDeloadCycle(cycle.cycle, cycle.deload) ? 'Deload cycle' : `Cycle ${blockPosition(cycle.cycle)} of ${BLOCK_CYCLES}`}
+        </Text>
+      ) : null}
+      <TargetMuscleCards volumes={volumes} figure={figure} selected={focusMuscle} onSelect={setFocusMuscle} />
 
-        <View style={styles.summary}>
-          <WorkoutHeading count={count} minutes={minutes} />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Add exercises"
-            onPress={() => router.push(`/workouts/${workoutId}/add-exercise`)}
-            style={styles.addButton}
-          >
-            <Lucide name="plus" size={24} color={theme.colors.text} />
-          </Pressable>
-        </View>
-
-        {count === 0 ? (
-          <EmptyState title="No exercises yet" body="Add some with the + button." />
-        ) : (
-          detail.exercises.map((entry, i) => (
-            <ExerciseSummaryRow
-              key={entry.workoutExercise.id}
-              name={entry.exercise.name}
-              sets={entry.sessionSets.map((set) => ({
-                key: set.id,
-                // null: this tracking type has no target to show.
-                label: formatWorkoutTarget(entry.exercise.trackingType, set, unit) ?? 'Set',
-                rir: set.targetRir,
-              }))}
-              muscles={musclesOf[i]!}
-              highlight={focusMuscle}
-              onPress={() => setInfoId(entry.exercise.id)}
-              onMenu={() => setMenuId(entry.workoutExercise.id)}
-            />
-          ))
-        )}
-      </ScrollView>
-
-      <View style={[styles.startBar, { paddingBottom: insets.bottom + theme.spacing.md }]}>
-        <Button title="Start Workout" onPress={() => starter.start(workoutId)} disabled={count === 0} />
+      <View style={styles.summary}>
+        <WorkoutHeading count={count} minutes={minutes} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add exercises"
+          onPress={() => router.push(`/workouts/${workoutId}/add-exercise`)}
+          style={styles.addButton}
+        >
+          <Lucide name="plus" size={24} color={theme.colors.text} />
+        </Pressable>
       </View>
+
+      {count === 0 ? (
+        <EmptyState title="No exercises yet" body="Add some with the + button." />
+      ) : (
+        detail.exercises.map((entry, i) => (
+          <ExerciseSummaryRow
+            key={entry.workoutExercise.id}
+            name={entry.exercise.name}
+            sets={
+              shown[i]
+                ? shown[i]!.sets.map((set, n) => ({
+                    key: String(n),
+                    label: cycleSetLabel(set),
+                    rir: set.rir,
+                    badge: set.setType === 'failure' ? 'F' : undefined,
+                  }))
+                : entry.sessionSets.map((set) => ({
+                    key: set.id,
+                    // null: this tracking type has no target to show.
+                    label: formatWorkoutTarget(entry.exercise.trackingType, set, unit) ?? 'Set',
+                    rir: set.targetRir,
+                  }))
+            }
+            muscles={musclesOf[i]!}
+            highlight={focusMuscle}
+            onPress={() => setInfoId(entry.exercise.id)}
+            onMenu={() => setMenuId(entry.workoutExercise.id)}
+          />
+        ))
+      )}
 
       <ExerciseMenu
         entry={detail.exercises[menuIndex] ?? null}
@@ -208,6 +221,34 @@ export function WorkoutBuilder({ workoutId }: Props) {
         onMove={(direction) => move(menuIndex, direction)}
       />
       <ExerciseInfoSheet exerciseId={infoId} figure={figure} onClose={() => setInfoId(null)} />
+    </>
+  );
+}
+
+/**
+ * A workout's overview: its plan, with Start Workout pinned to the bottom.
+ * Opening a workout never starts it — only that button does, through
+ * useWorkoutStarter's in-progress guard.
+ */
+export function WorkoutBuilder({ workoutId }: Props) {
+  const [, setVersion] = useState(0);
+  useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
+  const insets = useSafeAreaInsets();
+  const starter = useWorkoutStarter();
+  const detail = getWorkoutDetail(db, workoutId);
+
+  return (
+    <View style={styles.container}>
+      {/* The workout's own name: a program day's workout is "<program> · Day N",
+          and the header is the only thing that says which one this is. */}
+      {detail ? <Stack.Screen options={{ title: detail.workout.name }} /> : null}
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
+        <WorkoutPlan workoutId={workoutId} />
+      </ScrollView>
+
+      <View style={[styles.startBar, { paddingBottom: insets.bottom + theme.spacing.md }]}>
+        <Button title="Start Workout" onPress={() => starter.start(workoutId)} disabled={!detail || detail.exercises.length === 0} />
+      </View>
       <WorkoutStartSheet starter={starter} />
     </View>
   );

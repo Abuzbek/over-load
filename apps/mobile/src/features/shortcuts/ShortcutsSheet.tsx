@@ -26,8 +26,7 @@ function Shortcut({ icon, title, onPress }: { icon: IconName; title: string; onP
  * The tab bar's centre button, and the only place a program or workout is
  * created.
  *
- * New Program routes to the programs screen, which already owns naming
- * (?new=1 opens its create sheet). New Workout names the workout here instead:
+ * New Program opens the Create Program flow (/programs/new). New Workout names the workout here instead:
  * the workout library is the Workout tab's own section, not a page to route
  * to, so there is nowhere else for the naming to live.
  */
@@ -107,7 +106,7 @@ export function ShortcutsSheet({ visible, onClose }: { visible: boolean; onClose
               title="New Program"
               onPress={() => {
                 onClose();
-                router.push('/programs?new=1');
+                router.push('/programs/new');
               }}
             />
             <Shortcut icon="dumbbell" title="New Workout" onPress={() => setNaming(true)} />
