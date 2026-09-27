@@ -1,5 +1,7 @@
-import { appSettings, newId, programDays, programs, workouts, type Db, type Program, type Workout } from '@overload/schema';
-import { and, eq, inArray, isNull, max, sql } from 'drizzle-orm';
+import { blockPosition, estimatedOneRepMax, retuneRange } from '@overload/domain';
+import { appSettings, newId, programDays, programs, sessionExercises, sessionSets, sessions, workoutExercises, workoutSets, workouts, type Db, type DeloadPlace, type Program, type Workout } from '@overload/schema';
+import { duplicateWorkout } from './workoutRepo';
+import { and, desc, eq, inArray, isNotNull, isNull, max, ne, sql } from 'drizzle-orm';
 import { SETTINGS_ID } from './settingsRepo';
 
 export type ProgramSummary = { program: Program; trainingDays: number; isActive: boolean };
@@ -44,7 +46,15 @@ export function getActiveProgram(db: Db): Program | undefined {
  */
 export function createProgram(
   db: Db,
-  values: { name: string; icon?: string; iconColor?: string; generated?: boolean },
+  values: {
+    name: string;
+    icon?: string;
+    iconColor?: string;
+    generated?: boolean;
+    /** What periodization follows; a generated program is periodized from the start. */
+    goal?: 'hypertrophy' | 'strength' | 'both' | null;
+    deload?: DeloadPlace;
+  },
   at: number,
   /** Days in the new cycle: seven, or one for a program built from scratch, which grows it. */
   dayCount = DEFAULT_DAY_COUNT,
@@ -61,6 +71,11 @@ export function createProgram(
     orderIndex: (highest?.maxIndex ?? -1) + 1,
     cycleNumber: 1,
     generated: values.generated ?? false,
+    cycleCount: 7,
+    deload: values.deload ?? (values.generated ? ('last' as const) : ('none' as const)),
+    periodized: values.generated ?? false,
+    goal: values.goal ?? null,
+    archivedAt: null,
   };
 
   db.transaction((tx) => {
@@ -187,7 +202,82 @@ export function advanceCycleIfComplete(db: Db, programId: string, at: number): b
       .where(eq(programs.id, programId))
       .run();
   });
+  const program = getProgram(db, programId);
+  if (program?.periodized && blockPosition(program.cycleNumber, program.cycleCount) === 1) retuneAfterBlock(db, programId, at);
   return true;
+}
+
+/**
+ * After a block of a periodized program: each exercise that stalled over it
+ * moves to a fresh rep range (retuneRange), written to its plan so the next
+ * block's cycles build on it. Progress is its best estimated one-rep max over
+ * the block's last two sessions against its first; fewer than three sessions
+ * of it in the block, and it is left alone.
+ */
+export function retuneAfterBlock(db: Db, programId: string, at: number): void {
+  const program = getProgram(db, programId);
+  if (!program) return;
+  const days = getProgramDays(db, programId);
+  const workoutIds = [...new Set(days.flatMap((d) => (d.workout ? [d.workout.id] : [])))];
+  for (const workoutId of workoutIds) {
+    // ponytail: the block's sessions are taken as the workout's last (cycles × days it is on);
+    // store a block start on the program if skipped or extra sessions skew this.
+    const window = program.cycleCount * days.filter((d) => d.workout?.id === workoutId).length;
+    const recent = db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(and(eq(sessions.workoutId, workoutId), isNotNull(sessions.endedAt), isNull(sessions.deletedAt)))
+      .orderBy(desc(sessions.startedAt))
+      .limit(window)
+      .all()
+      .map((r) => r.id)
+      .reverse();
+    if (recent.length < 3) continue;
+    const planned = db
+      .select()
+      .from(workoutExercises)
+      .where(and(eq(workoutExercises.workoutId, workoutId), isNull(workoutExercises.deletedAt)))
+      .all();
+    for (const we of planned) {
+      const best = new Map<string, number>();
+      const rows = db
+        .select({ sessionId: sessionExercises.sessionId, weightKg: sessionSets.weightKg, reps: sessionSets.reps, rir: sessionSets.rir, targetRir: sessionSets.targetRir })
+        .from(sessionSets)
+        .innerJoin(sessionExercises, eq(sessionExercises.id, sessionSets.sessionExerciseId))
+        .where(
+          and(
+            inArray(sessionExercises.sessionId, recent),
+            eq(sessionExercises.exerciseId, we.exerciseId),
+            ne(sessionSets.setType, 'warmup'),
+            isNotNull(sessionSets.completedAt),
+            isNull(sessionSets.deletedAt),
+            isNull(sessionExercises.deletedAt),
+          ),
+        )
+        .all();
+      for (const r of rows) {
+        if (!r.weightKg || !r.reps) continue;
+        const e1rm = estimatedOneRepMax(r.weightKg, r.reps + (r.rir ?? r.targetRir ?? 2));
+        best.set(r.sessionId, Math.max(best.get(r.sessionId) ?? 0, e1rm));
+      }
+      const trained = recent.filter((id) => best.has(id)).map((id) => best.get(id)!);
+      if (trained.length < 3) continue;
+      const progress = Math.max(...trained.slice(-2)) / trained[0]! - 1;
+      const sets = db
+        .select()
+        .from(workoutSets)
+        .where(and(eq(workoutSets.workoutExerciseId, we.id), ne(workoutSets.setType, 'warmup'), isNull(workoutSets.deletedAt)))
+        .all();
+      const first = sets[0];
+      if (!first?.targetReps) continue;
+      const range = retuneRange(first.targetReps, first.targetRepsMax ?? first.targetReps, progress);
+      if (!range) continue;
+      db.update(workoutSets)
+        .set({ targetReps: range.repsMin, targetRepsMax: range.repsMax, updatedAt: at })
+        .where(inArray(workoutSets.id, sets.map((s) => s.id)))
+        .run();
+    }
+  }
 }
 
 /**
@@ -304,7 +394,8 @@ export function addProgramDay(db: Db, programId: string, at: number): number | n
 export function listPrograms(db: Db): ProgramSummary[] {
   const activeId = getSettingsRow(db)?.activeProgramId ?? null;
 
-  const live = db.select().from(programs).where(isNull(programs.deletedAt)).all();
+  // An archived program is out of the library; listArchivedPrograms has it.
+  const live = db.select().from(programs).where(and(isNull(programs.deletedAt), isNull(programs.archivedAt))).all();
 
   const dayRows = db
     .select({ programId: programDays.programId })
@@ -346,4 +437,84 @@ export function ensureDefaultProgram(db: Db, at: number): Program {
   const program = createProgram(db, { name: 'My Program' }, at);
   activateProgram(db, program.id, at);
   return program;
+}
+
+export type ProgramSettings = Pick<Program, 'cycleCount' | 'deload' | 'periodized' | 'goal'>;
+
+/** Changes how the program's blocks run. Cycles are kept between 1 and 52. */
+export function updateProgramSettings(db: Db, programId: string, patch: Partial<ProgramSettings>, at: number): void {
+  const values: Partial<ProgramSettings> & { updatedAt: number } = { ...patch, updatedAt: at };
+  if (patch.cycleCount !== undefined) values.cycleCount = Math.min(Math.max(Math.round(patch.cycleCount), 1), 52);
+  db.update(programs).set(values).where(eq(programs.id, programId)).run();
+}
+
+export function getProgram(db: Db, programId: string): Program | undefined {
+  return db.select().from(programs).where(and(eq(programs.id, programId), isNull(programs.deletedAt))).get();
+}
+
+/**
+ * A copy to change without touching the original: its settings, its days, and
+ * a copy of each workout on them (a workout on two days is copied once). Not
+ * activated; the cycle starts at 1.
+ */
+export function duplicateProgram(db: Db, programId: string, name: string, at: number): Program | undefined {
+  const source = getProgram(db, programId);
+  if (!source) return undefined;
+  const days = getProgramDays(db, programId);
+  const copy = createProgram(db, { name, icon: source.icon ?? undefined, iconColor: source.iconColor ?? undefined, generated: source.generated, goal: source.goal, deload: source.deload }, at, days.length);
+  updateProgramSettings(db, copy.id, { cycleCount: source.cycleCount, periodized: source.periodized }, at);
+  const copies = new Map<string, string>();
+  days.forEach((day, position) => {
+    if (!day.workout) return;
+    if (!copies.has(day.workout.id)) copies.set(day.workout.id, duplicateWorkout(db, day.workout.id, day.workout.name, at)!.id);
+    setProgramDay(db, copy.id, position, copies.get(day.workout.id)!, at);
+  });
+  return getProgram(db, copy.id);
+}
+
+/** Out of the library, kept: no longer the active program if it was. */
+export function archiveProgram(db: Db, programId: string, at: number): void {
+  db.update(programs).set({ archivedAt: at, updatedAt: at }).where(eq(programs.id, programId)).run();
+  if (getSettingsRow(db)?.activeProgramId === programId) {
+    db.update(appSettings).set({ activeProgramId: null, updatedAt: at }).where(eq(appSettings.id, SETTINGS_ID)).run();
+  }
+}
+
+export function restoreProgram(db: Db, programId: string, at: number): void {
+  db.update(programs).set({ archivedAt: null, updatedAt: at }).where(eq(programs.id, programId)).run();
+}
+
+export function listArchivedPrograms(db: Db): Program[] {
+  return db
+    .select()
+    .from(programs)
+    .where(and(isNull(programs.deletedAt), isNotNull(programs.archivedAt)))
+    .orderBy(programs.orderIndex)
+    .all();
+}
+
+/**
+ * Deletes a program: its days, and the workouts only it used — a workout
+ * another program also schedules stays. History is kept; sessions stand alone.
+ */
+export function deleteProgram(db: Db, programId: string, at: number): void {
+  const mine = new Set(getProgramDays(db, programId).flatMap((d) => (d.workout ? [d.workout.id] : [])));
+  const elsewhere = new Set(
+    db
+      .select({ workoutId: programDays.workoutId })
+      .from(programDays)
+      .innerJoin(programs, eq(programs.id, programDays.programId))
+      .where(and(isNull(programDays.deletedAt), isNull(programs.deletedAt), sql`${programDays.programId} <> ${programId}`))
+      .all()
+      .map((r) => r.workoutId),
+  );
+  db.transaction((tx) => {
+    tx.update(programs).set({ deletedAt: at, updatedAt: at }).where(eq(programs.id, programId)).run();
+    tx.update(programDays).set({ deletedAt: at, updatedAt: at }).where(and(eq(programDays.programId, programId), isNull(programDays.deletedAt))).run();
+    const only = [...mine].filter((id) => !elsewhere.has(id));
+    if (only.length > 0) tx.update(workouts).set({ deletedAt: at, updatedAt: at }).where(inArray(workouts.id, only)).run();
+    if (getSettingsRow(db)?.activeProgramId === programId) {
+      tx.update(appSettings).set({ activeProgramId: null, updatedAt: at }).where(eq(appSettings.id, SETTINGS_ID)).run();
+    }
+  });
 }

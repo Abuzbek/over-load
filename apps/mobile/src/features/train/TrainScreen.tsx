@@ -58,24 +58,28 @@ export function TrainScreen() {
     <Screen scroll safeTop>
       <Text variant="display">Workout</Text>
 
-      <SectionLabel>Active program</SectionLabel>
       {activeProgram ? (
         <ActiveProgramCard
           programId={activeProgram.id}
           programName={activeProgram.name}
           cycleNumber={activeProgram.cycleNumber}
+          cycleCount={activeProgram.cycleCount}
+          deload={activeProgram.deload}
           days={days}
           summaryByWorkoutId={summaryByWorkoutId}
           onChanged={() => setVersion((v) => v + 1)}
         />
       ) : (
-        <Card style={styles.programRows}>
-          <ListRow
-            title="No active program"
-            subtitle="Pick one from the program library"
-            onPress={() => router.push('/programs')}
-          />
-        </Card>
+        <>
+          <SectionLabel>Active program</SectionLabel>
+          <Card style={styles.programRows}>
+            <ListRow
+              title="No active program"
+              subtitle="Pick one from the program library"
+              onPress={() => router.push('/programs')}
+            />
+          </Card>
+        </>
       )}
 
       <Card style={styles.programRows}>

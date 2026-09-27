@@ -8,5 +8,6 @@ export * from './programs';
 export * from './workouts';
 export * from './sessions';
 export * from './personalRecords';
+export * from './weighIns';
 export * from './syncState';
 export type { Db } from './db';

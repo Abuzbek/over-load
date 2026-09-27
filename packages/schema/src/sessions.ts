@@ -74,6 +74,8 @@ export const sessionSets = sqliteTable(
      * sets of their own — they share the parent's number and count as one set.
      */
     parentSetId: text('parent_set_id'),
+    /** The reps smart progression pre-filled: while reps still equal it, the set is untouched and may be re-planned. */
+    suggestedReps: integer('suggested_reps'),
     /** Null means planned but not yet performed. This is what makes crash recovery work. */
     completedAt: integer('completed_at'),
   },

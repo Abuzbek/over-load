@@ -19,6 +19,10 @@ import {
   workouts,
   workoutSets,
   SYNCED_TABLES,
+  cyclePlans,
+  weighIns,
+  measurements,
+  progressPhotos,
   type Db,
   type SyncedTable,
 } from '@overload/schema';
@@ -39,9 +43,13 @@ const TABLES: Record<SyncedTable, SQLiteTable & { id: any; updatedAt: any }> = {
   program_days: programDays,
   workout_exercises: workoutExercises,
   workout_sets: workoutSets,
+  cycle_plans: cyclePlans,
   sessions,
   session_exercises: sessionExercises,
   session_sets: sessionSets,
+  weigh_ins: weighIns,
+  measurements: measurements,
+  progress_photos: progressPhotos,
   app_settings: appSettings,
 };
 

@@ -22,6 +22,7 @@ import {
   desc,
   eq,
   getTableColumns,
+  gte,
   isNotNull,
   isNull,
   like,
@@ -126,9 +127,15 @@ function equipmentFilter(need: 'resistance' | 'support', value: string): SQL {
     where e.exercise_id = ${outer('id')} and e.need = ${need} and e.equipment_id = ${value})`;
 }
 
-const musclesOf = (weight: number) => sql<string | null>`(
+/**
+ * exercise_muscles weighs a set as the generator credits it (1 the muscle it is
+ * for, 0.5 another primary, 0.25 a secondary), so a primary is anything from 0.5.
+ */
+const PRIMARY_WEIGHT = 0.5;
+
+const musclesOf = (role: 'primary' | 'secondary') => sql<string | null>`(
   select group_concat(l.name, ', ') from exercise_muscles m join lookups l on l.id = m.muscle_id
-  where m.exercise_id = ${outer('id')} and m.weight = ${weight}
+  where m.exercise_id = ${outer('id')} and ${role === 'primary' ? sql`m.weight >= ${PRIMARY_WEIGHT}` : sql`m.weight < ${PRIMARY_WEIGHT}`}
 )`;
 
 /**
@@ -164,7 +171,7 @@ export function listExercises(db: Db, opts: ExerciseFilters = {}): ExerciseListI
   if (opts.gymId) filters.push(doableAt(opts.gymId));
   if (opts.muscleIds?.length) {
     filters.push(sql`exists (select 1 from exercise_muscles m where m.exercise_id = ${outer('id')}
-      and m.weight = 1 and m.muscle_id in (${sql.join(opts.muscleIds.map((id) => sql`${id}`), sql`, `)}))`);
+      and m.weight >= ${PRIMARY_WEIGHT} and m.muscle_id in (${sql.join(opts.muscleIds.map((id) => sql`${id}`), sql`, `)}))`);
   }
   if (opts.type) filters.push(typeFilter(opts.type));
   if (opts.lateralityId) {
@@ -179,8 +186,8 @@ export function listExercises(db: Db, opts: ExerciseFilters = {}): ExerciseListI
   const query = db
     .select({
       ...getTableColumns(exercises),
-      primaryMuscles: musclesOf(1),
-      secondaryMuscles: musclesOf(0.5),
+      primaryMuscles: musclesOf('primary'),
+      secondaryMuscles: musclesOf('secondary'),
       category: resistanceCategory,
     })
     .from(exercises)
@@ -213,7 +220,7 @@ export function exerciseFilterOptions(db: Db, gymId: string | null): ExerciseFil
   const muscles = db
     .select({ id: lookups.id, name: lookups.name })
     .from(lookups)
-    .leftJoin(exerciseMuscles, and(eq(exerciseMuscles.muscleId, lookups.id), eq(exerciseMuscles.weight, 1)))
+    .leftJoin(exerciseMuscles, and(eq(exerciseMuscles.muscleId, lookups.id), gte(exerciseMuscles.weight, PRIMARY_WEIGHT)))
     .where(eq(lookups.type, 'featureMuscleGroup'))
     .groupBy(lookups.id)
     .orderBy(sql`count(${exerciseMuscles.exerciseId}) desc`, asc(lookups.name))
@@ -278,7 +285,7 @@ export function getExerciseDetail(db: Db, id: string): ExerciseDetail | undefine
     .where(eq(exerciseMuscles.exerciseId, id))
     .orderBy(desc(exerciseMuscles.weight), asc(lookups.name))
     .all()
-    .map(({ weight, ...m }) => ({ ...m, primary: weight === 1 }));
+    .map(({ weight, ...m }) => ({ ...m, primary: weight >= PRIMARY_WEIGHT }));
 
   const equipmentByNeed: ExerciseDetail['equipment'] = { resistance: [], support: [] };
   for (const row of db

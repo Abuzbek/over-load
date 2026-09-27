@@ -169,9 +169,10 @@ export type MuscleLoad = { muscle: string; sets: number };
  * core and your legs untrained. Fractional set counting works across every
  * tracking type.
  *
- * A secondary muscle counts half. Ignoring them entirely makes a squat look
- * like a quads-only movement, and counting them fully makes every compound
- * light up the whole body.
+ * Weighted as the generator credits a set (exercise_muscles): the muscle it is
+ * for in full, other primaries half, supporting ones a quarter. Ignoring them
+ * makes a squat look quads-only; counting them fully makes every compound
+ * light up the whole body, and a squat's adductors outrank the focus.
  *
  * Four joined levels, four tombstone filters — sets, session_exercises,
  * exercises and sessions — the same four periodTotals guards.

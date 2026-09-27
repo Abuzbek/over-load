@@ -245,13 +245,13 @@ MacroFactor Workouts (MFW) is a subscription lifting app.
 |---|---|---|---|
 | 13.1 | **Weekly Workouts rings**: Muscles, Sets, Exercises done vs weekly target; current vs previous cycle; **All Workouts vs Active Program** | yes | ⬜ (Dashboard has "All workouts") |
 | 13.2 | **Recent Records**: Volume / Reps / Estimated 1RM | yes | ✅ Recent records ❓ which types |
-| 13.3 | **Workouts insights**: sets and volume over time (week → all time), volume split into **external load vs bodyweight**, top exercises by sets/volume | yes | ⬜ |
-| 13.4 | **Weight Trend**: smoothed bodyweight, rate of change | yes | ⬜ |
-| 13.5 | **Habits**: calendar of workouts and weigh-ins, streaks; tap a day to log weight or "worked out" | yes | ⬜ |
+| 13.3 | **Workouts insights**: sets and volume over time (week → all time), volume split into **external load vs bodyweight**, top exercises by sets/volume | yes | ✅ Dashboard → Workouts (sets/volume by week, load vs bodyweight, top exercises) |
+| 13.4 | **Weight Trend**: smoothed bodyweight, rate of change | yes | ✅ |
+| 13.5 | **Habits**: calendar of workouts and weigh-ins, streaks; tap a day to log weight or "worked out" | yes | 🟡 no "worked out" mark |
 | 13.6 | **Muscle Groups** tiles: sets/volume per muscle over time → sessions list | yes | 🟡 heatmap |
 | 13.7 | **Levels**: body map, **average sets/week per muscle** over 1 week / 1 month / 3 months, front/back toggle, tap a muscle → contributing exercises (sets + muscles), drill into sub-muscles | yes | 🟡 MuscleHeatmap |
-| 13.8 | **Exercises** tiles: recent load + trend line → detail | yes | ⬜ |
-| 13.9 | Exercise detail metrics: **1RM / 3RM / 10RM estimates**, total volume, best-set volume, heaviest weight, total reps, best-set reps, total sets; time ranges; **monthly recaps** | yes | 🟡 `oneRepMax`, `personalRecords` in domain |
+| 13.8 | **Exercises** tiles: recent load + trend line → detail | yes | ✅ |
+| 13.9 | Exercise detail metrics: **1RM / 3RM / 10RM estimates**, total volume, best-set volume, heaviest weight, total reps, best-set reps, total sets; time ranges; **monthly recaps** | yes | 🟡 `/exercise-stats/[id]`; no monthly recaps |
 | 13.10 | **Steps** widget (manual or from Health) | yes | ⬜ |
 | 13.11 | **Period** tracking widget (calendar; can be hidden) | yes | ⬜ |
 | 13.12 | **Customize dashboard**: reorder, add/remove widgets and insights, swipe to remove, Reset to defaults | yes | ⬜ |

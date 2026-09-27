@@ -1,6 +1,11 @@
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { workouts } from './workouts';
+import { workoutExercises, workouts } from './workouts';
 import { syncColumns } from './sync';
+
+export const DELOAD_PLACES = ['none', 'first', 'last'] as const;
+export type DeloadPlace = (typeof DELOAD_PLACES)[number];
+/** A working set as a cycle plan holds it: repsMax null is "to failure". */
+export type CyclePlanSet = { repsMin: number; repsMax: number | null; rir: number; setType: 'normal' | 'drop' | 'myo' | 'failure' };
 
 export const programs = sqliteTable('programs', {
   ...syncColumns,
@@ -18,7 +23,38 @@ export const programs = sqliteTable('programs', {
    * the cycle stays at seven days — days can be changed, not added or removed.
    */
   generated: integer('generated', { mode: 'boolean' }).notNull().default(false),
+  /** How many cycles make a block before it repeats (1–52). */
+  cycleCount: integer('cycle_count').notNull().default(7),
+  /** A lighter cycle at the start or end of each block, or none. */
+  deload: text('deload', { enum: DELOAD_PLACES }).notNull().default('last'),
+  /**
+   * The plan changes cycle to cycle (packages/domain/src/periodization.ts).
+   * On for a generated program, off for one built by hand unless turned on.
+   */
+  periodized: integer('periodized', { mode: 'boolean' }).notNull().default(false),
+  /** The goal periodization follows; null falls back to the training preferences. */
+  goal: text('goal', { enum: ['hypertrophy', 'strength', 'both'] }),
+  /** Put away: out of the library until restored. Not a delete. */
+  archivedAt: integer('archived_at'),
 });
+
+/**
+ * One exercise's sets for one cycle of the block, as the user edited them —
+ * in place of what periodization would plan. `cycle` is the position in the
+ * block (1 to the program's cycle count); `sets` is the list of working sets.
+ */
+export const cyclePlans = sqliteTable(
+  'cycle_plans',
+  {
+    ...syncColumns,
+    workoutExerciseId: text('workout_exercise_id').notNull().references(() => workoutExercises.id),
+    cycle: integer('cycle').notNull(),
+    sets: text('sets', { mode: 'json' }).$type<CyclePlanSet[]>().notNull(),
+  },
+  (table) => ({
+    exerciseIdx: index('cycle_plans_exercise_idx').on(table.workoutExerciseId),
+  }),
+);
 
 /**
  * A program is a cycle of days, not a calendar week: one row per day, ordered
@@ -47,6 +83,7 @@ export const programDays = sqliteTable(
 );
 
 export type Program = typeof programs.$inferSelect;
+export type CyclePlan = typeof cyclePlans.$inferSelect;
 export type NewProgram = typeof programs.$inferInsert;
 export type ProgramDayRow = typeof programDays.$inferSelect;
 export type NewProgramDayRow = typeof programDays.$inferInsert;

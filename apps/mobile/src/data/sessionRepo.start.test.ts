@@ -3,13 +3,17 @@ import { createTestDb } from '@overload/schema/testing';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { startBareSession } from './sessionTestFixtures';
-import { activateProgram, createProgram, getProgramDays, setProgramDay } from './programRepo';
+import { activateProgram, createProgram, getProgramDays, setProgramDay, updateProgramSettings } from './programRepo';
 import { addExerciseToWorkout, addWorkoutSet, createWorkout, getWorkoutDetail } from './workoutRepo';
-import { setOnboarded } from './settingsRepo';
+import { setOnboarded, setProfile } from './settingsRepo';
+import { clearCyclePlans, saveCyclePlan } from './periodizationRepo';
 import {
   addExerciseFromHistory,
   completeSet,
   discardSession,
+  explainNext,
+  replanRemaining,
+  updateSet,
   finishSession,
   getActiveSession,
   getActiveSessionId,
@@ -258,7 +262,7 @@ describe('addExerciseFromHistory', () => {
 });
 
 describe('periodization at the start', () => {
-  it("starts a generated program's workout with this cycle's sets; a program built by hand keeps its plan", () => {
+  it("starts a periodized program's workout with this cycle's sets; with periodization off, the plan as written", () => {
     setOnboarded(db, { goal: 'hypertrophy', focus: {}, deprioritized: [], daysPerWeek: 3, sessionMinutes: 60, split: 'full_body', deload: true, skills: [], smartProgression: false, warmups: true }, AT);
     const workout = createWorkout(db, 'Workout A');
     const we = addExerciseToWorkout(db, workout.id, bench.id);
@@ -272,9 +276,98 @@ describe('periodization at the start', () => {
       getSessionDetail(db, startSessionFromWorkout(db, workout.id, AT))!.exercises[0]!.sessionSets.map((s) =>
         s.setType === 'failure' ? `${s.targetReps}+F` : `${s.targetReps}–${s.targetRepsMax}@${s.targetRir}`,
       );
-    expect(sets()).toEqual(['8–10@1', '8–10@0', '8+F', '8+F']);
+    // The fixture has no exercise type, so it plans as isolation work: cycle 6 is its low rep zone.
+    expect(sets()).toEqual(['5–7@1', '5–7@0', '5+F', '5+F']);
 
-    db.update(programs).set({ generated: false }).where(eq(programs.id, program.id)).run();
+    db.update(programs).set({ periodized: false }).where(eq(programs.id, program.id)).run();
     expect(sets()).toEqual(['8–10@3', '8–10@2', '8–10@2', '8–10@2']);
+  });
+});
+
+describe('smart progression gaps', () => {
+  function rangeDay(sets = 1) {
+    const workout = createWorkout(db, 'Bench day');
+    const we = addExerciseToWorkout(db, workout.id, bench.id);
+    for (let i = 0; i < sets; i++) addWorkoutSet(db, we.id, { targetReps: 7, targetRepsMax: 9, targetRir: 2 });
+    return workout;
+  }
+
+  it('starts a first session from an estimate, once the profile has a bodyweight', () => {
+    const workout = rangeDay();
+    expect(getSessionDetail(db, startSessionFromWorkout(db, workout.id, AT))!.exercises[0]!.sessionSets[0]!.weightKg).toBeNull();
+    setProfile(db, { bodyweightKg: 80, gender: 'male', liftingExperience: 'intermediate' }, AT);
+    const set = getSessionDetail(db, startSessionFromWorkout(db, workout.id, AT + 1))!.exercises[0]!.sessionSets[0]!;
+    expect(set.weightKg).toBeGreaterThan(0);
+    expect(set.reps).toBeGreaterThanOrEqual(7);
+  });
+
+  it('re-plans the untouched sets after a set harder than planned, and never one typed into', () => {
+    const workout = rangeDay(3);
+    // Last time: 100 × 8 at 2 RIR.
+    const first = startSessionFromWorkout(db, workout.id, AT);
+    for (const s of getSessionDetail(db, first)!.exercises[0]!.sessionSets) completeSet(db, s.id, { weightKg: 100, reps: 8, rir: 2 }, AT + 1);
+    finishSession(db, first, AT + 2);
+
+    const id = startSessionFromWorkout(db, workout.id, AT + 10);
+    const [a, b, c] = getSessionDetail(db, id)!.exercises[0]!.sessionSets;
+    updateSet(db, c!.id, { weightKg: 90 }, AT + 11); // typed: stays
+    // The first set went badly: 5 reps with nothing left.
+    completeSet(db, a!.id, { weightKg: a!.weightKg, reps: 5, rir: 0 }, AT + 12);
+    replanRemaining(db, a!.sessionExerciseId, AT + 13);
+    const after = getSessionDetail(db, id)!.exercises[0]!.sessionSets;
+    expect(after[1]!.weightKg!).toBeLessThan(b!.weightKg!);
+    expect(after[2]!.weightKg).toBe(90);
+    expect(explainNext(db, a!.sessionExerciseId, 'kg')![0]).toContain('Re-planned from your sets today');
+  });
+});
+
+describe('editing one cycle', () => {
+  it("starts a cycle's session from its own edited sets; other cycles keep the plan; reset undoes it", () => {
+    setOnboarded(db, { goal: 'hypertrophy', focus: {}, deprioritized: [], daysPerWeek: 3, sessionMinutes: 60, split: 'full_body', deload: true, skills: [], smartProgression: false, warmups: true }, AT);
+    const workout = createWorkout(db, 'Workout A');
+    const we = addExerciseToWorkout(db, workout.id, bench.id);
+    for (const rir of [3, 2, 2, 2]) addWorkoutSet(db, we.id, { targetReps: 8, targetRepsMax: 10, targetRir: rir });
+    const program = createProgram(db, { name: 'P', generated: true }, AT);
+    activateProgram(db, program.id, AT);
+    setProgramDay(db, program.id, 0, workout.id, AT);
+    const at = (cycle: number) => {
+      db.update(programs).set({ cycleNumber: cycle }).where(eq(programs.id, program.id)).run();
+      return getSessionDetail(db, startSessionFromWorkout(db, workout.id, AT))!.exercises[0]!.sessionSets.map((s) =>
+        s.setType === 'failure' ? `${s.targetReps}+F` : `${s.targetReps}–${s.targetRepsMax}@${s.targetRir}`,
+      );
+    };
+
+    saveCyclePlan(db, we.id, [2], [{ repsMin: 5, repsMax: 6, rir: 1, setType: 'normal' }, { repsMin: 5, repsMax: null, rir: 0, setType: 'failure' }], AT);
+    expect(at(2)).toEqual(['5–6@1', '5+F']);
+    expect(at(3)).toEqual(['5–7@2', '5–7@1', '5–7@1', '5–7@1']);
+    clearCyclePlans(db, we.id, AT + 1);
+    expect(at(2)).toEqual(['12–14@2', '12–14@2', '12–14@2', '12–14@2']);
+  });
+});
+
+describe('re-tuning after a block', () => {
+  function block(progressKg: number) {
+    const workout = createWorkout(db, 'Workout A');
+    const we = addExerciseToWorkout(db, workout.id, bench.id);
+    for (let i = 0; i < 3; i++) addWorkoutSet(db, we.id, { targetReps: 10, targetRepsMax: 12, targetRir: 2 });
+    const program = createProgram(db, { name: 'P', generated: true }, AT, 1);
+    updateProgramSettings(db, program.id, { cycleCount: 3, deload: 'none' }, AT);
+    activateProgram(db, program.id, AT);
+    setProgramDay(db, program.id, 0, workout.id, AT);
+    for (let s = 0; s < 3; s++) {
+      const at = AT + s * 86_400_000;
+      const id = startSessionFromWorkout(db, workout.id, at);
+      for (const set of getSessionDetail(db, id)!.exercises[0]!.sessionSets) completeSet(db, set.id, { weightKg: 60 + s * progressKg, reps: 10, rir: 2 }, at + 1);
+      finishSession(db, id, at + 2);
+    }
+    return getWorkoutDetail(db, workout.id)!.exercises[0]!.sessionSets.map((s) => `${s.targetReps}–${s.targetRepsMax}`);
+  }
+
+  it('moves a stalled exercise to a heavier rep range once the block ends', () => {
+    expect(block(0)).toEqual(['7–9', '7–9', '7–9']);
+  });
+
+  it('leaves one that progressed as planned', () => {
+    expect(block(2.5)).toEqual(['10–12', '10–12', '10–12']);
   });
 });

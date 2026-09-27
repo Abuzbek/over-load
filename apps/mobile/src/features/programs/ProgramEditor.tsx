@@ -64,7 +64,21 @@ export function ProgramEditor({ programId, programName }: Props) {
 
   return (
     <View style={styles.root}>
-      <Stack.Screen options={{ title: programName }} />
+      <Stack.Screen
+        options={{
+          title: programName,
+          headerRight: () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Program settings"
+              hitSlop={10}
+              onPress={() => router.push({ pathname: '/programs/[id]/settings', params: { id: programId } })}
+            >
+              <Lucide name="sliders-horizontal" size={22} color={theme.colors.text} />
+            </Pressable>
+          ),
+        }}
+      />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar} contentContainerStyle={styles.tabs}>
         {days.map((d, i) => (
           <Pressable

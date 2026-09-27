@@ -28,7 +28,7 @@ pnpm start          # Expo dev server — then press i (iOS) or a (Android)
 pnpm ios            # straight to the iOS simulator
 pnpm android        # straight to an Android emulator/device
 
-pnpm test           # full suite (456 tests, 38 files); functions/ has its own: npm test there
+pnpm test           # full suite (504 tests, 44 files); functions/ has its own: npm test there
 pnpm typecheck      # type gate; CI runs this too (.github/workflows/ci.yml)
 pnpm run ci         # everything CI runs, locally: install + typecheck + test + bundle
 pnpm bundle         # expo export — catches packaging breaks tests cannot see
@@ -103,20 +103,47 @@ cross-platform modal (no `Alert.prompt`, which is iOS-only).
   Compound or not, and "primary compound", come from the catalogue's per-goal
   classification (`exerciseClassification*` links), not `exerciseType`; big muscles get a
   compound, small ones isolation; two variants from one `exclusionGroupings` group never
-  share a program. After every muscle is covered, spare time goes to extra sets (focused
-  first) up to a weekly cap, so the session the user picked is filled. Rep ranges, RIR,
+  share a program. Every muscle due in a workout gets its first exercise
+  before any focused muscle gets a second (five focus muscles taking two each once filled the
+  day before hamstrings or abs had one). With focus, unfocused muscles drop to two-thirds of
+  their target (`UNFOCUSED_SHARE`) — a session only holds so many sets. **Abs count only their
+  own exercises** (`DIRECT_ONLY`: a squat's bracing does not close their gap) and get two days
+  a week. After every muscle is covered, spare time goes to extra sets (focused
+  first) up to a weekly cap, so the session the user picked is filled. `exercise_muscles`
+  weighs a set the same way (`CREDIT`: main 1, other primaries 0.5, secondaries 0.25), so the
+  Progress muscle list and heatmap agree with the plan; a primary is weight ≥ 0.5. Rep ranges, RIR,
   rest and a hard session-length budget via `estimateWorkoutSeconds` — the same estimate
   the workout overview shows. `onboardingRepo` feeds it candidates and writes the result
   (`createProgramFromPlan`). One workout per training day (A, B, C…), each muscle spread
   over about target÷3 days; a generated program is flagged `programs.generated` and keeps
   its seven days (`addProgramDay`/`removeProgramDay` refuse; a day's workout can change).
-- **Periodization** (`packages/domain/src/periodization.ts`, pure): a block of 7 cycles, the
-  last a deload (if chosen), then it repeats. By goal: hypertrophy (and isolation work for
+- **Periodization** (`packages/domain/src/periodization.ts`, pure): a block of
+  `programs.cycle_count` cycles (1–52, default 7), a deload first, last or not at all
+  (`programs.deload`), then it repeats; the six-step scheme spreads over however many
+  training cycles there are. By goal: hypertrophy (and isolation work for
   any goal) keeps the rep range and tapers RIR to failure sets; strength/both compounds
-  alternate moderate cycles with heavy ones (2–4 reps, then "2+" failure sets). Only a
-  *generated* active program is periodized (`periodizationRepo.cycleFor`, using the
-  program's `cycle_number` and the goal/deload preferences); its workout overview shows this
-  cycle's sets and a session starts from them, with smart progression filling the loads.
+  alternate moderate cycles with heavy ones (2–4 reps, then "2+" failure sets). Three rules
+  after MacroFactor's generated programs (`cyclePlan`): a heavy barbell compound (`barbell`
+  from the equipment string) never goes to failure — RIR floors at 1 — except one "2+" set in
+  the strength scheme's hardest cycle; a bodyweight exercise (`trackingType === 'reps'`)
+  adds a rep to its range each cycle; isolation work rotates rep zones each cycle — the
+  plan's, +4, −3 (`ZONES`), the rotated ones at most 3 reps wide. Only an
+  active program with `programs.periodized` on (generated ones from the start, hand-built
+  ones by the settings switch) is periodized (`periodizationRepo.cycleFor`); the goal is
+  `programs.goal`, else the preferences'. The overview shows cycle chips (C1…/Deload) and a
+  session starts from its cycle's sets, smart progression filling the loads. **One cycle's
+  sets can be edited** (⋮ → Edit cycle N sets, `CycleSetEditor`): saved to the synced
+  `cycle_plans` table by `(workout_exercise_id, cycle position)`, which beats the scheme;
+  "Reset to the plan" tombstones them. **After a block**, `advanceCycleIfComplete` calls
+  `retuneAfterBlock`: an exercise whose e1RM rose < 1% over the block moves to a fresh rep
+  range of the same width (`retuneRange`), written to its workout sets.
+- **Previewing a cycle**: the cycle link beside the Workout tab's ACTIVE PROGRAM label opens "Go to…" (past ← , current pin,
+  future →, the deload by name). Another cycle is look-only: no day checkboxes, and its
+  workouts open with `?cycle=N`, where the overview swaps Start Workout for a note.
+- **Program settings** (`/programs/[id]/settings`, `ProgramSettingsScreen`, the sliders icon
+  on the editor): cycles, deload, periodization + goal, duplicate (deep copy incl.
+  `cycle_plans`), archive (`archived_at`; restored from Programs → Archived) and delete
+  (tombstones the days and the workouts only it uses).
 - **Creating programs**: + → New Program opens `features/programs/CreateProgramFlow.tsx`
   (`/programs/new`), built on onboarding's step pieces and the shared `onboarding/StepFlow`
   frame. Smart Generation re-asks the program questions from last time's answers
@@ -131,7 +158,33 @@ cross-platform modal (no `Alert.prompt`, which is iOS-only).
   gets the heaviest weight the equipment can make (`gymRepo.loadableWeights`: bar totals,
   racks, stacks, plate pairs) whose reps, less its target RIR, land in the range. Applied
   when a session starts (`startSessionFromWorkout`), pre-filling weight and reps, unless
-  `training_preferences.smartProgression` is off. Nothing yet with no history.
+  `training_preferences.smartProgression` is off (`progressionRepo.suggestFor`). The
+  estimate is of the *total* resistance: a plate-loaded machine's base weight and the
+  bodyweight share (`exercise.bodyweight` × profile bodyweight) are added
+  (`resistanceOffsetKg`) and taken off again. No history: a starting estimate
+  (`startingWeight.ts`, from bodyweight, gender, experience, pattern) one RIR further from
+  failure. After each completed set the untouched later sets are re-planned at today's level
+  (`replanRemaining`; untouched = weight and reps still as suggested, `suggested_reps`). The
+  logger's wand chip explains a suggestion (`explainNext` → `explainSuggestion`).
+- **Shortcuts** (the centre +, `features/shortcuts/ShortcutsSheet.tsx`): Weight, Photos, Metrics,
+  History, an Up Next card (the active program's next day not ticked off), then New Program /
+  New Workout. The body sheets (`features/body/`) each edit one day — the title is the date (▾
+  opens `ui/MonthGrid`), the bin removes that day's entry — through `data/bodyRepo.ts`:
+  `weigh_ins` (+ `body_fat_percent`; the newest also sets the profile), `measurements` (one row
+  a day, values JSON in cm whatever the display unit), `progress_photos` (one per pose a day).
+  Photos come from `expo-image-picker` and are copied into the app's documents folder; the row
+  syncs, **the image does not** (no Firebase Storage yet). A body sheet opens after the
+  shortcuts Modal's close animation — Modal `onDismiss` is iOS-only.
+- **Dashboard widgets** (`features/dashboard/DashboardWidgets.tsx`, reads in `data/insightsRepo.ts`,
+  maths in `packages/domain/src/insights.ts`): Workouts (sets or volume a week, volume split
+  into load and the bodyweight share — catalogue fraction × profile bodyweight — plus top
+  exercises), Exercise tiles (latest e1RM + sparkline → `/exercise-stats/[id]`: 1/3/10RM,
+  charts, totals by range), Habits (a GitHub-style heatmap — a column a week, a row a weekday,
+  shaded by working sets that day; tapping it opens `/habits`, the month calendar of workouts and
+  weigh-ins with the weekly streak, where tapping a day logs weight) and Weight trend (daily average, exponentially smoothed at 0.1 a
+  day, weekly rate). Weigh-ins are the synced `weigh_ins` table; logging the newest one also
+  sets the profile bodyweight that smart progression reads. Charts are `ui/Charts.tsx`
+  (react-native-svg).
 - **Dashboard rings** measure this week (from Monday) against the active program's week
   (`historyRepo.programWeekTargets`). Muscles count every muscle an exercise trains,
   supporting ones too (`exercise_muscles`), not just the main one.
@@ -348,14 +401,11 @@ In rough order of what was asked for earlier:
 
 1. **Set types in the workout builder**: the logger has all of them; plans still only
    make standard sets. Left/right logging is not built.
-2. **Starting-weight recommendations**: progression needs one logged session; the first
-   has no load.
-   Inputs to use: bodyweight, gender, lifting experience, the catalogue's per-exercise
-   `bodyweight` fraction, and the onboarding skill answers (today they only exclude
-   exercises).
-3. **Progression and warm-ups, the rest**: progression is applied at session start, not
-   yet adjusted mid-session after a harder set, and has no "why" explanation (the wand);
-   warm-ups are added by hand, not automatically; deload is saved but unused.
+2. **Starting weights, the rest**: the estimate skips mostly-bodyweight exercises and
+   ignores the onboarding skill answers.
+3. **Progression, the rest**: warm-ups are added by hand, not automatically; the block
+   re-tune changes rep ranges only, not set types, and finds the block's sessions by count
+   (see the `ponytail:` note in `retuneAfterBlock`).
 4. **Exercise images**: every exercise thumbnail is a placeholder. If images must stay
    out of the repo, load them at runtime (e.g. Firebase Storage) rather than bundling.
 5. **Workout editing gaps**: no way to remove an exercise from a workout; the ⋮ menu adds

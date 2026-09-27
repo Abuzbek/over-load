@@ -35,6 +35,8 @@ type Props = {
   subtitle?: string;
   /** Top-right of the header, opposite the close button. */
   headerRight?: ReactNode;
+  /** Makes the title a button with a ▾, e.g. a date that opens a picker. */
+  onTitlePress?: () => void;
   /** Omitted, the sheet sizes to its content; a long list passes ['90%']. */
   snapPoints?: string[];
   footer?: (props: BottomSheetFooterProps) => ReactNode;
@@ -50,7 +52,7 @@ type Props = {
  * left, title centred. Driven by `visible` like a Modal, so callers keep plain
  * state instead of refs. Dragging down or tapping the backdrop closes it.
  */
-export function BottomSheet({ visible, onClose, title, subtitle, headerRight, snapPoints, footer, children }: Props) {
+export function BottomSheet({ visible, onClose, title, subtitle, headerRight, onTitlePress, snapPoints, footer, children }: Props) {
   const ref = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
 
@@ -86,9 +88,16 @@ export function BottomSheet({ visible, onClose, title, subtitle, headerRight, sn
         <Lucide name="x" size={22} color={theme.colors.text} />
       </Pressable>
       <View style={styles.titles}>
-        <Text variant="title" style={styles.center} numberOfLines={2}>
-          {title}
-        </Text>
+        {onTitlePress ? (
+          <Pressable accessibilityRole="button" accessibilityLabel={`${title}, change`} hitSlop={8} onPress={onTitlePress} style={styles.titleButton}>
+            <Text variant="title" numberOfLines={1}>{title}</Text>
+            <Lucide name="chevron-down" size={18} color={theme.colors.text} />
+          </Pressable>
+        ) : (
+          <Text variant="title" style={styles.center} numberOfLines={2}>
+            {title}
+          </Text>
+        )}
         {subtitle ? (
           <Text variant="caption" color="textMuted" style={styles.center}>
             {subtitle}
@@ -136,6 +145,7 @@ export function BottomSheet({ visible, onClose, title, subtitle, headerRight, sn
 
 const styles = StyleSheet.create({
   background: { backgroundColor: theme.colors.surface },
+  titleButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   handle: { backgroundColor: theme.colors.textMuted, width: 40 },
   header: {
     flexDirection: 'row',

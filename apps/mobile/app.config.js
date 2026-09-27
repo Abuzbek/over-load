@@ -70,6 +70,14 @@ module.exports = ({ config }) => {
         firebase ? { ios: { useFrameworks: 'static' } } : {},
       ],
       '@react-native-vector-icons/lucide',
+      [
+        'expo-image-picker',
+        {
+          photosPermission: 'Overload uses your photos for the progress pictures you choose to add.',
+          cameraPermission: 'Overload uses the camera to take your progress photos.',
+          microphonePermission: false,
+        },
+      ],
       ...(firebase
         ? [
             // RNFB 26 fetches the Firebase iOS SDK via Swift Package Manager by

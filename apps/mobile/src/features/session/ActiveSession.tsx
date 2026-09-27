@@ -25,8 +25,10 @@ import {
   discardSession,
   finishSession,
   getSessionDetail,
+  explainNext,
   lastPerformance,
   pauseSession,
+  replanRemaining,
   resumeSession,
   setSetType,
   supersetWithNext,
@@ -108,6 +110,7 @@ export function ActiveSession({ sessionId }: Props) {
   const [infoId, setInfoId] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
   const [supersetSheet, setSupersetSheet] = useState(false);
+  const [why, setWhy] = useState<string[] | null>(null);
   const [scheme, setScheme] = useState(() => getWarmupScheme(db));
 
   // The clock: the workout's length and the rest countdown both read Date.now().
@@ -203,6 +206,8 @@ export function ActiveSession({ sessionId }: Props) {
     if (saved.reps === null) values.reps = repsPlaceholder(saved) ?? last[working]?.reps ?? null;
     if (saved.rir === null && saved.setType !== 'warmup' && !saved.parentSetId) values.rir = saved.targetRir;
     completeSet(db, set.id, values, Date.now());
+    // Today's sets re-plan the ones still as suggested.
+    replanRemaining(db, entry.sessionExercise.id, Date.now());
     setFocus(null);
 
     const now = getSessionDetail(db, sessionId)?.exercises ?? exercises;
@@ -390,6 +395,14 @@ export function ActiveSession({ sessionId }: Props) {
                 deleteSet(db, set.id, Date.now());
                 refresh();
               }}
+              onWhy={() => {
+                focusField(null);
+                setWhy(
+                  explainNext(db, item.sessionExercise.id, unit) ?? [
+                    'Nothing to go on yet for this exercise: log a set, or add your bodyweight in your profile for a starting estimate.',
+                  ],
+                );
+              }}
               onSuperset={() => {
                 focusField(null);
                 setSupersetSheet(true);
@@ -543,6 +556,14 @@ export function ActiveSession({ sessionId }: Props) {
         </View>
       </BottomSheet>
 
+      <BottomSheet visible={why !== null} onClose={() => setWhy(null)} title="Smart progression">
+        <View style={[styles.why, { paddingBottom: insets.bottom + theme.spacing.lg }]}>
+          {(why ?? []).map((line, i) => (
+            <Text key={i} color={i === 0 ? 'text' : 'textMuted'}>{line}</Text>
+          ))}
+        </View>
+      </BottomSheet>
+
       <BottomSheet visible={supersetSheet} onClose={() => setSupersetSheet(false)} title="Superset">
         <View style={{ paddingBottom: insets.bottom + theme.spacing.lg }}>
           {current && current.sessionExercise.supersetGroup !== null ? (
@@ -600,6 +621,7 @@ const styles = StyleSheet.create({
   strip: { gap: theme.spacing.sm, paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.sm },
   trackJoined: { marginRight: -theme.spacing.sm },
   clockRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
+  why: { paddingHorizontal: theme.spacing.xl, gap: theme.spacing.md },
   sheetNote: { paddingHorizontal: theme.spacing.xl, paddingVertical: theme.spacing.lg },
   track: { height: 3, marginTop: 4, borderRadius: 2, backgroundColor: theme.colors.border, overflow: 'hidden' },
   fill: { height: 3, backgroundColor: theme.colors.textMuted },

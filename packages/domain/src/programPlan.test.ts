@@ -162,6 +162,36 @@ describe('generatePlan', () => {
   });
 });
 
+describe('balance with focus', () => {
+  const direct = (plan: ReturnType<typeof generatePlan>) => {
+    const sets = new Map<string, number>();
+    for (const w of plan.workouts) for (const e of w.exercises) sets.set(e.muscle, (sets.get(e.muscle) ?? 0) + e.sets.length);
+    return sets;
+  };
+  const FIVE = { Chest: 1, Quads: 1, 'Side Delts': 1, Lats: 1, Glutes: 1 };
+
+  it('gives abs direct work on two days, though the big lifts list them in support', () => {
+    // Every compound "trains" the abs; that support does not stand in for an ab exercise.
+    const bracing = CATALOGUE.map((x) => (x.mainMuscle === 'Abs' ? x : { ...x, secondaryMuscles: ['Abs'] }));
+    const plan = generatePlan(input({ candidates: bracing, focus: FIVE }));
+    const abDays = plan.workouts.filter((w) => w.exercises.some((e) => e.muscle === 'Abs')).length;
+    expect(abDays).toBe(2);
+  });
+
+  it('gives every muscle due its first exercise before a focused one gets a second', () => {
+    const plan = generatePlan(input({ focus: FIVE }));
+    const sets = direct(plan);
+    for (const m of ['Hamstrings', 'Upper Back', 'Abs', 'Calves']) expect(sets.get(m) ?? 0).toBeGreaterThan(0);
+  });
+
+  it('still puts the focused muscles on top', () => {
+    const sets = direct(generatePlan(input({ focus: FIVE })));
+    const focused = Math.min(...Object.keys(FIVE).map((m) => sets.get(m) ?? 0));
+    const others = Math.max(...MUSCLES.filter((m) => !(m in FIVE)).map((m) => sets.get(m) ?? 0));
+    expect(focused).toBeGreaterThan(others);
+  });
+});
+
 describe('weeklySetTarget', () => {
   it('adds half again per focus point', () => {
     expect(weeklySetTarget('intermediate', 0)).toBe(9);
