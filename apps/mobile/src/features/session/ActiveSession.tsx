@@ -32,6 +32,7 @@ import {
   resumeSession,
   setSetType,
   supersetWithNext,
+  swapSessionExercise,
   uncompleteSet,
   updateSet,
   type SetValues,
@@ -49,6 +50,7 @@ import { ExerciseInfoSheet } from '../library/ExerciseInfoSheet';
 import { ExercisePage, fieldsOf, fieldText, type Focus, type LogField } from './ExercisePage';
 import { RirInfoSheet, SetTypeSheet, WarmupSheet } from './LoggerSheets';
 import { PlateCalculator } from './PlateCalculator';
+import { SwapSheet } from './SwapSheet';
 import { cancelRestNotification, scheduleRestNotification } from './notifications';
 import { parseDecimalInput, parseDuration, parseIntegerInput } from './setInputs';
 import { repsPlaceholder, setTableRows } from './setTable';
@@ -110,6 +112,7 @@ export function ActiveSession({ sessionId }: Props) {
   const [infoId, setInfoId] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
   const [supersetSheet, setSupersetSheet] = useState(false);
+  const [swapFor, setSwapFor] = useState<WorkoutDetailExercise | null>(null);
   const [why, setWhy] = useState<string[] | null>(null);
   const [scheme, setScheme] = useState(() => getWarmupScheme(db));
 
@@ -120,6 +123,8 @@ export function ActiveSession({ sessionId }: Props) {
     return () => clearInterval(handle);
   }, []);
 
+  // Changes when an exercise is added or swapped: what the lookups below are keyed on.
+  const exerciseKey = detail?.exercises.map((e) => e.exercise.id).join() ?? '';
   // Last time's working sets, fixed for the session: one query per exercise.
   const previousByExercise = useMemo(() => {
     const map = new Map<string, CompletedSet[]>();
@@ -127,13 +132,13 @@ export function ActiveSession({ sessionId }: Props) {
       map.set(entry.exercise.id, lastPerformance(db, entry.exercise.id, sessionId).filter((s) => s.setType !== 'warmup'));
     }
     return map;
-  }, [sessionId, detail?.exercises.length]);
+  }, [sessionId, exerciseKey]);
 
   // How each exercise's bar is loaded in the gym trained at: one lookup per exercise.
   const loadings = useMemo(() => {
     const gymId = getActiveGym(db)?.id;
     return new Map((detail?.exercises ?? []).map((e) => [e.exercise.id, gymId ? barLoadingFor(db, gymId, e.exercise.id) : null]));
-  }, [detail?.exercises.length]);
+  }, [exerciseKey]);
 
   if (!detail) {
     return (
@@ -264,6 +269,10 @@ export function ActiveSession({ sessionId }: Props) {
     // A scheduled rest notification outlives the screen; it must not buzz after the workout.
     setRest(null);
     void cancelRestNotification();
+    if (end === 'finish') {
+      router.replace(`/session/${sessionId}/complete`);
+      return;
+    }
     router.dismissAll();
     router.replace('/');
   }
@@ -407,6 +416,10 @@ export function ActiveSession({ sessionId }: Props) {
                 focusField(null);
                 setSupersetSheet(true);
               }}
+              onSwap={() => {
+                focusField(null);
+                setSwapFor(item);
+              }}
               onToggle={(set) => toggle(set, item)}
               onBadge={(set) => {
                 focusField(null);
@@ -519,6 +532,25 @@ export function ActiveSession({ sessionId }: Props) {
         onClose={() => setWarmupFor(null)}
       />
       <ExerciseInfoSheet exerciseId={infoId} figure={figure} onClose={() => setInfoId(null)} />
+      <SwapSheet
+        exerciseId={swapFor?.exercise.id ?? null}
+        logged={swapFor?.sessionSets.some((s) => s.completedAt !== null) ?? false}
+        onClose={() => setSwapFor(null)}
+        onInfo={(id) => {
+          setSwapFor(null);
+          setInfoId(id);
+        }}
+        onSwap={(exerciseId) => {
+          if (swapFor) swapSessionExercise(db, swapFor.sessionExercise.id, exerciseId, Date.now());
+          setSwapFor(null);
+          refresh();
+        }}
+        onFindOther={() => {
+          if (!swapFor) return;
+          setSwapFor(null);
+          router.push({ pathname: '/session/[id]/swap', params: { id: sessionId, entry: swapFor.sessionExercise.id, name: swapFor.exercise.name } });
+        }}
+      />
 
       <BottomSheet visible={menu} onClose={() => setMenu(false)} title="Workout Options">
         <View style={{ paddingBottom: insets.bottom + theme.spacing.lg }}>

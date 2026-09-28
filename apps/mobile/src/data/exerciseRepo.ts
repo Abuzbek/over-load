@@ -23,6 +23,7 @@ import {
   eq,
   getTableColumns,
   gte,
+  inArray,
   isNotNull,
   isNull,
   like,
@@ -48,6 +49,8 @@ export const BODYWEIGHT_ONLY = 'bodyweight';
 export type ExerciseFilters = {
   search?: string;
   limit?: number;
+  /** Only these exercises. */
+  ids?: string[];
   /** Only what this gym's equipment allows. */
   gymId?: string | null;
   /** Any of these feature-muscle groups as a primary. */
@@ -168,6 +171,7 @@ export function listExercises(db: Db, opts: ExerciseFilters = {}): ExerciseListI
     const pattern = `%${opts.search}%`;
     filters.push(or(like(exercises.name, pattern), like(exercises.searchText, pattern.toLowerCase()))!);
   }
+  if (opts.ids) filters.push(inArray(exercises.id, opts.ids));
   if (opts.gymId) filters.push(doableAt(opts.gymId));
   if (opts.muscleIds?.length) {
     filters.push(sql`exists (select 1 from exercise_muscles m where m.exercise_id = ${outer('id')}
@@ -418,4 +422,32 @@ export function createCustomExercise(
   if (muscle) db.insert(exerciseMuscles).values({ exerciseId: row.id, muscleId: muscle.id, weight: 1 }).run();
 
   return row;
+}
+
+/** A "Chest, Front Delts" muscle list as a comparable key; group_concat keeps no order. */
+const muscleKey = (names: string | null) => (names ?? '').split(', ').filter(Boolean).sort().join('|');
+
+/**
+ * Exercises that can stand in for this one where the lifter is: the same main
+ * muscles exactly, doable with the gym's equipment. Those with the same
+ * supporting muscles too come first, then the picker's own order (most
+ * recommended). Empty when the exercise lists no muscles.
+ */
+export function smartSubstitutes(db: Db, exerciseId: string, gymId: string | null, limit = 3): ExerciseListItem[] {
+  const source = db
+    .select({ primary: musclesOf('primary'), secondary: musclesOf('secondary') })
+    .from(exercises)
+    .where(eq(exercises.id, exerciseId))
+    .get();
+  const key = muscleKey(source?.primary ?? null);
+  if (!source || key === '') return [];
+  const muscleIds = db
+    .select({ id: exerciseMuscles.muscleId })
+    .from(exerciseMuscles)
+    .where(and(eq(exerciseMuscles.exerciseId, exerciseId), gte(exerciseMuscles.weight, PRIMARY_WEIGHT)))
+    .all()
+    .map((m) => m.id);
+  const same = listExercises(db, { gymId, muscleIds }).filter((e) => e.id !== exerciseId && muscleKey(e.primaryMuscles) === key);
+  const supporting = muscleKey(source.secondary);
+  return [...same.filter((e) => muscleKey(e.secondaryMuscles) === supporting), ...same.filter((e) => muscleKey(e.secondaryMuscles) !== supporting)].slice(0, limit);
 }

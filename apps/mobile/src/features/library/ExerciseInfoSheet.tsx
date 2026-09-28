@@ -20,6 +20,8 @@ type Props = {
   onClose: () => void;
   /** Present in a picker: the footer's "Add Exercise". */
   onAdd?: (exerciseId: string) => void;
+  /** The footer button's words, "Add Exercise" unless given. */
+  addLabel?: string;
 };
 
 const TABS = ['Instructions', 'Details', 'History'] as const;
@@ -36,7 +38,7 @@ function typeLabel(type: string | null, region: string | null): string | null {
   return type;
 }
 
-export function ExerciseInfoSheet({ exerciseId, figure, onClose, onAdd }: Props) {
+export function ExerciseInfoSheet({ exerciseId, figure, onClose, onAdd, addLabel = 'Add Exercise' }: Props) {
   const [tab, setTab] = useState<Tab>('Instructions');
   const insets = useSafeAreaInsets();
   // Closing clears exerciseId before the sheet has slid away; keep showing the
@@ -50,7 +52,7 @@ export function ExerciseInfoSheet({ exerciseId, figure, onClose, onAdd }: Props)
     ? (props: Parameters<typeof BottomSheetFooter>[0]) => (
         <BottomSheetFooter {...props} bottomInset={0}>
           <View style={[styles.footer, { paddingBottom: insets.bottom + theme.spacing.lg }]}>
-            <Button title="Add Exercise" onPress={() => onAdd(exerciseId)} />
+            <Button title={addLabel} onPress={() => onAdd(exerciseId)} />
           </View>
         </BottomSheetFooter>
       )

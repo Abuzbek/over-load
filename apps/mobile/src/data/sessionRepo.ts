@@ -829,3 +829,85 @@ export function explainNext(db: Db, sessionExerciseId: string, unit: Unit): stri
   if (!planned) return null;
   return explainSuggestion(planned.basis, planned.oneRepMaxKg, plan, planned.suggestions[0]!, (kg) => formatWeight(kg, unit), planned.offsetKg);
 }
+
+/**
+ * Puts another exercise in an exercise's place, before any of its sets is
+ * done: the same sets, targets and rest, re-planned for the new exercise —
+ * smart progression's suggestion, else its last time's load. Warm-ups and
+ * rounds lose their weights, which were the old exercise's.
+ */
+export function swapSessionExercise(db: Db, sessionExerciseId: string, exerciseId: string, at: number): void {
+  const entry = db.select().from(sessionExercises).where(eq(sessionExercises.id, sessionExerciseId)).get();
+  const exercise = db.select().from(exercises).where(eq(exercises.id, exerciseId)).get();
+  if (!entry || !exercise) return;
+  const sets = db
+    .select()
+    .from(sessionSets)
+    .where(and(eq(sessionSets.sessionExerciseId, sessionExerciseId), isNull(sessionSets.deletedAt)))
+    .orderBy(asc(sessionSets.orderIndex))
+    .all();
+  // ponytail: a half-done exercise cannot be swapped; splitting it (done sets kept, the rest moved) if lifters ask.
+  if (sets.some((s) => s.completedAt !== null)) throw new Error('An exercise with logged sets cannot be swapped');
+  const working = sets.filter((s) => s.setType !== 'warmup' && !s.parentSetId);
+  const before = lastPerformance(db, exerciseId, entry.sessionId).filter((s) => s.setType !== 'warmup');
+  const suggested = isSmartProgressionOn(db)
+    ? (suggestFor(db, getActiveGym(db)?.id ?? null, exercise, lastWorkingSets(db, exerciseId, entry.sessionId), working.map(planOf))?.suggestions ?? null)
+    : null;
+
+  db.transaction((tx) => {
+    tx.update(sessionExercises).set({ exerciseId, updatedAt: at }).where(eq(sessionExercises.id, sessionExerciseId)).run();
+    for (const set of sets) {
+      const n = working.indexOf(set);
+      const suggestion = suggested?.[n];
+      const reps = n < 0 || set.setType === 'failure' ? null : (suggestion?.reps ?? null);
+      const weightKg = n < 0 ? null : (suggestion?.weightKg ?? before[n]?.weightKg ?? null);
+      tx.update(sessionSets)
+        .set({ weightKg, reps, suggestedReps: reps, targetWeightKg: suggestion?.weightKg ?? null, partialReps: null, rir: null, updatedAt: at })
+        .where(eq(sessionSets.id, set.id))
+        .run();
+    }
+  });
+}
+
+/** Moves a finished session's start (keeping its length) or sets its length. */
+export function setSessionTimes(db: Db, sessionId: string, times: { startedAt: number; endedAt: number }, at: number): void {
+  db.update(sessions).set({ ...times, updatedAt: at }).where(eq(sessions.id, sessionId)).run();
+}
+
+/** Which records the Workout Complete screen celebrates, by how the exercise is tracked. */
+const CELEBRATED: Record<TrackingType, PersonalRecordType[]> = {
+  weight_reps: ['est_1rm'],
+  reps: ['max_reps'],
+  duration: ['max_duration'],
+  distance_duration: ['max_distance'],
+};
+
+export type SessionRecord = {
+  exerciseId: string;
+  type: PersonalRecordType;
+  value: number;
+  /** The best before this workout. */
+  previous: number;
+};
+
+/**
+ * The records this session set: an exercise's best beaten by one of today's
+ * sets. A first time doing an exercise is no record — there is nothing to beat.
+ */
+export function sessionRecords(db: Db, sessionId: string): SessionRecord[] {
+  const detail = getSessionDetail(db, sessionId);
+  if (!detail) return [];
+  const today = new Set(detail.exercises.flatMap((e) => e.sessionSets.map((s) => s.id)));
+  const out: SessionRecord[] = [];
+  for (const { exercise } of detail.exercises) {
+    if (out.some((r) => r.exerciseId === exercise.id)) continue;
+    const all = allCompletedSets(db, [exercise.id]);
+    const before = computePersonalRecords(all.filter((s) => !today.has(s.id)));
+    for (const record of computePersonalRecords(all)) {
+      if (!today.has(record.setId) || !CELEBRATED[exercise.trackingType]?.includes(record.type)) continue;
+      const previous = before.find((b) => b.type === record.type)?.value;
+      if (previous !== undefined && record.value > previous) out.push({ exerciseId: exercise.id, type: record.type, value: record.value, previous });
+    }
+  }
+  return out;
+}

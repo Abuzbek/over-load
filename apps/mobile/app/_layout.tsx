@@ -110,6 +110,9 @@ export default function RootLayout() {
             here: set from inside the screen, the options were dropped whole. */}
         <Stack.Screen name="session/[id]/add-exercise" options={{ presentation: 'modal', title: 'Add exercises' }} />
         <Stack.Screen name="workouts/[id]/add-exercise" options={{ presentation: 'modal', title: 'Add exercises' }} />
+        <Stack.Screen name="session/[id]/swap" options={{ presentation: 'modal', title: 'Swap exercise' }} />
+        {/* After Finish: no swipe back into a workout that has ended. */}
+        <Stack.Screen name="session/[id]/complete" options={{ headerShown: false, gestureEnabled: false }} />
         {/* Draws its own header (×, progress), like onboarding. */}
         <Stack.Screen name="programs/new" options={{ headerShown: false }} />
         </Stack.Protected>

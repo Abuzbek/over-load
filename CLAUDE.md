@@ -28,7 +28,7 @@ pnpm start          # Expo dev server — then press i (iOS) or a (Android)
 pnpm ios            # straight to the iOS simulator
 pnpm android        # straight to an Android emulator/device
 
-pnpm test           # full suite (504 tests, 44 files); functions/ has its own: npm test there
+pnpm test           # full suite (509 tests, 45 files); functions/ has its own: npm test there
 pnpm typecheck      # type gate; CI runs this too (.github/workflows/ci.yml)
 pnpm run ci         # everything CI runs, locally: install + typecheck + test + bundle
 pnpm bundle         # expo export — catches packaging breaks tests cannot see
@@ -210,6 +210,13 @@ cross-platform modal (no `Alert.prompt`, which is iOS-only).
   each Swipeable `blocksExternalGesture` the pager's `Gesture.Native()`** — without it the
   horizontal pager takes every drag; and an open row closes before any other tap on the page,
   or a sheet opened over it sticks invisible.
+  **Swap** (the page's Swap chip, `SwapSheet`): Smart Substitutions are exercises with exactly the
+  same main muscles that the active gym can do (`exerciseRepo.smartSubstitutes`), and Find Other
+  Replacements opens the library as `session/[id]/swap` (`ExerciseList onSwap`).
+  `swapSessionExercise` keeps the row, sets and targets and re-plans the loads; an exercise with a
+  logged set cannot be swapped. **Finish opens `session/[id]/complete`** (`WorkoutComplete`):
+  fireworks (`ui/Fireworks.tsx`, reanimated), the session's body map, the records it beat
+  (`sessionRecords`: a first time is no record), volume, editable start and length, each exercise's sets.
   The **plate calculator** shows above the keypad while a weight is typed for an exercise
   loaded on a bar: `gymRepo.barLoadingFor` finds the bar its resistance equipment needs and
   the active gym owns (heaviest listed weight), plus the gym's plates; the maths is
