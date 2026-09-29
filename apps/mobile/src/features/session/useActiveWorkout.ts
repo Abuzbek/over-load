@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { getActiveSession } from '../../data/sessionRepo';
 import { db } from '../../db/client';
+import { useSyncedData } from '../../sync/syncService';
 
 /**
  * The active workout plus a live elapsed time.
@@ -19,6 +20,7 @@ export function useActiveWorkout() {
   const [, refresh] = useState(0);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
+  useSyncedData();
   useFocusEffect(
     useCallback(() => {
       refresh((v) => v + 1);

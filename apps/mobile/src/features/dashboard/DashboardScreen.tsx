@@ -14,6 +14,7 @@ import { Segmented } from '../../ui/Segmented';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import { ExerciseTilesRow, HabitsCard, InsightsCard, WeightCard } from './DashboardWidgets';
+import { useSyncedData } from '../../sync/syncService';
 
 /**
  * Chart colours, deliberately local rather than theme tokens: three rings need
@@ -160,6 +161,7 @@ export function DashboardScreen() {
   const [, setVersion] = useState(0);
   const refresh = () => setVersion((v) => v + 1);
   const [slide, setSlide] = useState(0);
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const width = Dimensions.get('window').width - theme.spacing.lg * 2;

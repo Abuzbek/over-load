@@ -19,6 +19,7 @@ import { Sheet } from '../../ui/Sheet';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import { Choices, GOALS, ToggleCard } from '../onboarding/steps';
+import { useSyncedData } from '../../sync/syncService';
 
 /**
  * How a program's blocks run — cycles, the deload, periodization and the goal
@@ -29,6 +30,7 @@ export function ProgramSettingsScreen({ programId }: { programId: string }) {
   const insets = useSafeAreaInsets();
   const [, setVersion] = useState(0);
   const refresh = () => setVersion((v) => v + 1);
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
   const [copyName, setCopyName] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);

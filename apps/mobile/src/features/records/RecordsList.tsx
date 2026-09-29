@@ -11,6 +11,7 @@ import { Screen } from '../../ui/Screen';
 import { StatTile } from '../../ui/StatTile';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
+import { useSyncedData } from '../../sync/syncService';
 
 const RECORD_TYPE_LABELS: Record<PersonalRecordType, string> = {
   max_weight: 'Max weight',
@@ -114,6 +115,7 @@ export function RecordsList() {
   const unit = getWeightUnit(db);
   const sections = groupByExercise(records);
 
+  useSyncedData();
   useFocusEffect(
     useCallback(() => {
       setVersion((v) => v + 1);

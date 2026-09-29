@@ -334,6 +334,8 @@ leaves Firebase out and the app runs local-only (`extra.firebase` in `app.config
 - **A screen reading the DB in its render body will show stale data** when another
   screen mutates it — the stack keeps it mounted. Use `useFocusEffect` to bump a
   version counter. Do not use `key={version}`; it remounts and resets scroll.
+  Also call `useSyncedData()` (`syncService`): it re-renders when a sync writes
+  rows, which focus never sees (sign-in, another device's changes).
 - **Tests run under `PRAGMA foreign_keys = ON`, and so does production** (`client.ts`).
   Keep them aligned.
 - **CI runs install → typecheck → test → bundle** on every push to `main` and every PR.

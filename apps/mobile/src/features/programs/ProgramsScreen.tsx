@@ -12,10 +12,12 @@ import { Screen } from '../../ui/Screen';
 import { SectionLabel } from '../../ui/SectionLabel';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
+import { useSyncedData } from '../../sync/syncService';
 
 export function ProgramsScreen() {
   const [, setVersion] = useState(0);
 
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const programs = listPrograms(db);

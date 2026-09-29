@@ -33,6 +33,7 @@ import { theme } from '../../ui/theme';
 import { EquipmentThumb } from '../library/EquipmentThumb';
 import { EquipmentEditor } from './EquipmentEditor';
 import { GYM_ICONS } from './GymProfilesScreen';
+import { useSyncedData } from '../../sync/syncService';
 
 export const CATEGORY_LABELS: Record<EquipmentCategory, string> = {
   free_weights: 'Free weights',
@@ -95,6 +96,7 @@ export function GymDetailScreen({ gymId, embedded = false, filter: outerFilter }
   const [name, setName] = useState('');
   const inputRef = useRef<TextInput>(null);
 
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
   const bump = () => setVersion((v) => v + 1);
 

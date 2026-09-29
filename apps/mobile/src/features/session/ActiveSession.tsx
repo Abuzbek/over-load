@@ -54,6 +54,7 @@ import { SwapSheet } from './SwapSheet';
 import { cancelRestNotification, scheduleRestNotification } from './notifications';
 import { parseDecimalInput, parseDuration, parseIntegerInput } from './setInputs';
 import { repsPlaceholder, setTableRows } from './setTable';
+import { useSyncedData } from '../../sync/syncService';
 
 type Props = { sessionId: string };
 
@@ -88,6 +89,7 @@ export function ActiveSession({ sessionId }: Props) {
 
   const [, setVersion] = useState(0);
   const refresh = () => setVersion((v) => v + 1);
+  useSyncedData();
   useFocusEffect(useCallback(() => refresh(), []));
 
   const detail = getSessionDetail(db, sessionId);

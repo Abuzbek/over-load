@@ -4,9 +4,11 @@ import { ScrollView, StyleSheet } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { HabitsCalendar } from '../src/features/dashboard/DashboardWidgets';
 import { theme } from '../src/ui/theme';
+import { useSyncedData } from '../src/sync/syncService';
 
 export default function HabitsRoute() {
   const [, setVersion] = useState(0);
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
   return (
     <>

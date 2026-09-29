@@ -37,6 +37,7 @@ import { textStyle } from '../../ui/typography';
 import { ExerciseInfoSheet } from './ExerciseInfoSheet';
 import { ChoiceSheet, EquipmentSheet, GymSheet, RangeSheet } from './FilterSheets';
 import { MuscleThumb } from './MuscleThumb';
+import { useSyncedData } from '../../sync/syncService';
 
 type Props = {
   /**
@@ -97,7 +98,9 @@ export function ExerciseList({ onAdd, onSwap }: Props) {
   const [formVisible, setFormVisible] = useState(false);
   // Bumped on focus (gyms edited under "Manage Gym Profiles") and after a custom
   // exercise is created: both change what the queries below return.
-  const [version, setVersion] = useState(0);
+  const [focusVersion, setVersion] = useState(0);
+  // Re-read on focus and after a sync writes rows, for the memos below.
+  const version = focusVersion + useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const figure = getProfile(db).gender === 'female' ? 'female' : 'male';

@@ -14,6 +14,7 @@ import { Screen } from '../../ui/Screen';
 import { SectionLabel } from '../../ui/SectionLabel';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
+import { useSyncedData } from '../../sync/syncService';
 
 function WorkoutCard({ summary }: { summary: WorkoutSummary }) {
   const { workout, exerciseCount, lastTrainedAt, primaryMuscles } = summary;
@@ -45,6 +46,7 @@ export function TrainScreen() {
   // Do NOT switch this to key={version} — that remounts and resets scroll (6b249e9).
   const [, setVersion] = useState(0);
 
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const summaries = listWorkoutSummaries(db);

@@ -11,6 +11,7 @@ import { Segmented } from '../../ui/Segmented';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import { MuscleHeatmap } from './MuscleHeatmap';
+import { useSyncedData } from '../../sync/syncService';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -31,6 +32,7 @@ export function ProgressScreen() {
   const [, setVersion] = useState(0);
   const [windowKey, setWindowKey] = useState<(typeof WINDOWS)[number]['value']>('7');
 
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const days = WINDOWS.find((w) => w.value === windowKey)!.days;

@@ -18,6 +18,7 @@ import { Screen } from '../../ui/Screen';
 import { Segmented } from '../../ui/Segmented';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
+import { useSyncedData } from '../../sync/syncService';
 
 export function UnitsScreen() {
   // A version bump forces a re-read from SQLite rather than caching a local
@@ -27,6 +28,7 @@ export function UnitsScreen() {
   const distanceUnit = getDistanceUnit(db);
   const heightUnit = getHeightUnit(db);
 
+  useSyncedData();
   useFocusEffect(
     useCallback(() => {
       setVersion((v) => v + 1);

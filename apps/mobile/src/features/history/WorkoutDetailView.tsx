@@ -9,6 +9,7 @@ import { Card } from '../../ui/Card';
 import { Screen } from '../../ui/Screen';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
+import { useSyncedData } from '../../sync/syncService';
 
 type Props = { sessionId: string };
 
@@ -20,6 +21,7 @@ export function WorkoutDetailView({ sessionId }: Props) {
   const unit = getWeightUnit(db);
   const distanceUnit = getDistanceUnit(db);
 
+  useSyncedData();
   useFocusEffect(
     useCallback(() => {
       setVersion((v) => v + 1);

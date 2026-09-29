@@ -30,6 +30,7 @@ import {
   type WorkoutTargetField,
 } from './workoutTargets';
 import { ExerciseSummaryRow, TargetMuscleCards, WorkoutHeading } from './WorkoutSummary';
+import { useSyncedData } from '../../sync/syncService';
 
 type Props = { workoutId: string; /** A cycle of the block to open at, previewed from the Workout tab. */ cycle?: number | null };
 
@@ -131,6 +132,7 @@ export function WorkoutPlan({
   // scroll (6b249e9's failure mode).
   const [, setVersion] = useState(0);
   const refresh = () => setVersion((v) => v + 1);
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const [infoId, setInfoId] = useState<string | null>(null);
@@ -303,6 +305,7 @@ export function WorkoutPlan({
  */
 export function WorkoutBuilder({ workoutId, cycle = null }: Props) {
   const [, setVersion] = useState(0);
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
   const insets = useSafeAreaInsets();
   const starter = useWorkoutStarter();

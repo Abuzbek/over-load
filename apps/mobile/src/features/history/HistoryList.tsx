@@ -10,6 +10,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { Text } from '../../ui/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../../ui/theme';
+import { useSyncedData } from '../../sync/syncService';
 
 function WorkoutCard({ summary, unit }: { summary: WorkoutSummary; unit: Unit }) {
   const { workout, setCount, volumeKg } = summary;
@@ -40,6 +41,7 @@ export function HistoryList() {
   const summaries = listFinishedWorkouts(db);
   const unit = getWeightUnit(db);
 
+  useSyncedData();
   useFocusEffect(
     useCallback(() => {
       setVersion((v) => v + 1);

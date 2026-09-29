@@ -19,6 +19,7 @@ import { Sheet } from '../../ui/Sheet';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import { WorkoutPlan } from '../workouts/WorkoutBuilder';
+import { useSyncedData } from '../../sync/syncService';
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -34,6 +35,7 @@ export function ProgramEditor({ programId, programName }: Props) {
   const insets = useSafeAreaInsets();
   const [, setVersion] = useState(0);
   const refresh = () => setVersion((v) => v + 1);
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const days = getProgramDays(db, programId);
