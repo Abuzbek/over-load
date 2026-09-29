@@ -1,5 +1,6 @@
 import { summariseMuscles } from '@overload/domain';
 import {
+  cyclePlans,
   exercises,
   newId,
   programDays,
@@ -262,4 +263,28 @@ export function listWorkoutSummaries(db: Db): WorkoutSummary[] {
       inProgram: scheduled.has(workout.id),
     };
   });
+}
+
+/**
+ * A copy of a workout to change without touching the original: its exercises,
+ * their sets and their per-cycle plans, all new rows.
+ */
+export function duplicateWorkout(db: Db, workoutId: string, name: string, at: number): Workout | undefined {
+  const detail = getWorkoutDetail(db, workoutId);
+  if (!detail) return undefined;
+  const copy = createWorkout(db, name);
+  for (const entry of detail.exercises) {
+    const we = addExerciseToWorkout(db, copy.id, entry.exercise.id, entry.workoutExercise.restSeconds);
+    db.update(workoutExercises)
+      .set({ notes: entry.workoutExercise.notes, supersetGroup: entry.workoutExercise.supersetGroup, updatedAt: at })
+      .where(eq(workoutExercises.id, we.id))
+      .run();
+    for (const set of entry.sessionSets) {
+      db.insert(workoutSets).values({ ...set, id: newId(), workoutExerciseId: we.id, createdAt: at, updatedAt: at }).run();
+    }
+    for (const plan of db.select().from(cyclePlans).where(and(eq(cyclePlans.workoutExerciseId, entry.workoutExercise.id), isNull(cyclePlans.deletedAt))).all()) {
+      db.insert(cyclePlans).values({ ...plan, id: newId(), workoutExerciseId: we.id, createdAt: at, updatedAt: at }).run();
+    }
+  }
+  return copy;
 }

@@ -56,8 +56,9 @@ export const exerciseLinks = sqliteTable(
 
 /**
  * The feature-muscle groups an exercise trains, with the weight one set gives
- * each: 1 for a primary, 0.5 for a secondary. Derived from exercise_links at
- * seed time — deduplicated, a muscle listed as both keeps the larger weight —
+ * each, as the program generator credits it (CREDIT): 1 for the muscle it is
+ * for, 0.5 for its other primaries, 0.25 for a secondary. Derived from
+ * exercise_links at seed time — deduplicated, a muscle listed as both keeps the larger weight —
  * so the heatmap's aggregate is a plain join and SUM, not a per-row rethink.
  */
 export const exerciseMuscles = sqliteTable(

@@ -126,7 +126,23 @@ export function mainMuscleOf(patterns: string[], primaryMuscles: string[]): stri
 const MINOR = new Set(['Adductors', 'Abductors', 'Obliques', 'Lower Back', 'Forearms', 'Upper Traps', 'Neck', 'Tibs', 'Hip flexors', 'Serratus']);
 
 /** How much one set counts for a muscle: the one it is for, the other primaries, the supporting ones. */
-const CREDIT = { main: 1, primary: 0.5, secondary: 0.25 };
+export const CREDIT = { main: 1, primary: 0.5, secondary: 0.25 };
+
+/**
+ * Muscles only their own exercises count for. Squats and deadlifts list the
+ * abs in support, but bracing is not training them: without this the
+ * supporting credit closes their gap and they never get an exercise.
+ */
+const DIRECT_ONLY = new Set(['Abs']);
+/** Abs: two-thirds of the usual weekly target — two sessions of direct work a week, about three sets each. */
+const ABS_SHARE = 2 / 3;
+/**
+ * With muscles focused, the others drop to this share of their target: a
+ * session holds only so many sets, and five focused muscles at +50% would
+ * take all of them. Two-thirds (six sets for an intermediate) is still more
+ * than it takes to keep a muscle — the focus is paid for, not free.
+ */
+const UNFOCUSED_SHARE = 2 / 3;
 
 /** Muscles a compound lift is for; the rest get isolation work. */
 const BIG = new Set(['Quads', 'Chest', 'Lats', 'Upper Back', 'Hamstrings', 'Glutes', 'Front Delts']);
@@ -220,6 +236,7 @@ function baseSets(level: PlanLevel, compound: boolean): number {
 export function weeklySetTarget(level: PlanLevel, points: number, muscle?: string): number {
   const base = level === 'novice' ? 6 : level === 'advanced' ? 12 : 9;
   if (points === 0 && muscle && MINOR.has(muscle)) return base / 2;
+  if (muscle && DIRECT_ONLY.has(muscle)) return base * ABS_SHARE * (1 + 0.5 * points);
   return base * (1 + 0.5 * points);
 }
 
@@ -320,7 +337,12 @@ export function generatePlan(input: PlanInput): Plan {
   // repeat. So Workout B does not redo the front delts Workout A's presses trained.
   const remaining = new Map<string, number>();
   const points = (m: string) => input.focus[m] ?? 0;
-  for (const slots of slotsOf) for (const m of slots) remaining.set(m, weeklySetTarget(input.level, points(m), m));
+  const focusing = Object.values(input.focus).some((p) => p > 0);
+  // This program's weekly target and cap for a muscle: its own, less when others are focused.
+  const target = (m: string) =>
+    weeklySetTarget(input.level, points(m), m) * (focusing && points(m) === 0 && !DIRECT_ONLY.has(m) ? UNFOCUSED_SHARE : 1);
+  const cap = (m: string) => Math.min(target(m) * 1.6, 24);
+  for (const slots of slotsOf) for (const m of slots) remaining.set(m, target(m));
   // Groups already in the program; a second variant from one is a near-duplicate.
   const usedGroups = new Set<string>();
   // The days each muscle is trained: about three sets a day, so a muscle with
@@ -330,7 +352,8 @@ export function generatePlan(input: PlanInput): Plan {
   const trainedOn = new Map<string, Set<number>>();
   [...remaining.keys()].forEach((m, k) => {
     const open = slotsOf.flatMap((slots, w) => (slots.includes(m) ? [w] : []));
-    const n = Math.min(Math.max(Math.round(remaining.get(m)! / 3), 1), open.length);
+    // Abs get two days whenever there are two: once a week is not enough direct work.
+    const n = Math.min(Math.max(Math.round(remaining.get(m)! / 3), DIRECT_ONLY.has(m) ? 2 : 1), open.length);
     trainedOn.set(m, new Set(Array.from({ length: n }, (_, j) => open[(Math.floor((j * open.length) / n) + k) % open.length]!)));
   });
   // Sessions from workout w on that train the muscle, to share what is left between.
@@ -345,8 +368,8 @@ export function generatePlan(input: PlanInput): Plan {
       if (deficit?.has(m)) deficit.set(m, deficit.get(m)! - n);
       if (remaining.has(m)) remaining.set(m, remaining.get(m)! - n * occurrences[w]!);
     };
-    for (const m of c.primaryMuscles) give(m, sets * (m === c.mainMuscle ? CREDIT.main : CREDIT.primary));
-    for (const m of c.secondaryMuscles) give(m, sets * CREDIT.secondary);
+    for (const m of c.primaryMuscles) if (m === c.mainMuscle || !DIRECT_ONLY.has(m)) give(m, sets * (m === c.mainMuscle ? CREDIT.main : CREDIT.primary));
+    for (const m of c.secondaryMuscles) if (!DIRECT_ONLY.has(m)) give(m, sets * CREDIT.secondary);
   };
 
   // First every day gets its exercises; only then does spare time buy extra
@@ -360,16 +383,17 @@ export function generatePlan(input: PlanInput): Plan {
     const exercises: PlannedExercise[] = [];
 
     while (exercises.length < MAX_EXERCISES) {
-      // Focused muscles first while they are still behind; among them, one
-      // not yet in this workout before a second exercise for one that is;
-      // then whichever is furthest behind. Ties keep slot order. A gap under
+      // Every muscle due today gets its first exercise before any gets a
+      // second — five focused muscles taking two each filled the workout
+      // before hamstrings or abs had one. Within that, focused muscles first,
+      // then whichever is furthest behind; ties keep slot order. A gap under
       // two sets is not worth an exercise, and a muscle gets one exercise a
       // workout (two if focused).
       const focused = (m: string) => ((input.focus[m] ?? 0) > 0 ? 1 : 0);
       const count = (m: string) => exercises.filter((e) => e.muscle === m).length;
       const muscle = slots
         .filter((m) => !skipped.has(m) && deficit.get(m)! >= MIN_GAP && count(m) < 1 + focused(m))
-        .sort((a, b) => focused(b) - focused(a) || count(a) - count(b) || deficit.get(b)! - deficit.get(a)!)[0];
+        .sort((a, b) => count(a) - count(b) || focused(b) - focused(a) || deficit.get(b)! - deficit.get(a)!)[0];
       if (!muscle) break;
 
       // A big muscle gets a compound — a primary one while the workout has
@@ -421,12 +445,11 @@ export function generatePlan(input: PlanInput): Plan {
     // muscles first, then the one furthest from its weekly target — until the
     // session is full or every muscle is at its cap. A user who asked for an
     // hour should not get half of one.
-    const target = (m: string) => weeklySetTarget(input.level, points(m), m);
     const given = (m: string) => target(m) - remaining.get(m)!;
     // The weekly cap, pro rata to the muscle's days so far: filling the first
     // days to the week's cap would leave the last ones nothing to do.
     const capSoFar = (m: string) =>
-      (weeklySetCap(input.level, points(m), m) * (sessionsLeft(m, 0) - sessionsLeft(m, w + 1))) / Math.max(sessionsLeft(m, 0), 1);
+      (cap(m) * (sessionsLeft(m, 0) - sessionsLeft(m, w + 1))) / Math.max(sessionsLeft(m, 0), 1);
     const full = new Set<PlannedExercise>();
     for (;;) {
       const next = exercises

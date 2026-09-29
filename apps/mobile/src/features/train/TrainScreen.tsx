@@ -14,6 +14,7 @@ import { Screen } from '../../ui/Screen';
 import { SectionLabel } from '../../ui/SectionLabel';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
+import { useSyncedData } from '../../sync/syncService';
 
 function WorkoutCard({ summary }: { summary: WorkoutSummary }) {
   const { workout, exerciseCount, lastTrainedAt, primaryMuscles } = summary;
@@ -45,6 +46,7 @@ export function TrainScreen() {
   // Do NOT switch this to key={version} — that remounts and resets scroll (6b249e9).
   const [, setVersion] = useState(0);
 
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const summaries = listWorkoutSummaries(db);
@@ -58,24 +60,28 @@ export function TrainScreen() {
     <Screen scroll safeTop>
       <Text variant="display">Workout</Text>
 
-      <SectionLabel>Active program</SectionLabel>
       {activeProgram ? (
         <ActiveProgramCard
           programId={activeProgram.id}
           programName={activeProgram.name}
           cycleNumber={activeProgram.cycleNumber}
+          cycleCount={activeProgram.cycleCount}
+          deload={activeProgram.deload}
           days={days}
           summaryByWorkoutId={summaryByWorkoutId}
           onChanged={() => setVersion((v) => v + 1)}
         />
       ) : (
-        <Card style={styles.programRows}>
-          <ListRow
-            title="No active program"
-            subtitle="Pick one from the program library"
-            onPress={() => router.push('/programs')}
-          />
-        </Card>
+        <>
+          <SectionLabel>Active program</SectionLabel>
+          <Card style={styles.programRows}>
+            <ListRow
+              title="No active program"
+              subtitle="Pick one from the program library"
+              onPress={() => router.push('/programs')}
+            />
+          </Card>
+        </>
       )}
 
       <Card style={styles.programRows}>

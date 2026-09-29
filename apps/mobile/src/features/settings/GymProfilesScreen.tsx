@@ -17,6 +17,7 @@ import { Screen } from '../../ui/Screen';
 import { Sheet } from '../../ui/Sheet';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
+import { useSyncedData } from '../../sync/syncService';
 
 type Preset = { key: string; name: string; items: string[] };
 
@@ -35,6 +36,7 @@ export function GymProfilesScreen() {
   const [preset, setPreset] = useState<Preset>(PRESETS[0]!);
   const inputRef = useRef<TextInput>(null);
 
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const gyms = listGyms(db);

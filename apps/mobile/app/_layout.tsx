@@ -8,6 +8,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initializeDatabase } from '../src/db/bootstrap';
 import { expoDb } from '../src/db/client';
+import { RestoreScreen } from '../src/features/auth/RestoreScreen';
 import { SignInScreen } from '../src/features/auth/SignInScreen';
 import { startSync, useSyncStatus } from '../src/sync/syncService';
 import { FontsProvider } from '../src/ui/FontsContext';
@@ -64,7 +65,10 @@ export default function RootLayout() {
   // for that answer rather than flash the app or onboarding at it.
   const onboard = state.ready && !needsAccount && sync.onboarding === 'needed';
   const awaitingAccount = state.ready && !needsAccount && sync.onboarding === 'unknown';
-  if (!state.ready || (!fontsLoaded && !fontError) || (sync.enabled && !sync.authResolved) || awaitingAccount) {
+  // A phone with no copy of the account yet shows the restore screen while the
+  // first sync runs, in place of the spinner and before onboarding is decided.
+  const restoring = state.ready && !needsAccount && sync.restore.state !== 'idle';
+  if (!state.ready || (!fontsLoaded && !fontError) || (sync.enabled && !sync.authResolved) || (awaitingAccount && !restoring)) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={theme.colors.text} />
@@ -77,6 +81,16 @@ export default function RootLayout() {
       <GestureHandlerRootView style={styles.root}>
         <FontsProvider serifLoaded={fontsLoaded && !fontError}>
           <SignInScreen />
+        </FontsProvider>
+      </GestureHandlerRootView>
+    );
+  }
+
+  if (restoring && sync.restore.state !== 'idle') {
+    return (
+      <GestureHandlerRootView style={styles.root}>
+        <FontsProvider serifLoaded={fontsLoaded && !fontError}>
+          <RestoreScreen restore={sync.restore} />
         </FontsProvider>
       </GestureHandlerRootView>
     );
@@ -110,6 +124,9 @@ export default function RootLayout() {
             here: set from inside the screen, the options were dropped whole. */}
         <Stack.Screen name="session/[id]/add-exercise" options={{ presentation: 'modal', title: 'Add exercises' }} />
         <Stack.Screen name="workouts/[id]/add-exercise" options={{ presentation: 'modal', title: 'Add exercises' }} />
+        <Stack.Screen name="session/[id]/swap" options={{ presentation: 'modal', title: 'Swap exercise' }} />
+        {/* After Finish: no swipe back into a workout that has ended. */}
+        <Stack.Screen name="session/[id]/complete" options={{ headerShown: false, gestureEnabled: false }} />
         {/* Draws its own header (×, progress), like onboarding. */}
         <Stack.Screen name="programs/new" options={{ headerShown: false }} />
         </Stack.Protected>

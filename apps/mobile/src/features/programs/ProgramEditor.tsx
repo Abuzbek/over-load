@@ -19,6 +19,7 @@ import { Sheet } from '../../ui/Sheet';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import { WorkoutPlan } from '../workouts/WorkoutBuilder';
+import { useSyncedData } from '../../sync/syncService';
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -34,6 +35,7 @@ export function ProgramEditor({ programId, programName }: Props) {
   const insets = useSafeAreaInsets();
   const [, setVersion] = useState(0);
   const refresh = () => setVersion((v) => v + 1);
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const days = getProgramDays(db, programId);
@@ -64,7 +66,21 @@ export function ProgramEditor({ programId, programName }: Props) {
 
   return (
     <View style={styles.root}>
-      <Stack.Screen options={{ title: programName }} />
+      <Stack.Screen
+        options={{
+          title: programName,
+          headerRight: () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Program settings"
+              hitSlop={10}
+              onPress={() => router.push({ pathname: '/programs/[id]/settings', params: { id: programId } })}
+            >
+              <Lucide name="sliders-horizontal" size={22} color={theme.colors.text} />
+            </Pressable>
+          ),
+        }}
+      />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar} contentContainerStyle={styles.tabs}>
         {days.map((d, i) => (
           <Pressable

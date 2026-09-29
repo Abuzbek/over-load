@@ -1,4 +1,4 @@
-import { mainMuscleOf } from '@overload/domain';
+import { CREDIT, mainMuscleOf } from '@overload/domain';
 import {
   catalogueMeta,
   equipment,
@@ -25,7 +25,7 @@ import { and, eq, inArray, notInArray, sql } from 'drizzle-orm';
  * compares this with catalogue_meta and only parses the 3.7 MB file on a
  * mismatch — a test pins the prefix to the file's own generatedAt.
  */
-export const CATALOGUE_VERSION = '2026-05-05T21:00:52Z#4';
+export const CATALOGUE_VERSION = '2026-05-05T21:00:52Z#5';
 
 export type AppFileEntry = { type: string; name: string | number } & Record<string, unknown>;
 export type AppFileExercise = { id: string; name: string } & Record<string, unknown>;
@@ -136,9 +136,12 @@ export function syncCatalogue(
       value.forEach((lookupId, position) => linkRows.push({ exerciseId: row.id, role: field, position, lookupId }));
     }
 
+    // The generator's credit, so the heatmap and the muscle list count a set as the plan did:
+    // the muscle it is for in full, its other primaries half, the supporting ones a quarter.
+    const main = mainMuscleOf(list('movementPattern').map(name), list('primaryFeatureMuscle').map(name));
     const weights = new Map<string, number>();
-    for (const id of list('secondaryFeatureMuscle')) weights.set(id, 0.5);
-    for (const id of list('primaryFeatureMuscle')) weights.set(id, 1);
+    for (const id of list('secondaryFeatureMuscle')) weights.set(id, CREDIT.secondary);
+    for (const id of list('primaryFeatureMuscle')) weights.set(id, name(id) === main ? CREDIT.main : CREDIT.primary);
     for (const [muscleId, weight] of weights) muscleRows.push({ exerciseId: row.id, muscleId, weight });
 
     for (const [need, field] of NEEDS) {

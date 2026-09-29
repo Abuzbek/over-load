@@ -241,7 +241,11 @@ export function CreateProgramFlow() {
   function finishSmart(activate: boolean) {
     if (!a.plan || !a.gymId) return;
     const at = Date.now();
-    const id = createProgramFromPlan(db, a.plan, { name: a.programName.trim() || defaultProgramName(a), icon: a.icon, color: a.color }, at, { activate });
+    const id = createProgramFromPlan(db, a.plan, { name: a.programName.trim() || defaultProgramName(a), icon: a.icon, color: a.color }, at, {
+      activate,
+      goal: a.goal,
+      deload: a.deload,
+    });
     setTrainingPreferences(db, preferencesOf(a), at);
     // The program is built for this gym: training it means training there.
     if (activate) activateGym(db, a.gymId, at);

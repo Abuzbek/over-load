@@ -37,6 +37,7 @@ import { textStyle } from '../../ui/typography';
 import { ExerciseInfoSheet } from './ExerciseInfoSheet';
 import { ChoiceSheet, EquipmentSheet, GymSheet, RangeSheet } from './FilterSheets';
 import { MuscleThumb } from './MuscleThumb';
+import { useSyncedData } from '../../sync/syncService';
 
 type Props = {
   /**
@@ -44,6 +45,8 @@ type Props = {
    * several, Done hands them over in the order they were picked.
    */
   onAdd?: (exerciseIds: string[]) => void;
+  /** Supplying onSwap instead makes each row a swap button: one pick, handed straight over. */
+  onSwap?: (exerciseId: string) => void;
 };
 
 type Filters = Omit<ExerciseFilters, 'search' | 'limit' | 'gymId' | 'muscleIds'> & { muscleIds: string[] };
@@ -82,7 +85,7 @@ const groupScore = (rows: ExerciseListItem[]) => {
 
 const rangeLabel = (name: string, range?: [number, number]) => (range ? `${name} ${range[0]}–${range[1]}` : name);
 
-export function ExerciseList({ onAdd }: Props) {
+export function ExerciseList({ onAdd, onSwap }: Props) {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<Filters>({ muscleIds: [] });
@@ -95,7 +98,9 @@ export function ExerciseList({ onAdd }: Props) {
   const [formVisible, setFormVisible] = useState(false);
   // Bumped on focus (gyms edited under "Manage Gym Profiles") and after a custom
   // exercise is created: both change what the queries below return.
-  const [version, setVersion] = useState(0);
+  const [focusVersion, setVersion] = useState(0);
+  // Re-read on focus and after a sync writes rows, for the memos below.
+  const version = focusVersion + useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const figure = getProfile(db).gender === 'female' ? 'female' : 'male';
@@ -241,6 +246,7 @@ export function ExerciseList({ onAdd }: Props) {
             selected={selected.includes(item.id)}
             onPress={() => setInfoId(item.id)}
             onToggle={onAdd ? () => toggleSelected(item.id) : undefined}
+            onSwap={onSwap ? () => onSwap(item.id) : undefined}
           />
         )}
       />
@@ -306,7 +312,8 @@ export function ExerciseList({ onAdd }: Props) {
         exerciseId={infoId}
         figure={figure}
         onClose={() => setInfoId(null)}
-        onAdd={onAdd ? (id) => onAdd(selected.includes(id) ? selected : [...selected, id]) : undefined}
+        onAdd={onSwap ?? (onAdd ? (id) => onAdd(selected.includes(id) ? selected : [...selected, id]) : undefined)}
+        addLabel={onSwap ? 'Swap Exercise' : undefined}
       />
 
       <NewExerciseModal
@@ -321,18 +328,23 @@ export function ExerciseList({ onAdd }: Props) {
   );
 }
 
-function ExerciseRow({ item, selected, onPress, onToggle }: {
-  item: ExerciseListItem;
-  selected: boolean;
-  onPress: () => void;
-  onToggle?: () => void;
-}) {
+/** "Chest, Front Delts • Triceps": main muscles, then supporting ones. */
+export function muscleLine(item: ExerciseListItem): string {
   // primaryMuscle is a display fallback for rows with no muscle links (a custom
   // exercise's free text); some seeded exercises list secondaries only.
-  const muscles =
-    item.primaryMuscles || item.secondaryMuscles
-      ? [item.primaryMuscles, item.secondaryMuscles].filter(Boolean).join(' • ')
-      : item.primaryMuscle;
+  return item.primaryMuscles || item.secondaryMuscles
+    ? [item.primaryMuscles, item.secondaryMuscles].filter(Boolean).join(' • ')
+    : item.primaryMuscle;
+}
+
+export function ExerciseRow({ item, selected = false, onPress, onToggle, onSwap }: {
+  item: ExerciseListItem;
+  selected?: boolean;
+  onPress: () => void;
+  onToggle?: () => void;
+  onSwap?: () => void;
+}) {
+  const muscles = muscleLine(item);
   return (
     <Pressable
       accessibilityRole="button"
@@ -358,6 +370,11 @@ function ExerciseRow({ item, selected, onPress, onToggle }: {
           style={[styles.add, selected && styles.addOn]}
         >
           <Lucide name={selected ? 'check' : 'plus'} size={20} color={selected ? theme.colors.onAccent : theme.colors.text} />
+        </Pressable>
+      ) : null}
+      {onSwap ? (
+        <Pressable accessibilityRole="button" accessibilityLabel={`Swap to ${item.name}`} hitSlop={8} onPress={onSwap} style={styles.add}>
+          <Lucide name="arrow-left-right" size={18} color={theme.colors.text} />
         </Pressable>
       ) : null}
     </Pressable>

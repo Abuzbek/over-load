@@ -16,13 +16,13 @@ describe('migrations', () => {
       .sort();
     const triggers = db.all<{ n: number }>(sql`select count(*) as n from sqlite_master where type = 'trigger'`)[0]!.n;
     close();
-    // An insert and an update trigger per synced table (0002_sync_outbox.sql).
+    // An insert and an update trigger per synced table (0002_sync_outbox.sql, 0008 for cycle_plans, 0009 for weigh_ins, 0010 for measurements and progress_photos).
     expect(triggers).toBe(SYNCED_TABLES.length * 2);
     expect(tables).toEqual([
-      'app_settings', 'catalogue_meta', 'equipment', 'exercise_equipment', 'exercise_links',
-      'exercise_muscles', 'exercises', 'gym_equipment', 'gyms', 'lookups', 'personal_records',
-      'program_days', 'programs', 'session_exercises', 'session_sets', 'sessions',
-      'sync_cursors', 'sync_flags', 'sync_outbox', 'workout_exercises', 'workout_sets', 'workouts',
+      'app_settings', 'catalogue_meta', 'cycle_plans', 'equipment', 'exercise_equipment', 'exercise_links',
+      'exercise_muscles', 'exercises', 'gym_equipment', 'gyms', 'lookups', 'measurements', 'personal_records',
+      'program_days', 'programs', 'progress_photos', 'session_exercises', 'session_sets', 'sessions',
+      'sync_cursors', 'sync_flags', 'sync_outbox', 'weigh_ins', 'workout_exercises', 'workout_sets', 'workouts',
     ]);
   });
 });

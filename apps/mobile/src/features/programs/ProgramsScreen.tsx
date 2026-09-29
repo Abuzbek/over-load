@@ -1,8 +1,8 @@
 import { Lucide } from '@react-native-vector-icons/lucide';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { activateProgram, listPrograms } from '../../data/programRepo';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { activateProgram, listArchivedPrograms, listPrograms, restoreProgram } from '../../data/programRepo';
 import { db } from '../../db/client';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
@@ -12,15 +12,18 @@ import { Screen } from '../../ui/Screen';
 import { SectionLabel } from '../../ui/SectionLabel';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
+import { useSyncedData } from '../../sync/syncService';
 
 export function ProgramsScreen() {
   const [, setVersion] = useState(0);
 
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const programs = listPrograms(db);
   const active = programs.find((p) => p.isActive);
-  const archived = programs.filter((p) => !p.isActive);
+  const library = programs.filter((p) => !p.isActive);
+  const archived = listArchivedPrograms(db);
 
   function activate(id: string) {
     activateProgram(db, id, Date.now());
@@ -52,26 +55,47 @@ export function ProgramsScreen() {
         )}
       </View>
 
-      <Collapsible title="Archived">
-        {archived.length === 0 ? (
+      <Collapsible title="Library">
+        {library.length === 0 ? (
           <Text variant="caption" color="textMuted">
-            Programs you are not training show up here. Activating one archives the
-            current one — only ever one is active.
+            Programs you are not training show up here. Activating one moves the current one here — only ever one is active.
           </Text>
         ) : (
           <Card style={styles.rows}>
-            {archived.map((p) => (
+            {library.map((p) => (
               <ListRow
                 key={p.program.id}
                 title={p.program.name}
                 subtitle={`${p.trainingDays} ${p.trainingDays === 1 ? 'training day' : 'training days'}`}
-                right={<Text variant="caption" color="accent">Activate</Text>}
-                onPress={() => activate(p.program.id)}
+                right={
+                  <Pressable accessibilityRole="button" hitSlop={10} onPress={() => activate(p.program.id)}>
+                    <Text variant="caption" color="accent">Activate</Text>
+                  </Pressable>
+                }
+                onPress={() => router.push({ pathname: '/programs/[id]', params: { id: p.program.id, name: p.program.name } })}
               />
             ))}
           </Card>
         )}
       </Collapsible>
+
+      {archived.length > 0 ? (
+        <Collapsible title="Archived">
+          <Card style={styles.rows}>
+            {archived.map((p) => (
+              <ListRow
+                key={p.id}
+                title={p.name}
+                right={<Text variant="caption" color="accent">Restore</Text>}
+                onPress={() => {
+                  restoreProgram(db, p.id, Date.now());
+                  setVersion((v) => v + 1);
+                }}
+              />
+            ))}
+          </Card>
+        </Collapsible>
+      ) : null}
 
       <Button title="New program" variant="secondary" onPress={() => router.push('/programs/new')} />
     </Screen>

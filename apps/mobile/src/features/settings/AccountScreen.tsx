@@ -18,7 +18,7 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { getHeightUnit, getProfile, getWeightUnit, setProfile } from '../../data/settingsRepo';
 import { db } from '../../db/client';
-import { requestSync, signOut, useSyncStatus } from '../../sync/syncService';
+import { deleteAccount, requestSync, signOut, useSyncStatus } from '../../sync/syncService';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
 import { ListRow } from '../../ui/ListRow';
@@ -117,6 +117,23 @@ export function AccountScreen() {
   // not stored: writing it here would make this phone's settings newer than
   // the account's, and sync would keep the phone's.
   const name = profile.name ?? sync.account?.name ?? null;
+
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function removeAccount() {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      // Success signs out, and the sign-in screen replaces this one.
+      if ((await deleteAccount()).cancelled) setConfirmingDelete(false);
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   async function logOut(force: boolean) {
     setLeaving(true);
@@ -270,7 +287,28 @@ export function AccountScreen() {
         </Text>
         <Button title="Log out" variant="destructive" disabled={!sync.account || leaving} onPress={() => void logOut(false)} />
         {logOutError ? <Text color="danger">{logOutError}</Text> : null}
+        <Button
+          title="Delete account"
+          variant="secondary"
+          disabled={!sync.account || leaving}
+          onPress={() => {
+            setDeleteError(null);
+            setConfirmingDelete(true);
+          }}
+        />
       </View>
+
+      <Sheet
+        visible={confirmingDelete}
+        onRequestClose={() => !deleting && setConfirmingDelete(false)}
+        anchor="bottom"
+        title="Delete your account?"
+        body={`This permanently deletes your account and everything in it: programs, workouts, sessions, weigh-ins, measurements and photos, from your account and from this phone. It cannot be undone.${sync.account?.provider === 'Apple' || sync.account?.provider === 'Google' ? ` You will be asked to sign in with ${sync.account.provider} once more to confirm.` : ''}`}
+      >
+        {deleteError ? <Text color="danger">{deleteError}</Text> : null}
+        <Button title={deleting ? 'Deleting…' : 'Delete account'} variant="destructive" disabled={deleting} onPress={() => void removeAccount()} />
+        <Button title="Cancel" variant="secondary" disabled={deleting} onPress={() => setConfirmingDelete(false)} />
+      </Sheet>
 
       <Sheet
         visible={editing !== null}

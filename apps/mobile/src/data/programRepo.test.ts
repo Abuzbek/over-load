@@ -4,6 +4,13 @@ import { and, eq, gt } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createWorkout } from './workoutRepo';
 import {
+  archiveProgram,
+  deleteProgram,
+  duplicateProgram,
+  getProgram,
+  listArchivedPrograms,
+  restoreProgram,
+  updateProgramSettings,
   activateProgram,
   advanceCycleIfComplete,
   createProgram,
@@ -475,5 +482,51 @@ describe('cycle rollover', () => {
     setProgramDayCompleted(db, program.id, 1, false, now());
 
     expect(cycleOf(program.id)).toBe(2);
+  });
+});
+
+describe('program settings and lifecycle', () => {
+  it('keeps the cycle count between 1 and 52', () => {
+    const p = createProgram(db, { name: 'P' }, 1);
+    updateProgramSettings(db, p.id, { cycleCount: 99, deload: 'first', periodized: true, goal: 'strength' }, 2);
+    expect(getProgram(db, p.id)).toMatchObject({ cycleCount: 52, deload: 'first', periodized: true, goal: 'strength' });
+    updateProgramSettings(db, p.id, { cycleCount: 0 }, 3);
+    expect(getProgram(db, p.id)!.cycleCount).toBe(1);
+  });
+
+  it('duplicates a program with its own copies of the workouts, one per workout', () => {
+    const p = createProgram(db, { name: 'P' }, 1, 3);
+    const w = createWorkout(db, 'Workout A');
+    setProgramDay(db, p.id, 0, w.id, 1);
+    setProgramDay(db, p.id, 2, w.id, 1);
+    const copy = duplicateProgram(db, p.id, 'P copy', 2)!;
+    const days = getProgramDays(db, copy.id);
+    expect(days.map((d) => d.workout?.name ?? null)).toEqual(['Workout A', null, 'Workout A']);
+    expect(days[0]!.workout!.id).not.toBe(w.id);
+    expect(days[0]!.workout!.id).toBe(days[2]!.workout!.id);
+  });
+
+  it('archives out of the library and off active; restores; deletes, keeping a workout another program uses', () => {
+    const p = createProgram(db, { name: 'P' }, 1, 2);
+    const other = createProgram(db, { name: 'Other' }, 1, 1);
+    const shared = createWorkout(db, 'Shared');
+    const own = createWorkout(db, 'Own');
+    setProgramDay(db, p.id, 0, shared.id, 1);
+    setProgramDay(db, p.id, 1, own.id, 1);
+    setProgramDay(db, other.id, 0, shared.id, 1);
+    activateProgram(db, p.id, 1);
+
+    archiveProgram(db, p.id, 2);
+    expect(listPrograms(db).map((s) => s.program.name)).not.toContain('P');
+    expect(listArchivedPrograms(db).map((a) => a.name)).toEqual(['P']);
+    expect(getActiveProgram(db)).toBeUndefined();
+    restoreProgram(db, p.id, 3);
+    expect(listPrograms(db).map((s) => s.program.name)).toContain('P');
+
+    deleteProgram(db, p.id, 4);
+    expect(getProgram(db, p.id)).toBeUndefined();
+    const live = db.select({ name: workouts.name, deletedAt: workouts.deletedAt }).from(workouts).all();
+    expect(live.find((w) => w.name === 'Shared')!.deletedAt).toBeNull();
+    expect(live.find((w) => w.name === 'Own')!.deletedAt).toBe(4);
   });
 });

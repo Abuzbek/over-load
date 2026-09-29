@@ -9,6 +9,9 @@ import m0004 from './0004_steady_dexter_bennett.sql';
 import m0005 from './0005_cuddly_yellow_claw.sql';
 import m0006 from './0006_bright_excalibur.sql';
 import m0007 from './0007_gorgeous_talos.sql';
+import m0008 from './0008_nice_emma_frost.sql';
+import m0009 from './0009_flippant_polaris.sql';
+import m0010 from './0010_small_meltdown.sql';
 
   export default {
     journal,
@@ -20,7 +23,10 @@ m0003,
 m0004,
 m0005,
 m0006,
-m0007
+m0007,
+m0008,
+m0009,
+m0010
     }
   }
   

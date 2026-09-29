@@ -1,4 +1,4 @@
-import { computePersonalRecords, nextDropKg, suggestSets, type CompletedSet, type PersonalRecordType, type SetPlan } from '@overload/domain';
+import { computePersonalRecords, explainSuggestion, formatWeight, nextDropKg, type CompletedSet, type PersonalRecordType, type SetPlan, type Unit } from '@overload/domain';
 import {
   exercises,
   newId,
@@ -17,11 +17,21 @@ import {
   type SetType,
 } from '@overload/schema';
 import { and, asc, desc, eq, inArray, isNotNull, isNull, max, min, or } from 'drizzle-orm';
-import { getActiveGym, loadableWeights } from './gymRepo';
+import { getActiveGym } from './gymRepo';
+import { suggestFor } from './progressionRepo';
 import { cycleFor, cycleSets } from './periodizationRepo';
 import { markDayDoneForWorkout } from './programRepo';
 import { isSmartProgressionOn } from './settingsRepo';
 import { addExerciseToWorkout, addWorkoutSet, getWorkoutDetail } from './workoutRepo';
+
+/** A planned set as smart progression reads it: a set to failure takes as many reps as the load allows. */
+function planOf(s: { setType: SetType; targetReps: number | null; targetRepsMax: number | null; targetRir: number | null }): SetPlan {
+  return {
+    repsMin: s.targetReps ?? 8,
+    repsMax: s.targetRepsMax ?? (s.setType === 'failure' ? 30 : (s.targetReps ?? 12)),
+    rir: s.targetRir ?? 2,
+  };
+}
 
 /** A working set as it is to be done, before it becomes a session set. */
 type PlannedWorking = {
@@ -81,7 +91,7 @@ export function startSessionFromWorkout(db: Db, workoutId: string, at: number): 
       // The working sets to do: this cycle's, for a periodized program; else as planned.
       const planned = entry.sessionSets.filter((s) => s.setType !== 'warmup');
       const working: PlannedWorking[] = cycle
-        ? cycleSets(db, entry.exercise, entry.sessionSets, cycle).map((c) => ({
+        ? cycleSets(db, entry.workoutExercise.id, entry.exercise, entry.sessionSets, cycle).map((c) => ({
             setType: c.setType,
             targetReps: c.repsMin,
             targetRepsMax: c.repsMax,
@@ -90,16 +100,7 @@ export function startSessionFromWorkout(db: Db, workoutId: string, at: number): 
           }))
         : planned.map((s) => ({ setType: s.setType, targetReps: s.targetReps, targetRepsMax: s.targetRepsMax, targetRir: s.targetRir, targetWeightKg: s.targetWeightKg }));
       const suggested = smart
-        ? suggestSets(
-            lastWorkingSets(db, entry.exercise.id, sessionId),
-            working.map((s): SetPlan => ({
-              repsMin: s.targetReps ?? 8,
-              // A set to failure: as many as the load allows.
-              repsMax: s.targetRepsMax ?? (s.setType === 'failure' ? 30 : (s.targetReps ?? 12)),
-              rir: s.targetRir ?? 2,
-            })),
-            gymId ? loadableWeights(db, gymId, entry.exercise.id) : null,
-          )
+        ? (suggestFor(db, gymId ?? null, entry.exercise, lastWorkingSets(db, entry.exercise.id, sessionId), working.map(planOf))?.suggestions ?? null)
         : null;
 
       tx.insert(sessionExercises).values({
@@ -145,6 +146,7 @@ export function startSessionFromWorkout(db: Db, workoutId: string, at: number): 
           setType: plannedSet.setType,
           weightKg: plannedSet.targetWeightKg ?? suggestion?.weightKg ?? last?.weightKg ?? null,
           reps: plannedSet.setType === 'failure' ? null : (suggestion?.reps ?? null),
+          suggestedReps: plannedSet.setType === 'failure' ? null : (suggestion?.reps ?? null),
           targetReps: plannedSet.targetReps,
           targetRepsMax: plannedSet.targetRepsMax,
           targetRir: plannedSet.targetRir,
@@ -310,6 +312,7 @@ export function addSet(db: Db, sessionExerciseId: string, at: number): SessionSe
     targetRir: previous?.setType === 'warmup' ? null : (previous?.targetRir ?? null),
     targetWeightKg: previous?.targetWeightKg ?? null,
     parentSetId: null,
+    suggestedReps: null,
   };
 
   db.insert(sessionSets).values(row).run();
@@ -414,6 +417,7 @@ export function addRound(db: Db, parentSetId: string, at: number): SessionSet {
     targetRir: drop ? 0 : null,
     targetWeightKg: drop ? dropKg : load,
     parentSetId,
+    suggestedReps: null,
   };
   db.insert(sessionSets).values(row).run();
   return row;
@@ -756,4 +760,154 @@ export function listAllPersonalRecords(db: Db): PersonalRecordSummary[] {
     .orderBy(asc(exercises.name), asc(personalRecords.type))
     .all()
     .map((row) => ({ ...row, type: row.type as PersonalRecordType }));
+}
+
+/** An exercise's working sets this session: warm-ups and drop or myo rounds aside. */
+function workingSets(db: Db, sessionExerciseId: string): SessionSet[] {
+  return db
+    .select()
+    .from(sessionSets)
+    .where(and(eq(sessionSets.sessionExerciseId, sessionExerciseId), isNull(sessionSets.deletedAt), isNull(sessionSets.parentSetId)))
+    .orderBy(asc(sessionSets.orderIndex))
+    .all()
+    .filter((s) => s.setType !== 'warmup');
+}
+
+/** Still as smart progression filled it: the weight and reps it suggested, untouched. */
+const untouched = (s: SessionSet) =>
+  s.completedAt === null && s.targetWeightKg !== null && s.weightKg === s.targetWeightKg && s.reps === s.suggestedReps;
+
+/**
+ * After a set is done, the exercise's remaining sets re-planned from today's
+ * sets: a set harder than planned lowers what follows, an easier one raises
+ * it. Only sets still as they were suggested change — never one the lifter
+ * has typed into.
+ */
+export function replanRemaining(db: Db, sessionExerciseId: string, at: number): void {
+  const exercise = db
+    .select({ exercise: exercises })
+    .from(sessionExercises)
+    .innerJoin(exercises, eq(exercises.id, sessionExercises.exerciseId))
+    .where(eq(sessionExercises.id, sessionExerciseId))
+    .get()?.exercise;
+  if (!exercise) return;
+  const sets = workingSets(db, sessionExerciseId);
+  const done = sets.filter((s) => s.completedAt !== null);
+  const open = sets.filter(untouched);
+  if (done.length === 0 || open.length === 0) return;
+  const planned = suggestFor(db, getActiveGym(db)?.id ?? null, exercise, [], open.map(planOf), done);
+  if (!planned) return;
+  open.forEach((set, i) => {
+    const s = planned.suggestions[i]!;
+    const reps = set.setType === 'failure' ? null : s.reps;
+    db.update(sessionSets)
+      .set({ weightKg: s.weightKg, targetWeightKg: s.weightKg, reps, suggestedReps: reps, updatedAt: at })
+      .where(eq(sessionSets.id, set.id))
+      .run();
+  });
+}
+
+/**
+ * The wand's words for an exercise's next open set: what its suggestion was
+ * built on and how it fits the plan. Null when smart progression has nothing
+ * to go on for it.
+ */
+export function explainNext(db: Db, sessionExerciseId: string, unit: Unit): string[] | null {
+  const row = db
+    .select({ exercise: exercises, sessionId: sessionExercises.sessionId })
+    .from(sessionExercises)
+    .innerJoin(exercises, eq(exercises.id, sessionExercises.exerciseId))
+    .where(eq(sessionExercises.id, sessionExerciseId))
+    .get();
+  if (!row) return null;
+  const sets = workingSets(db, sessionExerciseId);
+  const next = sets.find((s) => s.completedAt === null);
+  if (!next) return null;
+  const done = sets.filter((s) => s.completedAt !== null);
+  const plan = planOf(next);
+  const planned = suggestFor(db, getActiveGym(db)?.id ?? null, row.exercise, lastWorkingSets(db, row.exercise.id, row.sessionId), [plan], done);
+  if (!planned) return null;
+  return explainSuggestion(planned.basis, planned.oneRepMaxKg, plan, planned.suggestions[0]!, (kg) => formatWeight(kg, unit), planned.offsetKg);
+}
+
+/**
+ * Puts another exercise in an exercise's place, before any of its sets is
+ * done: the same sets, targets and rest, re-planned for the new exercise —
+ * smart progression's suggestion, else its last time's load. Warm-ups and
+ * rounds lose their weights, which were the old exercise's.
+ */
+export function swapSessionExercise(db: Db, sessionExerciseId: string, exerciseId: string, at: number): void {
+  const entry = db.select().from(sessionExercises).where(eq(sessionExercises.id, sessionExerciseId)).get();
+  const exercise = db.select().from(exercises).where(eq(exercises.id, exerciseId)).get();
+  if (!entry || !exercise) return;
+  const sets = db
+    .select()
+    .from(sessionSets)
+    .where(and(eq(sessionSets.sessionExerciseId, sessionExerciseId), isNull(sessionSets.deletedAt)))
+    .orderBy(asc(sessionSets.orderIndex))
+    .all();
+  // ponytail: a half-done exercise cannot be swapped; splitting it (done sets kept, the rest moved) if lifters ask.
+  if (sets.some((s) => s.completedAt !== null)) throw new Error('An exercise with logged sets cannot be swapped');
+  const working = sets.filter((s) => s.setType !== 'warmup' && !s.parentSetId);
+  const before = lastPerformance(db, exerciseId, entry.sessionId).filter((s) => s.setType !== 'warmup');
+  const suggested = isSmartProgressionOn(db)
+    ? (suggestFor(db, getActiveGym(db)?.id ?? null, exercise, lastWorkingSets(db, exerciseId, entry.sessionId), working.map(planOf))?.suggestions ?? null)
+    : null;
+
+  db.transaction((tx) => {
+    tx.update(sessionExercises).set({ exerciseId, updatedAt: at }).where(eq(sessionExercises.id, sessionExerciseId)).run();
+    for (const set of sets) {
+      const n = working.indexOf(set);
+      const suggestion = suggested?.[n];
+      const reps = n < 0 || set.setType === 'failure' ? null : (suggestion?.reps ?? null);
+      const weightKg = n < 0 ? null : (suggestion?.weightKg ?? before[n]?.weightKg ?? null);
+      tx.update(sessionSets)
+        .set({ weightKg, reps, suggestedReps: reps, targetWeightKg: suggestion?.weightKg ?? null, partialReps: null, rir: null, updatedAt: at })
+        .where(eq(sessionSets.id, set.id))
+        .run();
+    }
+  });
+}
+
+/** Moves a finished session's start (keeping its length) or sets its length. */
+export function setSessionTimes(db: Db, sessionId: string, times: { startedAt: number; endedAt: number }, at: number): void {
+  db.update(sessions).set({ ...times, updatedAt: at }).where(eq(sessions.id, sessionId)).run();
+}
+
+/** Which records the Workout Complete screen celebrates, by how the exercise is tracked. */
+const CELEBRATED: Record<TrackingType, PersonalRecordType[]> = {
+  weight_reps: ['est_1rm'],
+  reps: ['max_reps'],
+  duration: ['max_duration'],
+  distance_duration: ['max_distance'],
+};
+
+export type SessionRecord = {
+  exerciseId: string;
+  type: PersonalRecordType;
+  value: number;
+  /** The best before this workout. */
+  previous: number;
+};
+
+/**
+ * The records this session set: an exercise's best beaten by one of today's
+ * sets. A first time doing an exercise is no record — there is nothing to beat.
+ */
+export function sessionRecords(db: Db, sessionId: string): SessionRecord[] {
+  const detail = getSessionDetail(db, sessionId);
+  if (!detail) return [];
+  const today = new Set(detail.exercises.flatMap((e) => e.sessionSets.map((s) => s.id)));
+  const out: SessionRecord[] = [];
+  for (const { exercise } of detail.exercises) {
+    if (out.some((r) => r.exerciseId === exercise.id)) continue;
+    const all = allCompletedSets(db, [exercise.id]);
+    const before = computePersonalRecords(all.filter((s) => !today.has(s.id)));
+    for (const record of computePersonalRecords(all)) {
+      if (!today.has(record.setId) || !CELEBRATED[exercise.trackingType]?.includes(record.type)) continue;
+      const previous = before.find((b) => b.type === record.type)?.value;
+      if (previous !== undefined && record.value > previous) out.push({ exerciseId: exercise.id, type: record.type, value: record.value, previous });
+    }
+  }
+  return out;
 }

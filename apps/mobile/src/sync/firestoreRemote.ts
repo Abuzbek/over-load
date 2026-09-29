@@ -1,4 +1,4 @@
-import type { SyncedTable } from '@overload/schema';
+import { SYNCED_TABLES, type SyncedTable } from '@overload/schema';
 import { SETTINGS_ID } from '../data/settingsRepo';
 import type { OutgoingChange, SyncRow } from '../data/syncRepo';
 import { firestoreReady } from './firebase';
@@ -40,7 +40,7 @@ export async function firestoreRemote(uid: string): Promise<Remote> {
       }
     },
 
-    async pull(name: SyncedTable, since: number) {
+    async pull(name: SyncedTable, since: number, onRows?: (count: number) => void) {
       const rows: SyncRow[] = [];
       let cursor = since;
       const from = fs.Timestamp.fromMillis(Math.max(0, since - OVERLAP_MS));
@@ -56,10 +56,17 @@ export async function firestoreRemote(uid: string): Promise<Remote> {
           rows.push(data.row as SyncRow);
           cursor = Math.max(cursor, (data.syncedAt as { toMillis(): number }).toMillis());
         }
+        onRows?.(snap.docs.length);
         if (snap.docs.length < PAGE) break;
         last = snap.docs[snap.docs.length - 1];
       }
       return { rows, cursor };
+    },
+
+    async countRows(name: SyncedTable) {
+      // An aggregation: billed one read per 1,000 documents counted.
+      const snap = await fs.getCountFromServer(table(name));
+      return snap.data().count;
     },
 
     async hasData() {
@@ -85,4 +92,23 @@ export async function accountOnboardedAt(uid: string): Promise<number | null> {
 /** Firestore rejects `undefined`; the rows use null for empty, but be sure. */
 function stripUndefined(row: SyncRow): Record<string, unknown> {
   return Object.fromEntries(Object.entries(row).filter(([, v]) => v !== undefined));
+}
+
+/**
+ * Deletes everything under users/{uid}: every synced table, a page at a time.
+ * Needs the network; a failure part-way leaves the rest for a retry, and the
+ * account itself is only deleted after this has finished.
+ */
+export async function deleteAccountData(uid: string): Promise<void> {
+  const fs = await firestoreReady();
+  const db = fs.getFirestore();
+  for (const name of SYNCED_TABLES) {
+    for (;;) {
+      const snap = await fs.getDocs(fs.query(fs.collection(db, 'users', uid, name), fs.limit(PAGE)));
+      if (snap.empty) break;
+      const batch = fs.writeBatch(db);
+      for (const doc of snap.docs) batch.delete(doc.ref);
+      await batch.commit();
+    }
+  }
 }

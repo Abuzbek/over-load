@@ -66,9 +66,9 @@ describe('syncCatalogue', () => {
   });
 
   // Chest is listed as both primary and secondary: one set is one chest set.
-  it('weighs muscles 1 primary / 0.5 secondary, the larger winning', () => {
+  it('weighs muscles as the generator credits them: the main one 1, other primaries 0.5, secondaries 0.25', () => {
     const rows = db.select().from(exerciseMuscles).where(eq(exerciseMuscles.exerciseId, 'Bench press')).all();
-    expect(Object.fromEntries(rows.map((r) => [r.muscleId, r.weight]))).toEqual({ chest: 1, frontDelts: 1, triceps: 0.5 });
+    expect(Object.fromEntries(rows.map((r) => [r.muscleId, r.weight]))).toEqual({ chest: 1, frontDelts: 0.5, triceps: 0.25 });
   });
 
   it('flattens needs to owned items, dropping bodyweight', () => {

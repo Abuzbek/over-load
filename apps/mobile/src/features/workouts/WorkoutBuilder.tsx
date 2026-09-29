@@ -1,12 +1,13 @@
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { BLOCK_CYCLES, blockPosition, DEFAULT_REST_SECONDS, isDeloadCycle, toStorageKg, type Unit } from '@overload/domain';
+import { blockPosition, DEFAULT_REST_SECONDS, isDeloadCycle, toStorageKg, type CycleSet, type Unit } from '@overload/domain';
 import { Lucide } from '@react-native-vector-icons/lucide';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getExerciseDetail } from '../../data/exerciseRepo';
-import { cycleFor, cycleSetLabel, cycleSets } from '../../data/periodizationRepo';
+import { clearCyclePlans, cycleFor, cycleSetLabel, cycleSets, saveCyclePlan } from '../../data/periodizationRepo';
+import { CycleSetEditor } from './CycleSetEditor';
 import { getProfile, getWeightUnit } from '../../data/settingsRepo';
 import type { WorkoutDetailExercise } from '../../data/workoutRepo';
 import { addWorkoutSet, getWorkoutDetail, reorderWorkoutExercises } from '../../data/workoutRepo';
@@ -15,6 +16,7 @@ import { BottomSheet } from '../../ui/BottomSheet';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { Text } from '../../ui/Text';
+import { getActiveProgram } from '../../data/programRepo';
 import { theme } from '../../ui/theme';
 import { textStyle } from '../../ui/typography';
 import { ExerciseInfoSheet } from '../library/ExerciseInfoSheet';
@@ -28,8 +30,9 @@ import {
   type WorkoutTargetField,
 } from './workoutTargets';
 import { ExerciseSummaryRow, TargetMuscleCards, WorkoutHeading } from './WorkoutSummary';
+import { useSyncedData } from '../../sync/syncService';
 
-type Props = { workoutId: string };
+type Props = { workoutId: string; /** A cycle of the block to open at, previewed from the Workout tab. */ cycle?: number | null };
 
 const EMPTY_DRAFT: Record<WorkoutTargetField, string> = { weightKg: '', reps: '' };
 
@@ -37,12 +40,14 @@ const EMPTY_DRAFT: Record<WorkoutTargetField, string> = { weightKg: '', reps: ''
  * One exercise's edits: add a set with its targets, or move it. Opened from
  * the row's ⋮ so the overview reads as a plan, not a form.
  */
-function ExerciseMenu({ entry, unit, onClose, onChanged, onMove }: {
+function ExerciseMenu({ entry, unit, onClose, onChanged, onMove, cycleEdit }: {
   entry: WorkoutDetailExercise | null;
   unit: Unit;
   onClose: () => void;
   onChanged: () => void;
   onMove: (direction: -1 | 1) => void;
+  /** A periodized program's: edit this exercise's sets for the cycle in view. */
+  cycleEdit?: { label: string; onPress: () => void };
 }) {
   const [draft, setDraft] = useState(EMPTY_DRAFT);
   const insets = useSafeAreaInsets();
@@ -90,7 +95,8 @@ function ExerciseMenu({ entry, unit, onClose, onChanged, onMove }: {
             ))}
           </View>
         ) : null}
-        <Button title="Add set" onPress={addSet} />
+        {cycleEdit ? <Button title={cycleEdit.label} onPress={cycleEdit.onPress} /> : null}
+        <Button title="Add set" variant={cycleEdit ? 'secondary' : 'primary'} onPress={addSet} />
         <View style={styles.moveRow}>
           <View style={styles.flex}>
             <Button title="Move up" variant="secondary" onPress={() => onMove(-1)} />
@@ -110,18 +116,33 @@ function ExerciseMenu({ entry, unit, onClose, onChanged, onMove }: {
  * view of its own — the workout overview and the program editor both put it in
  * theirs.
  */
-export function WorkoutPlan({ workoutId }: { workoutId: string }) {
+export function WorkoutPlan({
+  workoutId,
+  viewing: viewingProp,
+  onView,
+}: {
+  workoutId: string;
+  /** The cycle in view, when the parent holds it (the overview, to know whether it can start). */
+  viewing?: number | null;
+  onView?: (position: number) => void;
+}) {
   // Bumped to re-read getWorkoutDetail: by an edit here, and on focus, since
   // add-exercise mutates this workout and navigates back to a still-mounted
   // screen. Do NOT switch this to key={version} — that remounts and resets
   // scroll (6b249e9's failure mode).
   const [, setVersion] = useState(0);
   const refresh = () => setVersion((v) => v + 1);
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const [infoId, setInfoId] = useState<string | null>(null);
   const [menuId, setMenuId] = useState<string | null>(null);
   const [focusMuscle, setFocusMuscle] = useState<string | null>(null);
+  /** The cycle of the block in view, as a position (null: the one being trained). */
+  const [ownViewing, setOwnViewing] = useState<number | null>(null);
+  const viewing = onView ? (viewingProp ?? null) : ownViewing;
+  const setViewing = onView ?? setOwnViewing;
+  const [editing, setEditing] = useState<{ id: string; name: string; sets: CycleSet[] } | null>(null);
   const detail = getWorkoutDetail(db, workoutId);
   const unit = getWeightUnit(db);
   const figure = getProfile(db).gender === 'female' ? 'female' : 'male';
@@ -131,12 +152,17 @@ export function WorkoutPlan({ workoutId }: { workoutId: string }) {
   }
 
   const count = detail.exercises.length;
-  // A periodized program's workout shows this cycle's sets, not the first cycle's.
-  const cycle = cycleFor(db, workoutId);
+  // A periodized program's workout shows this cycle's sets, not the first cycle's
+  // — or the cycle picked from the chips.
+  const training = cycleFor(db, workoutId);
+  const current = training ? blockPosition(training.cycle, training.cycleCount) : 1;
+  const cycle = training ? { ...training, cycle: viewing ?? current } : null;
+  const cycleName = (position: number) =>
+    training && isDeloadCycle(position, training.deload, training.cycleCount) ? 'Deload' : `Cycle ${position}`;
   const shown = detail.exercises.map((e) => {
     if (!cycle) return null;
     const warmups = e.sessionSets.filter((s) => s.setType === 'warmup').length;
-    return { warmups, sets: cycleSets(db, e.exercise, e.sessionSets, cycle) };
+    return { warmups, sets: cycleSets(db, e.workoutExercise.id, e.exercise, e.sessionSets, cycle) };
   });
   const setCount = (i: number) => (shown[i] ? shown[i]!.warmups + shown[i]!.sets.length : detail.exercises[i]!.sessionSets.length);
   const details = detail.exercises.map((e) => getExerciseDetail(db, e.exercise.id));
@@ -164,10 +190,26 @@ export function WorkoutPlan({ workoutId }: { workoutId: string }) {
 
   return (
     <>
-      {cycle ? (
-        <Text variant="caption" color="textMuted">
-          {isDeloadCycle(cycle.cycle, cycle.deload) ? 'Deload cycle' : `Cycle ${blockPosition(cycle.cycle)} of ${BLOCK_CYCLES}`}
-        </Text>
+      {training && cycle ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cycles}>
+          {Array.from({ length: training.cycleCount }, (_, i) => i + 1).map((position) => {
+            const on = position === cycle.cycle;
+            return (
+              <Pressable
+                key={position}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                onPress={() => setViewing(position)}
+                style={[styles.cycleChip, on && styles.cycleChipOn]}
+              >
+                <Text variant="caption" color={on ? 'onAccent' : 'text'}>
+                  {isDeloadCycle(position, training.deload, training.cycleCount) ? 'Deload' : `C${position}`}
+                  {position === current ? ' ·' : ''}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       ) : null}
       <TargetMuscleCards volumes={volumes} figure={figure} selected={focusMuscle} onSelect={setFocusMuscle} />
 
@@ -219,6 +261,37 @@ export function WorkoutPlan({ workoutId }: { workoutId: string }) {
         onClose={() => setMenuId(null)}
         onChanged={refresh}
         onMove={(direction) => move(menuIndex, direction)}
+        cycleEdit={
+          cycle && menuIndex >= 0 && shown[menuIndex]
+            ? {
+                label: `Edit ${cycleName(cycle.cycle).toLowerCase()} sets`,
+                onPress: () => {
+                  const entry = detail.exercises[menuIndex]!;
+                  setMenuId(null);
+                  setEditing({ id: entry.workoutExercise.id, name: entry.exercise.name, sets: shown[menuIndex]!.sets });
+                },
+              }
+            : undefined
+        }
+      />
+      <CycleSetEditor
+        sets={editing?.sets ?? null}
+        title={editing?.name ?? ''}
+        cycleLabel={cycle ? cycleName(cycle.cycle) : ''}
+        onClose={() => setEditing(null)}
+        onSave={(sets, scope) => {
+          if (editing && training && cycle) {
+            const positions = scope === 'all' ? Array.from({ length: training.cycleCount }, (_, i) => i + 1) : [cycle.cycle];
+            saveCyclePlan(db, editing.id, positions, sets, Date.now());
+          }
+          setEditing(null);
+          refresh();
+        }}
+        onReset={() => {
+          if (editing) clearCyclePlans(db, editing.id, Date.now());
+          setEditing(null);
+          refresh();
+        }}
       />
       <ExerciseInfoSheet exerciseId={infoId} figure={figure} onClose={() => setInfoId(null)} />
     </>
@@ -230,12 +303,18 @@ export function WorkoutPlan({ workoutId }: { workoutId: string }) {
  * Opening a workout never starts it — only that button does, through
  * useWorkoutStarter's in-progress guard.
  */
-export function WorkoutBuilder({ workoutId }: Props) {
+export function WorkoutBuilder({ workoutId, cycle = null }: Props) {
   const [, setVersion] = useState(0);
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
   const insets = useSafeAreaInsets();
   const starter = useWorkoutStarter();
   const detail = getWorkoutDetail(db, workoutId);
+  const [viewing, setViewing] = useState<number | null>(cycle);
+  // Another cycle of the block can be looked at, not trained: only the current one starts.
+  const program = getActiveProgram(db);
+  const current = program ? blockPosition(program.cycleNumber, program.cycleCount) : null;
+  const preview = viewing !== null && current !== null && viewing !== current;
 
   return (
     <View style={styles.container}>
@@ -243,11 +322,18 @@ export function WorkoutBuilder({ workoutId }: Props) {
           and the header is the only thing that says which one this is. */}
       {detail ? <Stack.Screen options={{ title: detail.workout.name }} /> : null}
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
-        <WorkoutPlan workoutId={workoutId} />
+        <WorkoutPlan workoutId={workoutId} viewing={viewing} onView={setViewing} />
       </ScrollView>
 
       <View style={[styles.startBar, { paddingBottom: insets.bottom + theme.spacing.md }]}>
-        <Button title="Start Workout" onPress={() => starter.start(workoutId)} disabled={!detail || detail.exercises.length === 0} />
+        {preview && program ? (
+          <Text color="textMuted" style={styles.previewNote}>
+            {isDeloadCycle(viewing!, program.deload, program.cycleCount) ? 'The deload' : `Cycle ${viewing}`} is {viewing! < current! ? 'behind you' : 'still to come'}.
+            You are on {isDeloadCycle(current!, program.deload, program.cycleCount) ? 'the deload' : `cycle ${current}`}.
+          </Text>
+        ) : (
+          <Button title="Start Workout" onPress={() => starter.start(workoutId)} disabled={!detail || detail.exercises.length === 0} />
+        )}
       </View>
       <WorkoutStartSheet starter={starter} />
     </View>
@@ -255,6 +341,10 @@ export function WorkoutBuilder({ workoutId }: Props) {
 }
 
 const styles = StyleSheet.create({
+  previewNote: { textAlign: 'center', paddingVertical: theme.spacing.md },
+  cycles: { gap: theme.spacing.sm, paddingBottom: theme.spacing.sm },
+  cycleChip: { paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.sm, borderRadius: theme.radius.pill, backgroundColor: theme.colors.surfaceRaised },
+  cycleChipOn: { backgroundColor: theme.colors.text },
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: theme.spacing.lg },
   flex: { flex: 1 },

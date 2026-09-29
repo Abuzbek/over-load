@@ -19,9 +19,13 @@ export const SYNCED_TABLES = [
   'program_days',
   'workout_exercises',
   'workout_sets',
+  'cycle_plans',
   'sessions',
   'session_exercises',
   'session_sets',
+  'weigh_ins',
+  'measurements',
+  'progress_photos',
   'app_settings',
 ] as const;
 export type SyncedTable = (typeof SYNCED_TABLES)[number];

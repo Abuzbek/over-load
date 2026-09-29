@@ -162,21 +162,22 @@ export function programWeekTargets(db: Db): (PeriodTotals & { workoutIds: string
 export type MuscleLoad = { muscle: string; sets: number };
 
 /**
- * Sets per muscle in a window, for the heatmap.
+ * Sets per muscle in a window (or one session's), for the heatmap.
  *
  * **Sets, not kilograms.** Volume in kg is only defined for weight_reps; a
  * plank and a 5 km row would both score zero and the heatmap would call your
  * core and your legs untrained. Fractional set counting works across every
  * tracking type.
  *
- * A secondary muscle counts half. Ignoring them entirely makes a squat look
- * like a quads-only movement, and counting them fully makes every compound
- * light up the whole body.
+ * Weighted as the generator credits a set (exercise_muscles): the muscle it is
+ * for in full, other primaries half, supporting ones a quarter. Ignoring them
+ * makes a squat look quads-only; counting them fully makes every compound
+ * light up the whole body, and a squat's adductors outrank the focus.
  *
  * Four joined levels, four tombstone filters — sets, session_exercises,
  * exercises and sessions — the same four periodTotals guards.
  */
-export function muscleLoad(db: Db, sinceMs: number, untilMs: number): MuscleLoad[] {
+export function muscleLoad(db: Db, sinceMs: number, untilMs: number, sessionId?: string): MuscleLoad[] {
   const sets = sql<number>`sum(${exerciseMuscles.weight})`;
   return db
     .select({ muscle: lookups.name, sets })
@@ -200,6 +201,7 @@ export function muscleLoad(db: Db, sinceMs: number, untilMs: number): MuscleLoad
         isNull(sessionExercises.deletedAt),
         isNull(exercises.deletedAt),
         isNull(sessions.deletedAt),
+        sessionId ? eq(sessions.id, sessionId) : undefined,
       ),
     )
     .groupBy(lookups.id)

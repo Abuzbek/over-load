@@ -1,4 +1,4 @@
-import { formatWeight, type PersonalRecordType } from '@overload/domain';
+import { formatWeight, startOfWeek, type PersonalRecordType } from '@overload/domain';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -13,14 +13,8 @@ import { SectionLabel } from '../../ui/SectionLabel';
 import { Segmented } from '../../ui/Segmented';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
-
-/** Monday 00:00 local time: the week the program's targets are for. */
-function startOfWeek(now: Date): number {
-  const d = new Date(now);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return d.getTime();
-}
+import { ExerciseTilesRow, HabitsCard, InsightsCard, WeightCard } from './DashboardWidgets';
+import { useSyncedData } from '../../sync/syncService';
 
 /**
  * Chart colours, deliberately local rather than theme tokens: three rings need
@@ -41,7 +35,7 @@ function TotalsSlide({ width }: { width: number }) {
   const now = Date.now();
 
   const targets = programWeekTargets(db);
-  const done = periodTotals(db, startOfWeek(new Date(now)), now, mode === 'program' && targets ? targets.workoutIds : undefined);
+  const done = periodTotals(db, startOfWeek(now), now, mode === 'program' && targets ? targets.workoutIds : undefined);
 
   const ring = (value: number, target: number | undefined, size: number, color: string) => {
     const left = target !== undefined ? Math.max(target - value, 0) : 0;
@@ -165,7 +159,9 @@ export function DashboardScreen() {
   // workout elsewhere updates these numbers. Never key={version} — that
   // remounts and resets the carousel to slide one.
   const [, setVersion] = useState(0);
+  const refresh = () => setVersion((v) => v + 1);
   const [slide, setSlide] = useState(0);
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const width = Dimensions.get('window').width - theme.spacing.lg * 2;
@@ -194,6 +190,13 @@ export function DashboardScreen() {
           <View key={i} style={[styles.dot, i === slide && styles.dotOn]} />
         ))}
       </View>
+
+      <InsightsCard />
+
+      <ExerciseTilesRow />
+
+      <HabitsCard />
+      <WeightCard onChanged={refresh} />
 
       <SectionLabel>History</SectionLabel>
       <Pressable

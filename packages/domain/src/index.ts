@@ -15,3 +15,5 @@ export * from './warmup';
 export * from './plates';
 export * from './progression';
 export * from './periodization';
+export * from './startingWeight';
+export * from './insights';

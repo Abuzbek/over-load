@@ -20,7 +20,10 @@ export function OnboardingFlow() {
   const finish = () => {
     const at = Date.now();
     if (answers.plan) {
-      createProgramFromPlan(db, answers.plan, { name: answers.programName.trim() || 'My Program', icon: answers.icon, color: answers.color }, at);
+      createProgramFromPlan(db, answers.plan, { name: answers.programName.trim() || 'My Program', icon: answers.icon, color: answers.color }, at, {
+        goal: answers.goal,
+        deload: answers.deload,
+      });
     }
     completeOnboarding(db, preferencesOf(answers), at);
     markOnboarded();

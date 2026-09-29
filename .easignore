@@ -1,0 +1,31 @@
+# EAS uploads what this file allows (it replaces .gitignore for builds). Same as
+# .gitignore except the Firebase config files, which the build needs.
+node_modules/
+.expo/
+dist/
+*.log
+.DS_Store
+.claude/worktrees/
+
+# expo prebuild output — regenerate with `npx expo prebuild --clean`.
+# Remove these lines if you switch to the bare workflow and hand-edit native code.
+apps/mobile/ios/
+apps/mobile/android/
+
+# Superpowers brainstorming companion (local mockups)
+.superpowers/
+
+# Third-party anatomy art dropped in for evaluation — not ours to ship.
+# MuscleMap-Demo's bodies, All Rights Reserved. Matched by content, not name:
+# they have arrived twice under different filenames.
+muscles_*-body.svg
+muscleheatmap-*.svg
+apps/mobile/assets/body
+apps/mobile/assets/markdown
+
+# Local config: commit the .example templates, never the real files.
+.env
+.env.*
+!.env.example
+mm_strangth_exercises.json
+mm_strength_muscles.json

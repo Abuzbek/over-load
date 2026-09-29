@@ -62,6 +62,9 @@ type Props = {
   onInfo: () => void;
   onWarmup: () => void;
   onSuperset: () => void;
+  onSwap: () => void;
+  /** The wand: why the next set is planned as it is. */
+  onWhy: () => void;
   /** A tap on the page that is not on a control: the keypad closes. */
   onBlank: () => void;
 };
@@ -105,8 +108,10 @@ export function ExercisePage(given: Props) {
     onInfo: closing(given.onInfo),
     onWarmup: closing(given.onWarmup),
     onSuperset: closing(given.onSuperset),
+    onSwap: closing(given.onSwap),
+    onWhy: closing(given.onWhy),
   };
-  const { entry, previous, unit, distanceUnit, width, superset, onBadge, onAddSet, onAddRound, onInfo, onWarmup, onSuperset } = props;
+  const { entry, previous, unit, distanceUnit, width, superset, onBadge, onAddSet, onAddRound, onInfo, onWarmup, onSuperset, onSwap, onWhy } = props;
   const [showPrevious, setShowPrevious] = useState(false);
   const { exercise } = entry;
   const rows = setTableRows(entry.sessionSets);
@@ -152,8 +157,12 @@ export function ExercisePage(given: Props) {
       </Text>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipBar} contentContainerStyle={styles.chips}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Why this weight" onPress={onWhy} style={({ pressed }) => [styles.chip, pressed && styles.pressed]}>
+          <Lucide name="wand-sparkles" size={18} color={theme.colors.text} />
+        </Pressable>
         <Chip icon="chart-no-axes-column" label="Info" onPress={onInfo} />
         <Chip icon="flame" label="Warm Up" onPress={onWarmup} />
+        <Chip icon="arrow-left-right" label="Swap" onPress={onSwap} />
         <Chip icon="repeat-2" label="Superset" onPress={onSuperset} on={superset !== null} />
       </ScrollView>
 
@@ -317,7 +326,7 @@ function SetLine({ row, last, showPrevious, waiting, onOpen, entry, unit, distan
   );
 }
 
-function Chip({ icon, label, on = false, onPress }: { icon: 'flame' | 'chart-no-axes-column' | 'repeat-2'; label: string; on?: boolean; onPress: () => void }) {
+function Chip({ icon, label, on = false, onPress }: { icon: 'flame' | 'chart-no-axes-column' | 'repeat-2' | 'arrow-left-right'; label: string; on?: boolean; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.chip, on && styles.chipOn, pressed && styles.pressed]}>
       <Lucide name={icon} size={16} color={on ? theme.colors.onAccent : theme.colors.text} />

@@ -27,3 +27,5 @@ apps/mobile/assets/markdown
 !.env.example
 apps/mobile/firebase/*/GoogleService-Info.plist
 apps/mobile/firebase/*/google-services.json
+mm_strangth_exercises.json
+mm_strength_muscles.json

@@ -11,6 +11,7 @@ import { Segmented } from '../../ui/Segmented';
 import { Text } from '../../ui/Text';
 import { theme } from '../../ui/theme';
 import { MuscleHeatmap } from './MuscleHeatmap';
+import { useSyncedData } from '../../sync/syncService';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -24,12 +25,14 @@ const WEEKLY_TARGET_SETS = 12;
 const WINDOWS = [
   { value: '7', label: '7 days', days: 7 },
   { value: '30', label: '30 days', days: 30 },
+  { value: '365', label: '1 year', days: 365 },
 ] as const;
 
 export function ProgressScreen() {
   const [, setVersion] = useState(0);
-  const [windowKey, setWindowKey] = useState<'7' | '30'>('7');
+  const [windowKey, setWindowKey] = useState<(typeof WINDOWS)[number]['value']>('7');
 
+  useSyncedData();
   useFocusEffect(useCallback(() => setVersion((v) => v + 1), []));
 
   const days = WINDOWS.find((w) => w.value === windowKey)!.days;
@@ -59,7 +62,7 @@ export function ProgressScreen() {
         <Text variant="caption" color="textMuted">
           {rows.length === 0
             ? 'Nothing logged in this window yet.'
-            : `Full colour is ${Math.round(target)} sets. A secondary muscle counts half a set.`}
+            : `Full colour is ${WEEKLY_TARGET_SETS} sets a week. A set counts in full for the muscle it is for, half for its other main muscles, a quarter for supporting ones.`}
         </Text>
       </Card>
 

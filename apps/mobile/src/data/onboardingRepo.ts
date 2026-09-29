@@ -145,7 +145,7 @@ export function createProgramFromPlan(
   plan: Plan,
   display: { name: string; icon: string; color: string },
   at: number,
-  { activate = true }: { activate?: boolean } = {},
+  { activate = true, goal = null, deload = true }: { activate?: boolean; goal?: PlanGoal | null; deload?: boolean } = {},
 ): string {
   const workoutIds = plan.workouts.map((w) => {
     const workout = createWorkout(db, w.name);
@@ -158,7 +158,12 @@ export function createProgramFromPlan(
     return workout.id;
   });
 
-  const program = createProgram(db, { name: display.name, icon: display.icon, iconColor: display.color, generated: true }, at);
+  // The goal and deload are the program's own, so a later program with another goal leaves this one be.
+  const program = createProgram(
+    db,
+    { name: display.name, icon: display.icon, iconColor: display.color, generated: true, goal, deload: deload ? 'last' : 'none' },
+    at,
+  );
   plan.days.forEach((w, day) => setProgramDay(db, program.id, day, w === null ? null : workoutIds[w]!, at));
   if (!activate) return program.id;
 
