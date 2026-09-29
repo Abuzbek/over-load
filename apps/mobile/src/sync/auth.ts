@@ -68,12 +68,17 @@ export function onAccountChanged(listener: (account: Account | null) => void): (
   return m.onAuthStateChanged(instance, (user) => listener(toAccount(user)));
 }
 
+/** Firebase refuses to delete a user whose sign-in is older than about this. */
+const RECENT_SIGN_IN_MS = 5 * 60 * 1000;
+
+type Credential = ReturnType<AuthModule['GoogleAuthProvider']['credential']>;
+
 /**
  * Apple, with a nonce: Apple signs the hash, Firebase checks it against the
- * raw value, so a stolen identity token cannot be replayed.
+ * raw value, so a stolen identity token cannot be replayed. The authorization
+ * code is what revokes the Apple token when the account is deleted.
  */
-export async function signInWithApple(): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- native module, iOS only
+async function appleCredential(): Promise<{ credential: Credential; authorizationCode: string | null }> {
   const Apple: typeof import('expo-apple-authentication') = require('expo-apple-authentication');
   const nonce = Crypto.randomUUID();
   const hashed = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, nonce);
@@ -82,21 +87,84 @@ export async function signInWithApple(): Promise<void> {
     nonce: hashed,
   });
   if (!result.identityToken) throw new Error('Apple did not return an identity token');
-  const { m, instance } = auth();
-  await m.signInWithCredential(instance, m.AppleAuthProvider.credential(result.identityToken, nonce));
+  return { credential: auth().m.AppleAuthProvider.credential(result.identityToken, nonce), authorizationCode: result.authorizationCode };
 }
 
-export async function signInWithGoogle(): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- native module
+/** Null: the user cancelled the Google sheet. */
+async function googleCredential(): Promise<Credential | null> {
   const { GoogleSignin, isSuccessResponse } = require('@react-native-google-signin/google-signin') as typeof import('@react-native-google-signin/google-signin');
   GoogleSignin.configure({ webClientId: googleWebClientId });
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
   const response = await GoogleSignin.signIn();
-  if (!isSuccessResponse(response)) return; // cancelled
+  if (!isSuccessResponse(response)) return null;
   const idToken = response.data.idToken;
   if (!idToken) throw new Error('Google did not return an id token');
+  return auth().m.GoogleAuthProvider.credential(idToken);
+}
+
+export async function signInWithApple(): Promise<void> {
+  const { credential } = await appleCredential();
   const { m, instance } = auth();
-  await m.signInWithCredential(instance, m.GoogleAuthProvider.credential(idToken));
+  await m.signInWithCredential(instance, credential);
+}
+
+export async function signInWithGoogle(): Promise<void> {
+  const credential = await googleCredential();
+  if (!credential) return; // cancelled
+  const { m, instance } = auth();
+  await m.signInWithCredential(instance, credential);
+}
+
+/**
+ * Deleting an account needs a fresh sign-in, so the person signs in once more
+ * with the same provider. False: they cancelled. A phone account cannot be
+ * re-checked without another SMS, so it must have signed in in the last few
+ * minutes.
+ */
+export async function reauthenticate(): Promise<{ ok: boolean; appleAuthorizationCode: string | null }> {
+  const { m, instance } = auth();
+  const user = instance.currentUser;
+  if (!user) throw new Error('Not signed in');
+  const providerId = user.providerData[0]?.providerId;
+  if (providerId === 'apple.com') {
+    const { credential, authorizationCode } = await appleCredential();
+    await m.reauthenticateWithCredential(user, credential);
+    return { ok: true, appleAuthorizationCode: authorizationCode };
+  }
+  if (providerId === 'google.com') {
+    const credential = await googleCredential();
+    if (!credential) return { ok: false, appleAuthorizationCode: null };
+    await m.reauthenticateWithCredential(user, credential);
+    return { ok: true, appleAuthorizationCode: null };
+  }
+  // Phone: checked here, before any data is deleted, rather than failing at
+  // the very end with the data already gone.
+  const lastSignIn = Date.parse(user.metadata.lastSignInTime ?? '');
+  if (!(Date.now() - lastSignIn < RECENT_SIGN_IN_MS)) {
+    throw new Error('For your security, log out, sign in again and then delete the account.');
+  }
+  return { ok: true, appleAuthorizationCode: null };
+}
+
+/**
+ * Deletes the Firebase user, which also signs this phone out. Apple requires
+ * an app that offers Sign in with Apple to revoke its token when the account
+ * goes, hence the authorization code from reauthenticate().
+ */
+export async function deleteSignedInUser(appleAuthorizationCode: string | null): Promise<void> {
+  const { m, instance } = auth();
+  const user = instance.currentUser;
+  if (!user) throw new Error('Not signed in');
+  if (appleAuthorizationCode) await m.revokeToken(instance, appleAuthorizationCode);
+  try {
+    await m.deleteUser(user);
+  } catch (e) {
+    if ((e as { code?: string }).code === 'auth/requires-recent-login') {
+      throw new Error('For your security, log out, sign in again and then delete the account.');
+    }
+    throw e;
+  }
+  await signOutOfGoogle();
 }
 
 /** Where the Telegram functions run (functions/src/index.ts sets the same). */
@@ -154,4 +222,18 @@ export async function confirmPhoneCode(confirmation: Confirmation, code: string)
 export async function signOutOfAccount(): Promise<void> {
   const { m, instance } = auth();
   await m.signOut(instance);
+  await signOutOfGoogle();
+}
+
+/**
+ * Google keeps its own session: without this, the next "Sign in with Google"
+ * goes straight back into the same account without asking which one.
+ */
+async function signOutOfGoogle(): Promise<void> {
+  try {
+    const { GoogleSignin } = require('@react-native-google-signin/google-signin') as typeof import('@react-native-google-signin/google-signin');
+    await GoogleSignin.signOut();
+  } catch {
+    // Not in this build, or never signed in with Google: nothing to clear.
+  }
 }

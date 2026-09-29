@@ -1,4 +1,4 @@
-import type { SyncedTable } from '@overload/schema';
+import { SYNCED_TABLES, type SyncedTable } from '@overload/schema';
 import { SETTINGS_ID } from '../data/settingsRepo';
 import type { OutgoingChange, SyncRow } from '../data/syncRepo';
 import { firestoreReady } from './firebase';
@@ -85,4 +85,23 @@ export async function accountOnboardedAt(uid: string): Promise<number | null> {
 /** Firestore rejects `undefined`; the rows use null for empty, but be sure. */
 function stripUndefined(row: SyncRow): Record<string, unknown> {
   return Object.fromEntries(Object.entries(row).filter(([, v]) => v !== undefined));
+}
+
+/**
+ * Deletes everything under users/{uid}: every synced table, a page at a time.
+ * Needs the network; a failure part-way leaves the rest for a retry, and the
+ * account itself is only deleted after this has finished.
+ */
+export async function deleteAccountData(uid: string): Promise<void> {
+  const fs = await firestoreReady();
+  const db = fs.getFirestore();
+  for (const name of SYNCED_TABLES) {
+    for (;;) {
+      const snap = await fs.getDocs(fs.query(fs.collection(db, 'users', uid, name), fs.limit(PAGE)));
+      if (snap.empty) break;
+      const batch = fs.writeBatch(db);
+      for (const doc of snap.docs) batch.delete(doc.ref);
+      await batch.commit();
+    }
+  }
 }

@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import * as FileSystem from 'expo-file-system/legacy';
 import { AppState } from 'react-native';
 import { now } from '@overload/schema';
 import { ensureDefaultGym } from '../data/gymRepo';
@@ -7,9 +8,9 @@ import { needsOnboarding } from '../data/onboardingRepo';
 import { getOnboardedAt } from '../data/settingsRepo';
 import { clearAccountData, localOwner, outboxSize } from '../data/syncRepo';
 import { db } from '../db/client';
-import { accountStillExists, onAccountChanged, signOutOfAccount, type Account } from './auth';
+import { accountStillExists, deleteSignedInUser, onAccountChanged, reauthenticate, signOutOfAccount, type Account } from './auth';
 import { firebaseEnabled } from './firebase';
-import { accountOnboardedAt, firestoreRemote } from './firestoreRemote';
+import { accountOnboardedAt, deleteAccountData, firestoreRemote } from './firestoreRemote';
 import { syncNow } from './syncEngine';
 
 export type SyncStatus = {
@@ -30,6 +31,8 @@ export type SyncStatus = {
 
 /** While the app is open, how often to sync without being asked. */
 const INTERVAL_MS = 2 * 60 * 1000;
+/** How long signing out waits for its last sync before counting what is left. */
+const SIGN_OUT_SYNC_MS = 10_000;
 
 let status: SyncStatus = { enabled: firebaseEnabled, authResolved: false, onboarding: 'unknown', account: null, syncing: false, lastSyncedAt: null, error: null };
 const listeners = new Set<() => void>();
@@ -56,15 +59,24 @@ export function useSyncStatus(): SyncStatus {
  */
 export async function requestSync(): Promise<void> {
   const account = status.account;
-  if (!account) return;
+  if (!account || deleting) return;
   update({ syncing: true });
-  try {
-    await syncNow(db, await firestoreRemote(account.uid), account.uid);
-    update({ syncing: false, lastSyncedAt: Date.now(), error: null });
-  } catch (error) {
-    update({ syncing: false, error: error instanceof Error ? error.message : String(error) });
-  }
+  const run = (async () => {
+    try {
+      await syncNow(db, await firestoreRemote(account.uid), account.uid);
+      update({ syncing: false, lastSyncedAt: Date.now(), error: null });
+    } catch (error) {
+      update({ syncing: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  })();
+  running = run;
+  await run;
 }
+
+/** The sync in progress, if any: deleting the account waits for it, or it could write rows back. */
+let running: Promise<void> | null = null;
+/** While the account is being deleted, nothing syncs. */
+let deleting = false;
 
 let started = false;
 
@@ -151,10 +163,39 @@ function resetLocalCopy(): void {
  * the local copy, so without `force` it stops and reports how many there are.
  */
 export async function signOut({ force = false } = {}): Promise<{ unsynced: number }> {
-  await requestSync();
+  // A last sync, but not forever: offline, a Firestore commit waits for the
+  // server indefinitely, and the button would spin with nothing happening.
+  // Whatever did not make it stays in the outbox and is counted below.
+  await Promise.race([requestSync(), new Promise((resolve) => setTimeout(resolve, SIGN_OUT_SYNC_MS))]);
   const unsynced = outboxSize(db);
   if (unsynced > 0 && !force) return { unsynced };
   resetLocalCopy();
   await signOutOfAccount();
   return { unsynced: 0 };
+}
+
+/**
+ * Deletes the account for good: a fresh sign-in first (cancelled: nothing
+ * happens), then everything under users/{uid} in Firestore, then the Firebase
+ * user, then this phone's copy. If the server part fails it throws and the
+ * phone keeps its copy, so trying again loses nothing.
+ */
+export async function deleteAccount(): Promise<{ cancelled: boolean }> {
+  const account = status.account;
+  if (!account) throw new Error('Not signed in');
+  const { ok, appleAuthorizationCode } = await reauthenticate();
+  if (!ok) return { cancelled: true };
+  deleting = true;
+  try {
+    await running;
+    await deleteAccountData(account.uid);
+    await deleteSignedInUser(appleAuthorizationCode);
+    resetLocalCopy();
+    // Progress photos live only on the phone (rows sync, images do not), so
+    // logging out keeps them for the next sign-in; deleting the account does not.
+    await FileSystem.deleteAsync(`${FileSystem.documentDirectory}progress-photos/`, { idempotent: true });
+  } finally {
+    deleting = false;
+  }
+  return { cancelled: false };
 }
