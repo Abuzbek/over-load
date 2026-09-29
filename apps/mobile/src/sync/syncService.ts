@@ -11,7 +11,7 @@ import { db } from '../db/client';
 import { accountStillExists, deleteSignedInUser, onAccountChanged, reauthenticate, signOutOfAccount, type Account } from './auth';
 import { firebaseEnabled } from './firebase';
 import { accountOnboardedAt, deleteAccountData, firestoreRemote } from './firestoreRemote';
-import { syncNow } from './syncEngine';
+import { syncNow, type RestoreProgress } from './syncEngine';
 
 export type SyncStatus = {
   enabled: boolean;
@@ -26,15 +26,30 @@ export type SyncStatus = {
   account: Account | null;
   syncing: boolean;
   lastSyncedAt: number | null;
+  /** Goes up each time a sync writes rows into this phone's database. */
+  dataVersion: number;
   error: string | null;
+  /**
+   * The first sync after signing in on a phone with no copy of the account,
+   * which the app waits for behind the restore screen. 'idle' otherwise.
+   */
+  restore: RestoreState;
 };
+
+export type RestoreState =
+  | { state: 'idle' }
+  | { state: 'restoring'; progress: RestoreProgress | null }
+  | { state: 'failed'; error: string };
+
+const IDLE: RestoreState = { state: 'idle' };
+
 
 /** While the app is open, how often to sync without being asked. */
 const INTERVAL_MS = 2 * 60 * 1000;
 /** How long signing out waits for its last sync before counting what is left. */
 const SIGN_OUT_SYNC_MS = 10_000;
 
-let status: SyncStatus = { enabled: firebaseEnabled, authResolved: false, onboarding: 'unknown', account: null, syncing: false, lastSyncedAt: null, error: null };
+let status: SyncStatus = { enabled: firebaseEnabled, authResolved: false, onboarding: 'unknown', account: null, syncing: false, lastSyncedAt: null, error: null, dataVersion: 0, restore: IDLE };
 const listeners = new Set<() => void>();
 
 function update(patch: Partial<SyncStatus>) {
@@ -42,14 +57,23 @@ function update(patch: Partial<SyncStatus>) {
   listeners.forEach((l) => l());
 }
 
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 export function useSyncStatus(): SyncStatus {
-  return useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    () => status,
-  );
+  return useSyncExternalStore(subscribe, () => status);
+}
+
+/**
+ * Re-renders the caller when a sync has written rows into the database, and
+ * only then. Screens read the database while rendering and otherwise re-read
+ * only on focus, so rows pulled while one is open (at sign-in, or from another
+ * device) stayed invisible until the user navigated away and back.
+ */
+export function useSyncedData(): number {
+  return useSyncExternalStore(subscribe, () => status.dataVersion);
 }
 
 /**
@@ -57,14 +81,15 @@ export function useSyncStatus(): SyncStatus {
  * work, and a phone in a gym basement is offline by design — the outbox keeps
  * everything for the next attempt.
  */
-export async function requestSync(): Promise<void> {
+export async function requestSync(onProgress?: (progress: RestoreProgress) => void): Promise<void> {
   const account = status.account;
   if (!account || deleting) return;
   update({ syncing: true });
   const run = (async () => {
     try {
-      await syncNow(db, await firestoreRemote(account.uid), account.uid);
-      update({ syncing: false, lastSyncedAt: Date.now(), error: null });
+      const { pulled, adopted } = await syncNow(db, await firestoreRemote(account.uid), account.uid, Date.now(), onProgress);
+      const changed = pulled > 0 || adopted;
+      update({ syncing: false, lastSyncedAt: Date.now(), error: null, ...(changed ? { dataVersion: status.dataVersion + 1 } : {}) });
     } catch (error) {
       update({ syncing: false, error: error instanceof Error ? error.message : String(error) });
     }
@@ -99,9 +124,12 @@ export function startSync(): void {
     // or someone else signing in): let it go before this account syncs.
     const owner = localOwner(db);
     if (account && owner && owner !== account.uid) resetLocalCopy();
-    update({ account, authResolved: true, onboarding: 'unknown', lastSyncedAt: null, error: null });
+    // No copy of this account here yet (a new phone, or after logging out):
+    // the first sync brings all of it, so the app waits behind the restore screen.
+    const fresh = account !== null && localOwner(db) !== account.uid;
+    update({ account, authResolved: true, onboarding: 'unknown', lastSyncedAt: null, error: null, restore: IDLE });
     if (account) void confirmAccount(account.uid);
-    void requestSync();
+    void (fresh ? restoreAccount() : requestSync());
   });
 
   AppState.addEventListener('change', (state) => {
@@ -198,4 +226,23 @@ export async function deleteAccount(): Promise<{ cancelled: boolean }> {
     deleting = false;
   }
   return { cancelled: false };
+}
+
+/**
+ * The first sync of an account on this phone, reported to the restore screen.
+ * Runs again from "Try again"; a table that already arrived is not fetched twice.
+ */
+export async function restoreAccount(): Promise<void> {
+  update({ restore: { state: 'restoring', progress: null } });
+  await requestSync((progress) => {
+    if (status.restore.state === 'restoring') update({ restore: { state: 'restoring', progress } });
+  });
+  // "Continue in the background" already let the user in: leave it that way.
+  if (status.restore.state === 'idle') return;
+  update({ restore: status.error ? { state: 'failed', error: status.error } : IDLE });
+}
+
+/** Into the app without waiting; sync carries on in the background as usual. */
+export function skipRestore(): void {
+  update({ restore: IDLE });
 }

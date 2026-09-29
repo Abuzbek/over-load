@@ -33,8 +33,9 @@ class FakeRemote implements Remote {
     }
   }
 
-  async pull(table: SyncedTable, since: number) {
+  async pull(table: SyncedTable, since: number, onRows?: (count: number) => void) {
     const docs = [...(this.docs.get(table)?.values() ?? [])].filter((d) => d.stamp >= since);
+    if (docs.length > 0) onRows?.(docs.length);
     return {
       rows: docs.map((d) => d.row) as Awaited<ReturnType<Remote['pull']>>['rows'],
       cursor: docs.reduce((max, d) => Math.max(max, d.stamp), since),
@@ -43,6 +44,10 @@ class FakeRemote implements Remote {
 
   async hasData() {
     return [...this.docs.values()].some((t) => t.size > 0);
+  }
+
+  async countRows(table: SyncedTable) {
+    return this.count(table);
   }
 
   count(table: SyncedTable) {
@@ -209,5 +214,25 @@ describe('syncNow', () => {
     const remote = new FakeRemote();
     const [a, b] = await Promise.all([syncNow(phone, remote, 'u1', 20), syncNow(phone, remote, 'u1', 20)]);
     expect(a).toBe(b);
+  });
+
+  it('reports a first sync\'s progress up to the account\'s total, and later syncs not at all', async () => {
+    const phone = device();
+    const remote = new FakeRemote();
+    createWorkout(phone, 'Push day');
+    logBench(phone, 10);
+    await syncNow(phone, remote, 'u1', 20);
+    const total = [...remote.docs.values()].reduce((n, t) => n + t.size, 0);
+
+    const tablet = device();
+    const seen: { done: number; total: number; table?: string }[] = [];
+    await syncNow(tablet, remote, 'u1', 30, (p) => seen.push(seen.length === 0 ? { done: p.done, total: p.total, table: p.table } : { done: p.done, total: p.total }));
+    expect(seen[0]).toEqual({ done: 0, total, table: 'gyms' });
+    expect(seen.at(-1)).toEqual({ done: total, total });
+    expect(seen.every((p, i) => i === 0 || p.done >= seen[i - 1]!.done)).toBe(true);
+
+    const later: unknown[] = [];
+    await syncNow(tablet, remote, 'u1', 40, (p) => later.push(p));
+    expect(later).toEqual([]);
   });
 });

@@ -40,7 +40,7 @@ export async function firestoreRemote(uid: string): Promise<Remote> {
       }
     },
 
-    async pull(name: SyncedTable, since: number) {
+    async pull(name: SyncedTable, since: number, onRows?: (count: number) => void) {
       const rows: SyncRow[] = [];
       let cursor = since;
       const from = fs.Timestamp.fromMillis(Math.max(0, since - OVERLAP_MS));
@@ -56,10 +56,17 @@ export async function firestoreRemote(uid: string): Promise<Remote> {
           rows.push(data.row as SyncRow);
           cursor = Math.max(cursor, (data.syncedAt as { toMillis(): number }).toMillis());
         }
+        onRows?.(snap.docs.length);
         if (snap.docs.length < PAGE) break;
         last = snap.docs[snap.docs.length - 1];
       }
       return { rows, cursor };
+    },
+
+    async countRows(name: SyncedTable) {
+      // An aggregation: billed one read per 1,000 documents counted.
+      const snap = await fs.getCountFromServer(table(name));
+      return snap.data().count;
     },
 
     async hasData() {
